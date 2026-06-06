@@ -1233,14 +1233,12 @@ function renderCP(){
 }
 
 function cpNewMonth(){
-  const now=new Date();
-  const key=cpMonthKey(now.getFullYear(),now.getMonth()+1);
-  if(cpRecords[key]&&cpRecords[key].length){alert(`${key.replace('-','년 ')}월 데이터가 이미 있습니다.`);return;}
-  cpRecords[key]=[];
+  const input=prompt('추가할 월을 입력하세요 (예: 2026-05)','2026-05');
+  if(!input||!/^\d{4}-\d{2}$/.test(input)){alert('형식이 맞지 않습니다. 예: 2026-05');return;}
+  if(!cpRecords[input]) cpRecords[input]=[];
   buildCpMonthSel();
-  document.getElementById('cp-month-sel').value=key;
+  document.getElementById('cp-month-sel').value=input;
   renderCP();
-  alert(`${key.replace('-','년 ')}월 CP 내역이 생성됐습니다.`);
 }
 
 let cpRatioChart=null;
