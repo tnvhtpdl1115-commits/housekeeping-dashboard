@@ -1182,7 +1182,7 @@ function buildCpMonthSel(){
   if(!sel) return;
   const cur=sel.value;
   sel.innerHTML=months.map(m=>`<option value="${m}"${m===cur?' selected':''}>${m.replace('-','년 ')}월</option>`).join('');
-  if(!sel.value||!cpRecords[sel.value]) sel.value=months.slice(-1)[0];
+  if(!sel.value||!cpRecords[sel.value]) sel.value=key;
 }
 
 function renderCP(){
@@ -1283,7 +1283,7 @@ function buildInvMonthSel(){
   if(!sel)return;
   const cur=sel.value;
   sel.innerHTML=months.map(m=>`<option value="${m}"${m===cur?' selected':''}>${m.replace('-','년 ')}월</option>`).join('');
-  if(!sel.value||!invData[sel.value]) sel.value=months.slice(-1)[0];
+  if(!sel.value||!invData[sel.value]) sel.value=key;
 }
 
 function getInvMonth(){return document.getElementById('inv-month-sel')?.value||thisMonthKey();}
@@ -1413,7 +1413,7 @@ function buildPurMonthSel(){
   if(!sel)return;
   const cur=sel.value;
   sel.innerHTML=months.map(m=>`<option value="${m}"${m===cur?' selected':''}>${m.replace('-','년 ')}월</option>`).join('');
-  if(!sel.value||!purData[sel.value]) sel.value=months.slice(-1)[0];
+  if(!sel.value||!purData[sel.value]) sel.value=key;
 }
 
 function getPurMonth(){return document.getElementById('pur-month-sel')?.value||thisMonthKey();}
@@ -1533,7 +1533,7 @@ function buildCostMonthSel(){
   if(!sel)return;
   const cur=sel.value;
   sel.innerHTML=months.map(m=>`<option value="${m}"${m===cur?' selected':''}>${m.replace('-','년 ')}월</option>`).join('');
-  if(!sel.value||!costData[sel.value]) sel.value=months.slice(-1)[0];
+  if(!sel.value||!costData[sel.value]) sel.value=key;
 }
 
 function getCostMonth(){return document.getElementById('cost-month-sel')?.value||thisMonthKey();}
