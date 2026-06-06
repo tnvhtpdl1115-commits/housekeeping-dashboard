@@ -31,11 +31,11 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f0ede8;min-height:100vh;c
 .sidebar-clock{font-size:11px;color:rgba(255,255,255,0.3);margin-bottom:8px}
 
 /* ── 메인 콘텐츠 ── */
-.main-wrap{margin-left:200px;flex:1;min-height:100vh;display:flex;flex-direction:column}
+.main-wrap{margin-left:200px;flex:1;min-height:100vh;display:flex;flex-direction:column;max-width:calc(100vw - 200px)}
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:#fff;border-bottom:1px solid rgba(0,0,0,0.08);position:sticky;top:0;z-index:50}
 .topbar-left{font-size:16px;font-weight:700;color:#1a1a18}
 .topbar-right{display:flex;align-items:center;gap:10px}
-.content{padding:20px 24px;flex:1}
+.content{padding:20px 24px;flex:1;overflow-y:auto}
 
 /* ── 소분류 탭 ── */
 .sub-tabs{display:flex;gap:0;margin-bottom:1.2rem;border-bottom:1px solid rgba(0,0,0,0.1)}
@@ -562,8 +562,10 @@ tr:hover td{background:#fafaf8}
   <div class="metrics" id="pur-metrics"></div>
   <div class="card">
     <div class="ct" id="pur-title">구매 발주 목록</div>
-    <table><thead><tr><th>품목</th><th>수량</th><th>단가</th><th>금액</th><th>발주일</th><th>상태</th><th></th></tr></thead>
-    <tbody id="pur-tbody"></tbody></table>
+    <div style="overflow-x:auto">
+      <table style="min-width:600px"><thead><tr><th>품목</th><th>수량</th><th>단가</th><th>금액</th><th>발주일</th><th>상태</th><th></th></tr></thead>
+      <tbody id="pur-tbody"></tbody></table>
+    </div>
   </div>
 </div>
 
@@ -2264,7 +2266,11 @@ function renderInv(){
       <td><strong>${currQty.toLocaleString()}</strong></td>
       <td style="color:${usage>0?'#A32D2D':'#6b6b68'}">${usage>0?usage.toLocaleString():'-'}</td>
       <td><span class="badge" style="${statusStyle}">${statusLabel}</span></td>
-      <td><button class="btn-i d" onclick="deleteWeeklyItem('${item.name}')"><i class="ti ti-trash"></i></button></td>
+      <td><div style="display:flex;gap:3px">
+        <button class="btn-i" onclick="weeklyQtyChange('${month}','${item.name}',-1,'${currentInvCategory}')">-1</button>
+        <button class="btn-i" onclick="weeklyQtyChange('${month}','${item.name}',1,'${currentInvCategory}')" style="color:#3B6D11;border-color:#9FE1CB">+1</button>
+        <button class="btn-i d" onclick="deleteWeeklyItem('${item.name}')"><i class="ti ti-trash"></i></button>
+      </div></td>
     </tr>`;
   }).join('');
 }
@@ -2353,7 +2359,21 @@ function saveInvItemReg(){
   renderInv();
 }
 
-function deleteWeeklyItem(name){
+function weeklyQtyChange(month, itemName, delta, category){
+  const weekKey=getWeekKey(month,currentWeek);
+  if(!weeklyData[weekKey]) weeklyData[weekKey]=[];
+  const item=weeklyData[weekKey].find(w=>w.itemName===itemName&&w.category===category);
+  if(item){
+    item.currQty=Math.max(0,item.currQty+delta);
+    dbSaveWeekly(month,currentWeek,item);
+  } else {
+    const masterItem=(weeklyItems[category]||[]).find(i=>i.name===itemName);
+    const newObj={itemName,unit:masterItem?.unit||'개',prevQty:0,inQty:0,currQty:Math.max(0,delta),minQty:masterItem?.minQty||0,category};
+    weeklyData[weekKey].push(newObj);
+    dbSaveWeekly(month,currentWeek,newObj);
+  }
+  renderInv();
+}
   const cat=currentInvCategory;
   weeklyItems[cat]=weeklyItems[cat].filter(i=>i.name!==name);
   // 모든 주차에서 해당 품목 삭제
