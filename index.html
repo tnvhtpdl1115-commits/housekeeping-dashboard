@@ -451,21 +451,56 @@ tr:hover td{background:#fafaf8}
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
     <select id="cost-month-sel" onchange="renderCost()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1a1a18;font-family:'Noto Sans KR',sans-serif"></select>
     <button class="btn-s" onclick="costNewMonth()"><i class="ti ti-calendar-plus"></i> 새 달 시작</button>
+    <button class="btn-s" onclick="openBudgetModal()"><i class="ti ti-target"></i> 예산 설정</button>
     <div style="flex:1"></div>
     <button class="btn-p" onclick="openCostModal()"><i class="ti ti-plus"></i> 비용 등록</button>
   </div>
-  <div class="metrics" id="cost-metrics"></div>
+  <!-- 월 전체 비용 + 전월 대비 -->
+  <div id="cost-metrics"></div>
+  <!-- 도넛차트 + 예산진행률 -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+    <div class="card" style="margin-bottom:0">
+      <div class="ct">소분류별 비용 비율</div>
+      <div style="position:relative;width:100%;height:200px;display:flex;align-items:center;justify-content:center">
+        <canvas id="costDonutChart" style="max-width:200px;max-height:200px"></canvas>
+      </div>
+      <div id="cost-donut-legend" style="margin-top:8px"></div>
+    </div>
+    <div class="card" style="margin-bottom:0">
+      <div class="ct">예산 대비 지출</div>
+      <div id="cost-budget-bars"></div>
+    </div>
+  </div>
+  <!-- 내역 테이블 -->
   <div class="card">
     <div class="ct" id="cost-title">비용 내역</div>
     <table><thead><tr><th>항목</th><th>분류</th><th>금액</th><th>날짜</th><th></th></tr></thead>
     <tbody id="cost-tbody"></tbody></table>
   </div>
+  <!-- 월별 추이 차트 -->
   <div class="card">
     <div class="ct">월별 비용 추이</div>
     <div style="position:relative;width:100%;height:220px">
-      <canvas id="costChart" role="img" aria-label="월별 하우스키핑 비용 추이 차트">월별 비용 데이터</canvas>
+      <canvas id="costChart"></canvas>
     </div>
   </div>
+</div>
+
+<!-- 모달: 예산 설정 -->
+<div class="modal-bg" id="budget-modal">
+<div class="modal">
+  <h3>월 예산 설정</h3>
+  <p style="font-size:12px;color:#6b6b68;margin-bottom:12px">소분류별 월 예산을 설정하세요 (원)</p>
+  <div class="fg"><label>객실</label><input type="number" id="budget-room" placeholder="0" min="0"></div>
+  <div class="fg"><label>린넨</label><input type="number" id="budget-linen" placeholder="0" min="0"></div>
+  <div class="fg"><label>유니폼</label><input type="number" id="budget-uniform" placeholder="0" min="0"></div>
+  <div class="fg"><label>구매</label><input type="number" id="budget-purchase" placeholder="0" min="0"></div>
+  <div class="fg"><label>기타</label><input type="number" id="budget-etc" placeholder="0" min="0"></div>
+  <div class="btn-row">
+    <button class="btn-s" onclick="closeModal('budget-modal')">취소</button>
+    <button class="btn-p" onclick="saveBudget()">저장</button>
+  </div>
+</div>
 </div>
 </div>
 
@@ -1500,43 +1535,112 @@ function getCostMonth(){return document.getElementById('cost-month-sel')?.value|
 
 const COST_CAT_LABEL={room:'객실',linen:'린넨',uniform:'유니폼',purchase:'구매',etc:'기타'};
 
+// ── 예산 데이터 ──
+let budgetData = {room:0, linen:0, uniform:0, purchase:0, etc:0};
+
+const COST_COLORS = {
+  '객실':   {bg:'#B5D4F4', border:'#185FA5', text:'#185FA5'},
+  '린넨':   {bg:'#9FE1CB', border:'#1A7A5A', text:'#1A7A5A'},
+  '유니폼': {bg:'#FAC775', border:'#854F0B', text:'#854F0B'},
+  '구매':   {bg:'#F4B5D4', border:'#A32D6A', text:'#A32D6A'},
+  '기타':   {bg:'#C5B5F4', border:'#534AB7', text:'#534AB7'},
+};
+const COST_CATS = ['객실','린넨','유니폼','구매','기타'];
+const COST_CAT_KEYS = {객실:'room',린넨:'linen',유니폼:'uniform',구매:'purchase',기타:'etc'};
+
+function openBudgetModal(){
+  document.getElementById('budget-room').value=budgetData.room||'';
+  document.getElementById('budget-linen').value=budgetData.linen||'';
+  document.getElementById('budget-uniform').value=budgetData.uniform||'';
+  document.getElementById('budget-purchase').value=budgetData.purchase||'';
+  document.getElementById('budget-etc').value=budgetData.etc||'';
+  openModal('budget-modal');
+}
+function saveBudget(){
+  budgetData.room=parseInt(document.getElementById('budget-room').value)||0;
+  budgetData.linen=parseInt(document.getElementById('budget-linen').value)||0;
+  budgetData.uniform=parseInt(document.getElementById('budget-uniform').value)||0;
+  budgetData.purchase=parseInt(document.getElementById('budget-purchase').value)||0;
+  budgetData.etc=parseInt(document.getElementById('budget-etc').value)||0;
+  closeModal('budget-modal');renderCost();
+}
+
+let costDonutChart=null;
+
+function getCatTotal(items, cat){
+  return items.filter(c=>c.type===cat||c.subType===cat).reduce((a,c)=>a+c.amount,0);
+}
+
 function renderCost(){
   buildCostMonthSel();
   const month=getCostMonth();
+  const months=Object.keys(costData).sort();
+  const idx=months.indexOf(month);
+  const prevMonth=idx>0?months[idx-1]:null;
   const allItems=costData[month]||[];
+  const prevItems=prevMonth?costData[prevMonth]||[]:[];
   const catLabel=COST_CAT_LABEL[currentCostCategory]||currentCostCategory;
-  // 소분류 필터
   const filtered=allItems.filter(c=>{
-    if(currentCostCategory==='purchase') return c.type==='구매';
-    if(currentCostCategory==='room') return c.type==='객실'||c.type==='인건비'||c.type==='소모품';
+    if(currentCostCategory==='purchase') return c.type==='구매'||c.subType==='구매';
+    if(currentCostCategory==='room') return c.type==='객실'||c.subType==='객실';
     return c.type===catLabel||c.subType===catLabel;
   });
   const total=allItems.reduce((a,c)=>a+c.amount,0);
+  const prevTotal=prevItems.reduce((a,c)=>a+c.amount,0);
   const catTotal=filtered.reduce((a,c)=>a+c.amount,0);
+  const diff=total-prevTotal;
   const titleEl=document.getElementById('cost-title');
   if(titleEl) titleEl.textContent=`${month.replace('-','년 ')}월 ${catLabel} 비용 내역`;
   const el=document.getElementById('cost-metrics');
   if(el) el.innerHTML=`
-    <div class="met" style="grid-column:1/-1;background:#1a1a18;color:#fff;padding:16px 20px;border-radius:12px;display:flex;align-items:center;justify-content:space-between">
+    <div style="background:#1a1a18;border-radius:14px;padding:20px 24px;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between">
       <div>
-        <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:4px">${month.replace('-','년 ')}월 전체 비용</div>
-        <div style="font-size:28px;font-weight:700;color:#fff">${fmt(total)}</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.45);margin-bottom:6px">${month.replace('-','년 ')}월 전체 비용</div>
+        <div style="font-size:32px;font-weight:700;color:#fff;letter-spacing:-0.5px">${fmt(total)}</div>
+        ${prevTotal?`<div style="font-size:12px;margin-top:6px;color:${diff>0?'#FF8A8A':diff<0?'#7FE0B8':'rgba(255,255,255,0.4)'}">${diff>0?'▲':'▼'} ${fmt(Math.abs(diff))} 전월 대비</div>`:`<div style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:4px">전월 데이터 없음</div>`}
       </div>
-      <i class="ti ti-coin" style="font-size:36px;color:rgba(255,255,255,0.15)"></i>
-    </div>
-    <div class="met"><div class="met-l">${catLabel} 합계</div><div class="met-v amb">${fmt(catTotal)}</div></div>
-    <div class="met"><div class="met-l">비율</div><div class="met-v">${total?Math.round(catTotal/total*100):0}%</div></div>
-    <div class="met"><div class="met-l">건수</div><div class="met-v">${filtered.length}건</div></div>`;
+      <div style="text-align:right">
+        <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:4px">${catLabel} 합계</div>
+        <div style="font-size:20px;font-weight:600;color:rgba(255,255,255,0.85)">${fmt(catTotal)}</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:2px">${total?Math.round(catTotal/total*100):0}% 비중</div>
+      </div>
+    </div>`;
+  if(costDonutChart) costDonutChart.destroy();
+  const donutCtx=document.getElementById('costDonutChart');
+  if(donutCtx){
+    const catAmounts=COST_CATS.map(c=>getCatTotal(allItems,c));
+    const hasData=catAmounts.some(v=>v>0);
+    if(hasData){
+      costDonutChart=new Chart(donutCtx,{type:'doughnut',data:{labels:COST_CATS,datasets:[{data:catAmounts,backgroundColor:COST_CATS.map(c=>COST_COLORS[c].bg),borderColor:COST_CATS.map(c=>COST_COLORS[c].border),borderWidth:1.5}]},options:{responsive:true,maintainAspectRatio:true,cutout:'68%',plugins:{legend:{display:false},tooltip:{callbacks:{label:v=>`${v.label}: ${fmt(v.raw)}`}}}}});
+      document.getElementById('cost-donut-legend').innerHTML=COST_CATS.map((c,i)=>catAmounts[i]?`<div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0;font-size:11px"><div style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:${COST_COLORS[c].bg};border:1px solid ${COST_COLORS[c].border};display:inline-block"></span><span style="color:#6b6b68">${c}</span></div><span style="font-weight:600;color:${COST_COLORS[c].text}">${fmt(catAmounts[i])}</span></div>`:'').join('');
+    } else {
+      document.getElementById('cost-donut-legend').innerHTML='<div class="empty" style="padding:10px 0">이번 달 비용 없음</div>';
+    }
+  }
+  const budgetEl=document.getElementById('cost-budget-bars');
+  if(budgetEl){
+    const hasBudget=Object.values(budgetData).some(v=>v>0);
+    if(!hasBudget){
+      budgetEl.innerHTML=`<div style="text-align:center;padding:30px 0;font-size:12px;color:#9b9b97">예산을 설정해주세요<br><button onclick="openBudgetModal()" class="btn-s" style="margin-top:8px;font-size:11px">예산 설정</button></div>`;
+    } else {
+      budgetEl.innerHTML=COST_CATS.map(cat=>{
+        const key=COST_CAT_KEYS[cat];
+        const budget=budgetData[key]||0;
+        const spent=getCatTotal(allItems,cat);
+        const prevSpent=getCatTotal(prevItems,cat);
+        const pct=budget?Math.min(Math.round(spent/budget*100),100):0;
+        const over=budget&&spent>budget;
+        const diff2=spent-prevSpent;
+        if(!budget&&!spent) return '';
+        return `<div style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:${COST_COLORS[cat].bg};border:1px solid ${COST_COLORS[cat].border};display:inline-block"></span><span style="font-size:12px;font-weight:600;color:#1a1a18">${cat}</span>${prevSpent?`<span style="font-size:10px;color:${diff2>0?'#A32D2D':'#3B6D11'}">${diff2>0?'▲':'▼'}${fmt(Math.abs(diff2))}</span>`:''}</div><span style="font-size:11px;color:${over?'#A32D2D':'#6b6b68'}">${fmt(spent)}${budget?` / ${fmt(budget)}`:''}</span></div>${budget?`<div style="height:8px;background:#f0ede8;border-radius:4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${over?'#F09595':COST_COLORS[cat].border};border-radius:4px;transition:width .5s ease"></div></div><div style="font-size:10px;color:${over?'#A32D2D':'#9b9b97'};margin-top:2px;text-align:right">${over?`초과 ${fmt(spent-budget)}`:`${pct}% 사용`}</div>`:''}</div>`;
+      }).filter(Boolean).join('');
+    }
+  }
   const tbody=document.getElementById('cost-tbody');
   if(!tbody)return;
   if(!filtered.length){tbody.innerHTML=`<tr><td colspan="5" class="empty">비용 내역이 없습니다</td></tr>`;return;}
-  tbody.innerHTML=filtered.map(c=>`<tr>
-    <td>${c.label}</td>
-    <td><span class="badge" style="background:#E6F1FB;color:#185FA5">${c.type}</span></td>
-    <td>${fmt(c.amount)}</td>
-    <td style="color:#6b6b68;font-size:11px">${c.date}</td>
-    <td><button class="btn-i d" onclick="deleteCostItem('${month}','${c.id}')"><i class="ti ti-trash"></i></button></td>
-  </tr>`).join('');
+  tbody.innerHTML=filtered.slice().reverse().map(c=>`<tr><td>${c.label}</td><td><span class="badge" style="background:${COST_COLORS[c.type]?.bg||'#E6F1FB'};color:${COST_COLORS[c.type]?.text||'#185FA5'}">${c.type}</span></td><td><strong>${fmt(c.amount)}</strong></td><td style="color:#6b6b68;font-size:11px">${c.date}</td><td><button class="btn-i d" onclick="deleteCostItem('${month}','${c.id}')"><i class="ti ti-trash"></i></button></td></tr>`).join('');
+  renderCostChart();
 }
 
 function openCostModal(){
