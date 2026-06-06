@@ -1388,13 +1388,12 @@ function deleteInvItem(month,id){
 }
 
 function invNewMonth(){
-  const now=new Date();
-  const key=mkKey(now.getFullYear(),now.getMonth()+1);
-  if(!invData[key]) invData[key]=[];
+  const input=prompt('추가할 월을 입력하세요 (예: 2026-05)','2026-05');
+  if(!input||!/^\d{4}-\d{2}$/.test(input)){alert('형식이 맞지 않습니다. 예: 2026-05');return;}
+  if(!invData[input]) invData[input]=[];
   buildInvMonthSel();
-  document.getElementById('inv-month-sel').value=key;
+  document.getElementById('inv-month-sel').value=input;
   renderInv();
-  alert(`${key.replace('-','년 ')}월 재고가 생성됐습니다.`);
 }
 
 // ── 구매 (월별) ──
@@ -1506,13 +1505,12 @@ function deletePur(month,id){
 }
 
 function purNewMonth(){
-  const now=new Date();
-  const key=mkKey(now.getFullYear(),now.getMonth()+1);
-  if(!purData[key]) purData[key]=[];
+  const input=prompt('추가할 월을 입력하세요 (예: 2026-05)','2026-05');
+  if(!input||!/^\d{4}-\d{2}$/.test(input)){alert('형식이 맞지 않습니다. 예: 2026-05');return;}
+  if(!purData[input]) purData[input]=[];
   buildPurMonthSel();
-  document.getElementById('pur-month-sel').value=key;
+  document.getElementById('pur-month-sel').value=input;
   renderPur();
-  alert(`${key.replace('-','년 ')}월 구매 내역이 생성됐습니다.`);
 }
 
 // ── 비용 (월별) ──
@@ -1675,13 +1673,12 @@ function deleteCostItem(month,id){
 }
 
 function costNewMonth(){
-  const now=new Date();
-  const key=mkKey(now.getFullYear(),now.getMonth()+1);
-  if(!costData[key]) costData[key]=[];
+  const input=prompt('추가할 월을 입력하세요 (예: 2026-05)','2026-05');
+  if(!input||!/^\d{4}-\d{2}$/.test(input)){alert('형식이 맞지 않습니다. 예: 2026-05');return;}
+  if(!costData[input]) costData[input]=[];
   buildCostMonthSel();
-  document.getElementById('cost-month-sel').value=key;
+  document.getElementById('cost-month-sel').value=input;
   renderCost();
-  alert(`${key.replace('-','년 ')}월 비용 내역이 생성됐습니다.`);
 }
 
 let costChart=null;
