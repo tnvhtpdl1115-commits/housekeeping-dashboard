@@ -574,6 +574,7 @@ tr:hover td{background:#fafaf8}
 <div class="modal">
   <h3 id="inv-modal-title">품목 등록</h3>
   <input type="hidden" id="inv-edit-id">
+  <div class="fg"><label>월 *</label><input type="month" id="inv-modal-month" style="font-size:13px;padding:7px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1a1a18;font-family:'Noto Sans KR',sans-serif;width:100%"></div>
   <div class="fr">
     <div class="fg"><label>품목명 *</label><input type="text" id="inv-name" placeholder="예: 샴푸 300ml"></div>
     <div class="fg"><label>단위 *</label><input type="text" id="inv-unit" placeholder="예: 개, 장, 롤"></div>
@@ -636,6 +637,7 @@ tr:hover td{background:#fafaf8}
 <div class="modal-bg" id="pur-modal">
 <div class="modal">
   <h3>발주 등록</h3>
+  <div class="fg"><label>월 *</label><input type="month" id="pur-modal-month" style="font-size:13px;padding:7px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1a1a18;font-family:'Noto Sans KR',sans-serif;width:100%"></div>
   <div class="fr">
     <div class="fg"><label>품목명 *</label><input type="text" id="pur-item" placeholder="품목명 직접 입력"></div>
     <div class="fg"><label>분류</label>
@@ -1330,6 +1332,7 @@ function openInvModal(month=null,id=null){
   const m=month||getInvMonth();
   document.getElementById('inv-modal-title').textContent=id?'품목 수정':'품목 등록';
   document.getElementById('inv-edit-id').value=id||'';
+  document.getElementById('inv-modal-month').value=m;
   if(id){
     const item=(invData[m]||[]).find(x=>x.id==id);
     if(item){
@@ -1354,8 +1357,8 @@ function saveInvItem(){
   const min=parseInt(document.getElementById('inv-min').value)||0;
   const price=parseInt(document.getElementById('inv-price').value)||0;
   const eid=document.getElementById('inv-edit-id').value;
+  const month=document.getElementById('inv-modal-month').value||getInvMonth();
   if(!name||!unit){alert('품목명과 단위를 입력하세요.');return;}
-  const month=getInvMonth();
   if(!invData[month]) invData[month]=[];
   if(eid){
     const item=invData[month].find(x=>x.id==eid);
@@ -1365,6 +1368,9 @@ function saveInvItem(){
     invData[month].push(newObj);
     dbSaveInvItem(month,newObj);
   }
+  // 월 선택기 갱신
+  buildInvMonthSel();
+  document.getElementById('inv-month-sel').value=month;
   closeModal('inv-modal');renderInv();
 }
 
@@ -1443,6 +1449,7 @@ function renderPur(){
 }
 
 function openPurModal(){
+  document.getElementById('pur-modal-month').value=getPurMonth();
   document.getElementById('pur-item').value='';
   document.getElementById('pur-qty').value=100;
   document.getElementById('pur-price').value=0;
@@ -1455,8 +1462,8 @@ function addPur(){
   const qty=parseInt(document.getElementById('pur-qty').value)||0;
   const price=parseInt(document.getElementById('pur-price').value)||0;
   const cat=document.getElementById('pur-cat').value;
+  const month=document.getElementById('pur-modal-month').value||getPurMonth();
   if(!item){alert('품목명을 입력하세요.');return;}
-  const month=getPurMonth();
   if(!purData[month]) purData[month]=[];
   const newObj={id:purIdSeq++,item,qty,price,date:todayStr,status:'pending',category:cat};
   purData[month].push(newObj);
@@ -1466,6 +1473,8 @@ function addPur(){
   if(!costData[month]) costData[month]=[];
   costData[month].push(costObj);
   dbSaveCost(month,costObj);
+  buildPurMonthSel();
+  document.getElementById('pur-month-sel').value=month;
   renderPur();renderOverview();closeModal('pur-modal');
 }
 
@@ -1640,6 +1649,7 @@ function renderCost(){
 }
 
 function openCostModal(){
+  document.getElementById('cost-modal-month').value=getCostMonth();
   document.getElementById('cost-date').value=todayStr;
   document.getElementById('cost-label').value='';
   document.getElementById('cost-amount').value='';
@@ -1652,13 +1662,15 @@ function addCostItem(){
   const amount=parseInt(document.getElementById('cost-amount').value)||0;
   const type=document.getElementById('cost-type').value;
   const date=document.getElementById('cost-date').value||todayStr;
+  const month=document.getElementById('cost-modal-month').value||getCostMonth();
   if(!label||!amount){alert('항목명과 금액을 입력하세요.');return;}
   const typeName=COST_CAT_LABEL[type]||type;
-  const month=getCostMonth();
   if(!costData[month]) costData[month]=[];
   const newObj={id:costIdSeq++,label,type:typeName,subType:typeName,amount,date};
   costData[month].push(newObj);
   dbSaveCost(month,newObj);
+  buildCostMonthSel();
+  document.getElementById('cost-month-sel').value=month;
   closeModal('cost-add-modal');renderCost();renderOverview();
 }
 
@@ -2301,6 +2313,7 @@ async function initApp(){
 <div class="modal-bg" id="cost-add-modal">
 <div class="modal">
   <h3>비용 등록</h3>
+  <div class="fg"><label>월 *</label><input type="month" id="cost-modal-month" style="font-size:13px;padding:7px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1a1a18;font-family:'Noto Sans KR',sans-serif;width:100%"></div>
   <div class="fr">
     <div class="fg"><label>항목명 *</label><input type="text" id="cost-label" placeholder="예: 수건 세탁비"></div>
     <div class="fg"><label>금액 (원) *</label><input type="number" id="cost-amount" placeholder="0" min="0"></div>
