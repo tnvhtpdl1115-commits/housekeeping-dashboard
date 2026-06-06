@@ -2374,6 +2374,8 @@ function weeklyQtyChange(month, itemName, delta, category){
   }
   renderInv();
 }
+
+function deleteWeeklyItem(name){
   const cat=currentInvCategory;
   weeklyItems[cat]=weeklyItems[cat].filter(i=>i.name!==name);
   // 모든 주차에서 해당 품목 삭제
