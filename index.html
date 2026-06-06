@@ -1173,16 +1173,16 @@ function cpRatio(month){
 const CP_STATUS={open:'미해결',resolved:'해결완료',penalty:'패널티 부과'};
 const CP_STATUS_STYLE={open:'background:#FCEBEB;color:#A32D2D',resolved:'background:#EAF3DE;color:#3B6D11',penalty:'background:#FAEEDA;color:#854F0B'};
 
-function buildCpMonthSel(){
+function buildCpMonthSel(forceReset=false){
   const now=new Date();
   const key=cpMonthKey(now.getFullYear(),now.getMonth()+1);
   if(!cpRecords[key]) cpRecords[key]=[];
   const months=getCpMonths();
   const sel=document.getElementById('cp-month-sel');
   if(!sel) return;
-  const cur=sel.value;
+  const cur=forceReset?key:(sel.value||key);
   sel.innerHTML=months.map(m=>`<option value="${m}"${m===cur?' selected':''}>${m.replace('-','년 ')}월</option>`).join('');
-  if(!sel.value||!cpRecords[sel.value]) sel.value=key;
+  sel.value=cur;
 }
 
 function renderCP(){
@@ -1274,16 +1274,16 @@ function renderCpRatioChart(){
 let invData = {}; // { 'YYYY-MM': [{id,name,qty,unit,min,price,category}] }
 let invIdSeq = 100;
 
-function buildInvMonthSel(){
+function buildInvMonthSel(forceReset=false){
   const now=new Date();
   const key=mkKey(now.getFullYear(),now.getMonth()+1);
   if(!invData[key]) invData[key]=[];
   const months=Object.keys(invData).sort();
   const sel=document.getElementById('inv-month-sel');
   if(!sel)return;
-  const cur=sel.value;
+  const cur=forceReset?key:(sel.value||key);
   sel.innerHTML=months.map(m=>`<option value="${m}"${m===cur?' selected':''}>${m.replace('-','년 ')}월</option>`).join('');
-  if(!sel.value||!invData[sel.value]) sel.value=key;
+  sel.value=cur;
 }
 
 function getInvMonth(){return document.getElementById('inv-month-sel')?.value||thisMonthKey();}
@@ -1404,16 +1404,16 @@ function invNewMonth(){
 let purData = {}; // { 'YYYY-MM': [{id,item,qty,price,date,status,category}] }
 let purIdSeq = 100;
 
-function buildPurMonthSel(){
+function buildPurMonthSel(forceReset=false){
   const now=new Date();
   const key=mkKey(now.getFullYear(),now.getMonth()+1);
   if(!purData[key]) purData[key]=[];
   const months=Object.keys(purData).sort();
   const sel=document.getElementById('pur-month-sel');
   if(!sel)return;
-  const cur=sel.value;
+  const cur=forceReset?key:(sel.value||key);
   sel.innerHTML=months.map(m=>`<option value="${m}"${m===cur?' selected':''}>${m.replace('-','년 ')}월</option>`).join('');
-  if(!sel.value||!purData[sel.value]) sel.value=key;
+  sel.value=cur;
 }
 
 function getPurMonth(){return document.getElementById('pur-month-sel')?.value||thisMonthKey();}
@@ -1524,16 +1524,16 @@ function purNewMonth(){
 let costData = {}; // { 'YYYY-MM': [{id,label,type,subType,amount,date}] }
 let costIdSeq = 100;
 
-function buildCostMonthSel(){
+function buildCostMonthSel(forceReset=false){
   const now=new Date();
   const key=mkKey(now.getFullYear(),now.getMonth()+1);
   if(!costData[key]) costData[key]=[];
   const months=Object.keys(costData).sort();
   const sel=document.getElementById('cost-month-sel');
   if(!sel)return;
-  const cur=sel.value;
+  const cur=forceReset?key:(sel.value||key);
   sel.innerHTML=months.map(m=>`<option value="${m}"${m===cur?' selected':''}>${m.replace('-','년 ')}월</option>`).join('');
-  if(!sel.value||!costData[sel.value]) sel.value=key;
+  sel.value=cur;
 }
 
 function getCostMonth(){return document.getElementById('cost-month-sel')?.value||thisMonthKey();}
@@ -2260,8 +2260,13 @@ async function initApp(){
     if(!invData[tm]) invData[tm]=[];
     if(!purData[tm]) purData[tm]=[];
     if(!costData[tm]) costData[tm]=[];
+    if(!cpRecords[tm]) cpRecords[tm]=[];
     swMain('overview');
-    buildCpMonthSel();
+    // 각 탭 월 선택기를 현재 달로 강제 초기화
+    buildCpMonthSel(true);
+    buildInvMonthSel(true);
+    buildPurMonthSel(true);
+    buildCostMonthSel(true);
     if(!window._clockStarted){
       window._clockStarted=true;
       updateClock();
