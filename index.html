@@ -2327,14 +2327,16 @@ function renderInv(){
   if(!tbody)return;
   if(!items.length){tbody.innerHTML=`<tr><td colspan="8" class="empty">등록된 품목이 없습니다<br><button class="btn-s" style="margin-top:8px" onclick="openInvItemRegModal()">품목 등록</button></td></tr>`;return;}
   tbody.innerHTML=items.map(item=>{
-    const wd=weekData.find(w=>w.itemName===item.name)||{prevQty:0,inQty:0,currQty:0,minQty:item.minQty||0};
+    const wd=weekData.find(w=>w.itemName===item.name); // undefined이면 미조사
     const pd=prevData.find(w=>w.itemName===item.name);
-    const prevQty=pd?pd.currQty:wd.prevQty;
+    const prevQty=pd?pd.currQty:0;
     // 이번 주 입고량
     const inQty=purItems.filter(p=>p.item===item.name).reduce((a,p)=>a+p.qty,0);
-    const currQty=wd.currQty;
-    const usage=prevQty+inQty-currQty;
-    const minQty=wd.minQty||item.minQty||0;
+    // 재고조사 여부 판단: weeklyData에 해당 품목이 있으면 조사한 것
+    const surveyed=!!wd;
+    const currQty=surveyed?wd.currQty:(prevQty+inQty);
+    const usage=surveyed?Math.max(0,prevQty+inQty-wd.currQty):0;
+    const minQty=(wd?.minQty)||item.minQty||0;
     const low2=minQty>0&&currQty<minQty;
     const warn=!low2&&minQty>0&&currQty<minQty*2;
     const statusStyle=low2?'background:#FCEBEB;color:#A32D2D':warn?'background:#FAEEDA;color:#854F0B':'background:#EAF3DE;color:#3B6D11';
@@ -2344,9 +2346,9 @@ function renderInv(){
       <td style="color:#6b6b68">${item.unit}</td>
       <td style="color:#6b6b68">${prevQty.toLocaleString()}</td>
       <td style="color:#3B6D11;font-weight:600">${inQty>0?'+'+inQty.toLocaleString():'-'}</td>
-      <td><strong>${currQty.toLocaleString()}</strong></td>
-      <td style="color:${usage>0?'#A32D2D':'#6b6b68'}">${usage>0?usage.toLocaleString():'-'}</td>
-      <td><span class="badge" style="${statusStyle}">${statusLabel}</span></td>
+      <td><strong>${currQty.toLocaleString()}</strong>${!surveyed?'<span style="font-size:10px;color:#9b9b97;margin-left:4px">(미조사)</span>':''}</td>
+      <td style="color:${usage>0?'#A32D2D':'#6b6b68'}">${surveyed&&usage>0?usage.toLocaleString():'-'}</td>
+      <td>${surveyed?`<span class="badge" style="${statusStyle}">${statusLabel}</span>`:'<span class="badge" style="background:#f0ede8;color:#9b9b97">미조사</span>'}</td>
       <td><div style="display:flex;gap:3px">
         <button class="btn-i" onclick="weeklyQtyChange('${month}','${item.name}',-1,'${currentInvCategory}')">-1</button>
         <button class="btn-i" onclick="weeklyQtyChange('${month}','${item.name}',1,'${currentInvCategory}')" style="color:#3B6D11;border-color:#9FE1CB">+1</button>
