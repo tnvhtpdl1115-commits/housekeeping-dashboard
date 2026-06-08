@@ -2462,7 +2462,7 @@ function renderInv(){
     const ok=minQty>0&&currQty>=minQty*2;
     const statusStyle=low2?'background:#FCEBEB;color:#A32D2D':warn?'background:#FAEEDA;color:#854F0B':'background:#EAF3DE;color:#3B6D11';
     const statusLabel=low2?'부족':warn?'주의':'충분';
-    const diffQty = surveyed ? currQty - prevQty : 0;
+    const diffQty = surveyed ? currQty - prevQty - inQty : 0;
     return `<tr>
       <td><strong style="font-size:13px">${item.name}</strong></td>
       <td style="color:#6b6b68;font-size:11px;text-align:center">${item.unit}</td>
@@ -2476,12 +2476,13 @@ function renderInv(){
       </td>
       <td style="text-align:center">
         <div style="font-size:26px;font-weight:800;color:${surveyed?(low2?'#A32D2D':warn?'#854F0B':'#0f1f3d'):'#c0bdb8'};line-height:1">${currQty.toLocaleString()}</div>
-        ${surveyed&&diffQty!==0?`<div style="font-size:11px;font-weight:600;color:${diffQty>0?'#3B6D11':'#A32D2D'};margin-top:2px">${diffQty>0?'+':''}${diffQty.toLocaleString()}</div>`:''}
       </td>
       <td style="text-align:center">
-        ${surveyed&&usage>0
-          ?`<div style="font-size:18px;font-weight:700;color:#A32D2D;line-height:1">-${usage.toLocaleString()}</div>`
-          :`<div style="font-size:16px;color:#d0cdc8">-</div>`}
+        ${surveyed
+          ? diffQty!==0
+            ? `<div style="font-size:18px;font-weight:700;color:${diffQty<0?'#A32D2D':'#3B6D11'};line-height:1">${diffQty>0?'+':''}${diffQty.toLocaleString()}</div>`
+            : `<div style="font-size:16px;color:#d0cdc8">-</div>`
+          : `<div style="font-size:16px;color:#d0cdc8">-</div>`}
       </td>
       <td style="text-align:center">
         ${minQty>0
