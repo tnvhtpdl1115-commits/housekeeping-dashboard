@@ -2668,6 +2668,10 @@ function deleteWeeklyItem(name){
   Object.keys(weeklyData).forEach(k=>{
     weeklyData[k]=weeklyData[k].filter(w=>w.itemName!==name);
   });
+  // DB 마스터에서 삭제
+  supa.from('inv_data').delete().eq('month','MASTER').eq('name',name).eq('category',cat).then(()=>{});
+  // DB 주간 데이터에서도 삭제
+  supa.from('inv_weekly').delete().eq('item_name',name).eq('category',cat).then(()=>{});
   renderInv();
 }
 
@@ -2934,17 +2938,24 @@ async function dbLoadWeekly(){
       weeklyData[key].push({itemName:r.item_name,unit:r.unit,prevQty:r.prev_qty,inQty:r.in_qty,currQty:r.curr_qty,minQty:r.min_qty,category:r.category});
     });
   }
-  // 품목 마스터 로드 (DB에 저장된 추가 품목만 merge)
+  // 품목 마스터 로드 - DB에 MASTER 데이터가 있으면 DB 우선, 없으면 기본값 사용
   const {data:mData}=await supa.from('inv_data').select('*').eq('month','MASTER');
-  if(mData){
+  if(mData && mData.length>0){
+    // DB에 마스터 데이터가 있으면 DB 기준으로 완전 교체
+    weeklyItems={consumable:[],equipment:[],maintenance:[]};
     mData.forEach(r=>{
       const cat=r.category||'consumable';
-      if(!weeklyItems[cat]) weeklyItems[cat]=[];
-      // 이미 있는 품목은 스킵 (기본 품목 중복 방지)
-      if(!weeklyItems[cat].find(i=>i.name===r.name)){
+      if(cat!=='linen'&&weeklyItems[cat]){
         weeklyItems[cat].push({name:r.name,unit:r.unit||'개',minQty:r.min_qty||0});
       }
     });
+  } else {
+    // DB에 마스터 없으면 기본 품목을 DB에 저장
+    for(const cat of ['consumable','equipment','maintenance']){
+      for(const item of weeklyItems[cat]||[]){
+        await supa.from('inv_data').insert({month:'MASTER',name:item.name,qty:0,unit:item.unit,min_qty:item.minQty||0,price:0,category:cat});
+      }
+    }
   }
 }
 async function dbLoadInventory(){
