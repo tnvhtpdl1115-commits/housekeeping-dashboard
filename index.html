@@ -413,7 +413,7 @@ tr:hover td{background:#fafaf8}
             <th style="width:75px;text-align:center">입고</th>
             <th style="width:105px;text-align:center">이번주 재고</th>
             <th style="width:85px;text-align:center">사용량</th>
-            <th style="width:65px;text-align:center">상태</th>
+            <th style="width:90px;text-align:center">상태<br><span style="font-size:10px;font-weight:400;color:#9b9b97">(최소기준)</span></th>
             <th style="width:115px"></th>
           </tr></thead>
           <tbody id="inv-tbody"></tbody>
@@ -2456,9 +2456,10 @@ function renderInv(){
     const surveyed=!!wd;
     const currQty=surveyed?wd.currQty:(prevQty+inQty);
     const usage=surveyed?Math.max(0,prevQty+inQty-wd.currQty):0;
-    const minQty=(wd?.minQty)||item.minQty||0;
+    const minQty=(weeklyItems[currentInvCategory]||[]).find(i=>i.name===item.name)?.minQty||item.minQty||0;
     const low2=minQty>0&&currQty<minQty;
-    const warn=!low2&&minQty>0&&currQty<minQty*2;
+    const warn=minQty>0&&!low2&&currQty<minQty*2;
+    const ok=minQty>0&&currQty>=minQty*2;
     const statusStyle=low2?'background:#FCEBEB;color:#A32D2D':warn?'background:#FAEEDA;color:#854F0B':'background:#EAF3DE;color:#3B6D11';
     const statusLabel=low2?'부족':warn?'주의':'충분';
     return `<tr>
@@ -2482,7 +2483,15 @@ function renderInv(){
           ?`<div style="font-size:18px;font-weight:700;color:#A32D2D;line-height:1">${usage.toLocaleString()}</div><div style="font-size:10px;color:#e09090;margin-top:2px">사용량</div>`
           :`<div style="font-size:16px;color:#d0cdc8">-</div>`}
       </td>
-      <td style="text-align:center">${surveyed?`<span class="badge" style="${statusStyle}">${statusLabel}</span>`:'<span class="badge" style="background:#f0ede8;color:#9b9b97">미조사</span>'}</td>
+      <td style="text-align:center">
+        ${minQty>0
+          ? `<span class="badge" style="${statusStyle}">${statusLabel}</span>
+             <div style="font-size:10px;color:#9b9b97;margin-top:3px">최소 ${minQty.toLocaleString()}${item.unit}</div>`
+          : surveyed
+            ? `<span class="badge" style="background:#f0ede8;color:#9b9b97">기준없음</span>`
+            : `<span class="badge" style="background:#f0ede8;color:#9b9b97">미조사</span>`
+        }
+      </td>
       <td><div style="display:flex;gap:3px;justify-content:flex-end">
         <button class="btn-i" onclick="weeklyQtyChange('${month}','${item.name}',-1,'${currentInvCategory}')">-1</button>
         <button class="btn-i" onclick="weeklyQtyChange('${month}','${item.name}',1,'${currentInvCategory}')" style="color:#3B6D11;border-color:#9FE1CB">+1</button>
@@ -2905,9 +2914,11 @@ async function dbSaveWeekly(month,week,obj){
 }
 
 async function dbSaveWeeklyItem(category,item){
-  // inv_data에 마스터 품목 저장 (월: 'MASTER')
   const {data:existing}=await supa.from('inv_data').select('id').eq('month','MASTER').eq('name',item.name).eq('category',category);
-  if(!existing||!existing.length){
+  if(existing&&existing.length){
+    // 기존 품목 업데이트 (단위/최소기준 변경 반영)
+    await supa.from('inv_data').update({unit:item.unit,min_qty:item.minQty||0}).eq('id',existing[0].id);
+  } else {
     await supa.from('inv_data').insert({month:'MASTER',name:item.name,qty:0,unit:item.unit,min_qty:item.minQty||0,price:0,category});
   }
 }
