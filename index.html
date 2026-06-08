@@ -245,7 +245,7 @@ tr:hover td{background:#fafaf8}
   <div class="sidebar-bottom">
     <div class="sidebar-clock" id="clock"></div>
     <div class="sidebar-user" id="user-email"></div>
-    <button class="sidebar-logout" onclick="doLogout()">
+    <button class="sidebar-logout" onclick="showConfirm('로그아웃 하시겠습니까?',doLogout,{icon:'👋',title:'로그아웃',btnText:'로그아웃',btnColor:'#0f1f3d'})">
       <i class="ti ti-logout" style="font-size:15px"></i> 로그아웃
     </button>
   </div>
@@ -826,12 +826,13 @@ tr:hover td{background:#fafaf8}
 
 <!-- 모달: 삭제 -->
 <div class="modal-bg" id="del-modal">
-<div class="modal" style="width:300px">
-  <h3>삭제 확인</h3>
-  <p style="font-size:13px;color:#6b6b68;margin-bottom:1rem" id="del-msg"></p>
-  <div class="btn-row">
-    <button class="btn-s" onclick="closeModal('del-modal')">취소</button>
-    <button class="btn-p" style="background:#A32D2D" onclick="confirmDel()">삭제</button>
+<div class="modal" style="width:320px;text-align:center">
+  <div id="confirm-icon" style="font-size:40px;margin-bottom:12px">🗑️</div>
+  <h3 id="confirm-title" style="margin-bottom:8px">삭제 확인</h3>
+  <p style="font-size:13px;color:#6b6b68;margin-bottom:1.5rem;line-height:1.6" id="del-msg"></p>
+  <div class="btn-row" style="justify-content:center;gap:10px">
+    <button class="btn-s" style="padding:8px 20px" onclick="closeModal('del-modal')">취소</button>
+    <button class="btn-p" id="confirm-btn" style="background:#A32D2D;padding:8px 20px" onclick="confirmDel()">삭제</button>
   </div>
 </div>
 </div>
@@ -1319,7 +1320,7 @@ function renderIssues(){
     <td style="font-size:11px;color:#6b6b68">${i.assignee||'미배정'}</td>
     <td>${i.priority==='urgent'?`<span class="badge" style="background:#FCEBEB;color:#A32D2D">긴급</span>`:`<span class="badge" style="background:#EAF3DE;color:#3B6D11">일반</span>`}</td>
     <td>${i.done?`<span class="badge" style="background:#EAF3DE;color:#3B6D11">완료</span>`:`<span class="badge" style="background:#FAEEDA;color:#854F0B">미처리</span>`}</td>
-    <td><div style="display:flex;gap:3px">${!i.done?`<button class="btn-i" onclick="resolveIss(${i.id})" title="완료처리"><i class="ti ti-check"></i></button>`:''}<button class="btn-i" onclick="editIss(${i.id})"><i class="ti ti-edit"></i></button><button class="btn-i d" onclick="askDel('issue',null,${i.id})"><i class="ti ti-trash"></i></button></div></td>
+    <td><div style="display:flex;gap:3px">${!i.done?`<button class="btn-i" onclick="showConfirm('이 특이사항을 완료 처리하시겠습니까?',()=>resolveIss(${i.id}),{icon:'✅',title:'완료 처리',btnText:'완료 처리',btnColor:'#3B6D11'})" title="완료처리"><i class="ti ti-check"></i></button>`:''}<button class="btn-i" onclick="editIss(${i.id})"><i class="ti ti-edit"></i></button><button class="btn-i d" onclick="askDel('issue',null,${i.id})"><i class="ti ti-trash"></i></button></div></td>
   </tr>`).join('');
 }
 
@@ -1496,7 +1497,7 @@ function renderInv(){
         <button class="btn-i" onclick="quickUse('${month}','${item.id}')">-1</button>
         <button class="btn-i" onclick="quickAdd('${month}','${item.id}')" style="color:#3B6D11;border-color:#9FE1CB">+1</button>
         <button class="btn-i" onclick="openInvModal('${month}','${item.id}')"><i class="ti ti-edit"></i></button>
-        <button class="btn-i d" onclick="deleteInvItem('${month}','${item.id}')"><i class="ti ti-trash"></i></button>
+        <button class="btn-i d" onclick="showConfirm('${item.name} 품목을 삭제하시겠습니까?',()=>deleteInvItem('${month}','${item.id}'),{icon:'📦',title:'재고 삭제',btnText:'삭제',btnColor:'#A32D2D'})"><i class="ti ti-trash"></i></button>
       </div></td>
     </tr>`;
   }).join('');
@@ -1616,9 +1617,9 @@ function renderPur(){
     <td style="color:#6b6b68;font-size:11px">${p.date}</td>
     <td><span class="badge" style="${p.status==='received'?'background:#EAF3DE;color:#3B6D11':'background:#FAEEDA;color:#854F0B'}">${p.status==='received'?'입고완료':'발주중'}</span></td>
     <td><div style="display:flex;gap:3px">
-      ${p.status==='pending'?`<button class="btn-i" onclick="recvPur('${month}','${p.id}')" style="color:#3B6D11;border-color:#9FE1CB">입고</button>`:''}
+      ${p.status==='pending'?`<button class="btn-i" onclick="showConfirm('${p.item} 입고 처리하시겠습니까?\n(재고에 자동 반영됩니다)',()=>recvPur('${month}','${p.id}'),{icon:'📬',title:'입고 확인',btnText:'입고 처리',btnColor:'#3B6D11'})" style="color:#3B6D11;border-color:#9FE1CB">입고</button>`:''}
       <button class="btn-i" onclick="editPur('${month}','${p.id}')"><i class="ti ti-edit"></i></button>
-      <button class="btn-i d" onclick="deletePur('${month}','${p.id}')"><i class="ti ti-trash"></i></button>
+      <button class="btn-i d" onclick="showConfirm('${p.item} 발주 내역을 삭제하시겠습니까?',()=>deletePur('${month}','${p.id}'),{icon:'🛒',title:'발주 삭제',btnText:'삭제',btnColor:'#A32D2D'})"><i class="ti ti-trash"></i></button>
     </div></td>
   </tr>`).join('');
 }
@@ -1889,7 +1890,7 @@ function renderCost(){
   const tbody=document.getElementById('cost-tbody');
   if(!tbody)return;
   if(!filtered.length){tbody.innerHTML=`<tr><td colspan="5" class="empty">비용 내역이 없습니다</td></tr>`;return;}
-  tbody.innerHTML=filtered.slice().reverse().map(c=>`<tr><td>${c.label}</td><td><span class="badge" style="background:${COST_COLORS[c.type]?.bg||'#E6F1FB'};color:${COST_COLORS[c.type]?.text||'#185FA5'}">${c.type}</span></td><td><strong>${fmt(c.amount)}</strong></td><td style="color:#6b6b68;font-size:11px">${c.date}</td><td><button class="btn-i d" onclick="deleteCostItem('${month}','${c.id}')"><i class="ti ti-trash"></i></button></td></tr>`).join('');
+  tbody.innerHTML=filtered.slice().reverse().map(c=>`<tr><td>${c.label}</td><td><span class="badge" style="background:${COST_COLORS[c.type]?.bg||'#E6F1FB'};color:${COST_COLORS[c.type]?.text||'#185FA5'}">${c.type}</span></td><td><strong>${fmt(c.amount)}</strong></td><td style="color:#6b6b68;font-size:11px">${c.date}</td><td><button class="btn-i d" onclick="showConfirm('${c.label} 비용을 삭제하시겠습니까?',()=>deleteCostItem('${month}','${c.id}'),{icon:'💰',title:'비용 삭제',btnText:'삭제',btnColor:'#A32D2D'})"><i class="ti ti-trash"></i></button></td></tr>`).join('');
   renderCostChart();
 }
 
@@ -1961,12 +1962,52 @@ function renderCostChart(){
         y:{stacked:true,ticks:{font:{family:"'Noto Sans KR',sans-serif"},callback:v=>Math.round(v/10000)+'만'}}}}
   });
 }
-function askDel(kind,sec,id){delTarget={kind,sec,id};document.getElementById('del-msg').textContent=kind==='room'?`${id}호 객실을 삭제하시겠습니까?`:kind==='cp'?'이 CP 내역을 삭제하시겠습니까?':'이 특이사항을 삭제하시겠습니까?';openModal('del-modal');}
+// ── 범용 확인 모달 ──
+let confirmCallback = null;
+
+function showConfirm(msg, onConfirm, opts={}){
+  const icon = opts.icon || '🗑️';
+  const title = opts.title || '확인';
+  const btnText = opts.btnText || '확인';
+  const btnColor = opts.btnColor || '#A32D2D';
+  document.getElementById('confirm-icon').textContent = icon;
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('del-msg').textContent = msg;
+  document.getElementById('confirm-btn').textContent = btnText;
+  document.getElementById('confirm-btn').style.background = btnColor;
+  confirmCallback = onConfirm;
+  openModal('del-modal');
+}
+
+function askDel(kind, sec, id){
+  const msgs = {
+    room: `${id}호 객실을 삭제하시겠습니까?`,
+    cp: 'CP 내역을 삭제하시겠습니까?',
+    issue: '이 특이사항을 삭제하시겠습니까?',
+  };
+  delTarget = {kind, sec, id};
+  showConfirm(msgs[kind]||'삭제하시겠습니까?', confirmDel, {icon:'🗑️', title:'삭제 확인', btnText:'삭제', btnColor:'#A32D2D'});
+}
 function confirmDel(){
+  if(confirmCallback){
+    confirmCallback();
+    confirmCallback=null;
+    closeModal('del-modal');
+    return;
+  }
   if(!delTarget)return;
-  if(delTarget.kind==='room'){if(delTarget.sec==='seoul')seoulRooms=seoulRooms.filter(r=>r.no!==delTarget.id);else dormRooms=dormRooms.filter(r=>r.no!==delTarget.id);renderSeoul();renderDorm();}
-  else if(delTarget.kind==='cp'){const month=getSelectedCpMonth();if(cpRecords[month])cpRecords[month]=cpRecords[month].filter(r=>r.id!==delTarget.id);renderCP();}
-  else{issues=issues.filter(i=>i.id!==delTarget.id);renderIssues();}
+  if(delTarget.kind==='room'){
+    if(delTarget.sec==='seoul') seoulRooms=seoulRooms.filter(r=>r.no!==delTarget.id);
+    else dormRooms=dormRooms.filter(r=>r.no!==delTarget.id);
+    renderSeoul();renderDorm();
+  } else if(delTarget.kind==='cp'){
+    const month=getSelectedCpMonth();
+    if(cpRecords[month]) cpRecords[month]=cpRecords[month].filter(r=>r.id!==delTarget.id);
+    renderCP();
+  } else {
+    issues=issues.filter(i=>i.id!==delTarget.id);
+    renderIssues();
+  }
   renderOverview();closeModal('del-modal');delTarget=null;
 }
 // ── 사진 첨부 시스템 ──
@@ -2445,7 +2486,7 @@ function renderInv(){
         <button class="btn-i" onclick="weeklyQtyChange('${month}','${item.name}',-1,'${currentInvCategory}')">-1</button>
         <button class="btn-i" onclick="weeklyQtyChange('${month}','${item.name}',1,'${currentInvCategory}')" style="color:#3B6D11;border-color:#9FE1CB">+1</button>
         <button class="btn-i" onclick="openEditWeeklyItem('${month}','${item.name}','${currentInvCategory}')"><i class="ti ti-edit"></i></button>
-        <button class="btn-i d" onclick="deleteWeeklyItem('${item.name}')"><i class="ti ti-trash"></i></button>
+        <button class="btn-i d" onclick="showConfirm('${item.name} 품목을 삭제하시겠습니까?',()=>deleteWeeklyItem('${item.name}'),{icon:'📦',title:'재고 삭제',btnText:'삭제',btnColor:'#A32D2D'})"><i class="ti ti-trash"></i></button>
       </div></td>
     </tr>`;
   }).join('');
@@ -2582,34 +2623,32 @@ function saveEditWeeklyItem(){
   const qty=parseInt(document.getElementById('ewm-qty').value)||0;
   const min=parseInt(document.getElementById('ewm-min').value)||0;
   if(!newName||!unit){alert('품목명과 단위를 입력하세요.');return;}
-  // 마스터 품목 업데이트
-  const items=weeklyItems[cat]||[];
-  const mi=items.find(i=>i.name===oldName);
-  if(mi){Object.assign(mi,{name:newName,unit,minQty:min});}
-  // 이름이 바뀐 경우 weeklyData 전체에서 업데이트
-  if(newName!==oldName){
-    Object.keys(weeklyData).forEach(key=>{
-      const w=weeklyData[key].find(w=>w.itemName===oldName&&w.category===cat);
-      if(w) w.itemName=newName;
-    });
-  }
-  // 이번주 재고조사 데이터 업데이트
-  const weekKey=getWeekKey(month,currentWeek);
-  if(!weeklyData[weekKey]) weeklyData[weekKey]=[];
-  const wd=weeklyData[weekKey].find(w=>w.itemName===newName&&w.category===cat);
-  if(wd){
-    Object.assign(wd,{unit,currQty:qty,minQty:min});
-    dbSaveWeekly(month,currentWeek,wd);
-  } else {
-    const newWd={itemName:newName,unit,prevQty:0,inQty:0,currQty:qty,minQty:min,category:cat};
-    weeklyData[weekKey].push(newWd);
-    dbSaveWeekly(month,currentWeek,newWd);
-  }
-  // DB 마스터 업데이트
-  dbSaveWeeklyItem(cat,{name:newName,unit,minQty:min});
-  closeModal('edit-weekly-modal');
-  renderInv();
-  showToast('✅ 수정됨',`${newName} 품목이 수정됐습니다`,'grn');
+  showConfirm(`${newName} 품목을 수정하시겠습니까?`, ()=>{
+    const items=weeklyItems[cat]||[];
+    const mi=items.find(i=>i.name===oldName);
+    if(mi){Object.assign(mi,{name:newName,unit,minQty:min});}
+    if(newName!==oldName){
+      Object.keys(weeklyData).forEach(key=>{
+        const w=weeklyData[key].find(w=>w.itemName===oldName&&w.category===cat);
+        if(w) w.itemName=newName;
+      });
+    }
+    const weekKey=getWeekKey(month,currentWeek);
+    if(!weeklyData[weekKey]) weeklyData[weekKey]=[];
+    const wd=weeklyData[weekKey].find(w=>w.itemName===newName&&w.category===cat);
+    if(wd){
+      Object.assign(wd,{unit,currQty:qty,minQty:min});
+      dbSaveWeekly(month,currentWeek,wd);
+    } else {
+      const newWd={itemName:newName,unit,prevQty:0,inQty:0,currQty:qty,minQty:min,category:cat};
+      weeklyData[weekKey].push(newWd);
+      dbSaveWeekly(month,currentWeek,newWd);
+    }
+    dbSaveWeeklyItem(cat,{name:newName,unit,minQty:min});
+    closeModal('edit-weekly-modal');
+    renderInv();
+    showToast('✅ 수정됨',`${newName} 품목이 수정됐습니다`,'grn');
+  },{icon:'✏️',title:'수정 확인',btnText:'수정 저장',btnColor:'#0f1f3d'});
 }
 
 function deleteWeeklyItem(name){
@@ -2666,7 +2705,7 @@ function renderLinenInv(){
         <button class="btn-i" onclick="quickUse('${month}','${item.id}')">-1</button>
         <button class="btn-i" onclick="quickAdd('${month}','${item.id}')" style="color:#3B6D11;border-color:#9FE1CB">+1</button>
         <button class="btn-i" onclick="openInvModal('${month}','${item.id}')"><i class="ti ti-edit"></i></button>
-        <button class="btn-i d" onclick="deleteInvItem('${month}','${item.id}')"><i class="ti ti-trash"></i></button>
+        <button class="btn-i d" onclick="showConfirm('${item.name} 품목을 삭제하시겠습니까?',()=>deleteInvItem('${month}','${item.id}'),{icon:'📦',title:'재고 삭제',btnText:'삭제',btnColor:'#A32D2D'})"><i class="ti ti-trash"></i></button>
       </div></td>
     </tr>`;
   }).join('');
