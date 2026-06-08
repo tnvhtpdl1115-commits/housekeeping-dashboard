@@ -1655,7 +1655,6 @@ function addPur(){
   renderPur();renderOverview();closeModal('pur-modal');
 }
 
-// 발주 날짜 기반으로 해당 주차 재고 업데이트
 function autoUpdateInventory(p, dateStr){
   const d=new Date(dateStr);
   const month=mkKey(d.getFullYear(),d.getMonth()+1);
@@ -1663,31 +1662,44 @@ function autoUpdateInventory(p, dateStr){
   const weekKey=getWeekKey(month,week);
   const cat=p.category||'consumable';
   if(cat==='linen'){
-    // 린넨은 월별 재고 업데이트
     if(!invData[month]) invData[month]=[];
     const invItem=invData[month].find(i=>i.name===p.item&&i.category==='linen');
     if(invItem){
       invItem.qty+=p.qty;
       dbUpdateInvQty(month,invItem.dbId||invItem.id,invItem.qty);
       showToast(`📦 린넨 재고 업데이트`,`${p.item} ${p.qty}개 입고 → ${invItem.qty}개`,'grn');
+    } else {
+      const newInvItem={id:invIdSeq++,name:p.item,qty:p.qty,unit:'개',min:0,price:p.price,category:'linen'};
+      invData[month].push(newInvItem);
+      dbSaveInvItem(month,newInvItem);
+      showToast(`📦 린넨 재고 신규 등록`,`${p.item} ${p.qty}개`,'grn');
     }
   } else {
-    // 소모품/비품은 주간 재고 업데이트
+    // 품목 마스터에 없으면 추가
+    if(!weeklyItems[cat]) weeklyItems[cat]=[];
+    const masterItem=weeklyItems[cat].find(i=>i.name===p.item);
+    if(!masterItem){
+      const newMaster={name:p.item,unit:'개',minQty:0};
+      weeklyItems[cat].push(newMaster);
+      dbSaveWeeklyItem(cat,newMaster);
+    }
+    // 주간 재고 업데이트
     if(!weeklyData[weekKey]) weeklyData[weekKey]=[];
     const wItem=weeklyData[weekKey].find(w=>w.itemName===p.item&&w.category===cat);
     if(wItem){
       wItem.inQty=(wItem.inQty||0)+p.qty;
       wItem.currQty=(wItem.currQty||0)+p.qty;
       dbSaveWeekly(month,week,wItem);
-      showToast(`📦 재고 자동 업데이트`,`${p.item} ${p.qty}개 ${month}월 ${week}주차 반영`,'grn');
+      showToast(`📦 재고 자동 업데이트`,`${p.item} ${p.qty}개 → ${month}월 ${week}주차 반영`,'grn');
     } else {
-      const masterItem=(weeklyItems[cat]||[]).find(i=>i.name===p.item);
-      const newWItem={itemName:p.item,unit:masterItem?.unit||'개',prevQty:0,inQty:p.qty,currQty:p.qty,minQty:masterItem?.minQty||0,category:cat};
+      const mi=weeklyItems[cat].find(i=>i.name===p.item);
+      const newWItem={itemName:p.item,unit:mi?.unit||'개',prevQty:0,inQty:p.qty,currQty:p.qty,minQty:mi?.minQty||0,category:cat};
       weeklyData[weekKey].push(newWItem);
       dbSaveWeekly(month,week,newWItem);
-      showToast(`📦 재고 자동 등록`,`${p.item} ${p.qty}개 ${month}월 ${week}주차 신규 등록`,'grn');
+      showToast(`📦 재고 자동 등록`,`${p.item} ${p.qty}개 → ${month}월 ${week}주차 신규 등록`,'grn');
     }
   }
+  if(document.getElementById('tab-inventory').classList.contains('on')) renderInv();
 }
 
 function recvPur(month,id){
