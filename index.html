@@ -1990,9 +1990,10 @@ function askDel(kind, sec, id){
 }
 function confirmDel(){
   if(confirmCallback){
-    confirmCallback();
+    const cb=confirmCallback;
     confirmCallback=null;
     closeModal('del-modal');
+    cb();
     return;
   }
   if(!delTarget)return;
@@ -3065,6 +3066,13 @@ resolveIss = async function(id){
 
 const _origConfirmDel = confirmDel;
 confirmDel = async function(){
+  if(confirmCallback){
+    const cb=confirmCallback;
+    confirmCallback=null;
+    closeModal('del-modal');
+    await cb();
+    return;
+  }
   if(!delTarget)return;
   if(delTarget.kind==='room'){
     if(delTarget.sec==='seoul'){seoulRooms=seoulRooms.filter(r=>r.no!==delTarget.id);await dbDeleteRoom(delTarget.id);}
