@@ -15,16 +15,16 @@
 body{font-family:'Noto Sans KR',sans-serif;background:#f0ede8;min-height:100vh;color:#1a1a18;display:flex}
 
 /* ── 사이드바 ── */
-.sidebar{width:200px;min-height:100vh;background:#1a1a18;display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:100;transition:width .2s}
-.sidebar-logo{padding:20px 16px 16px;border-bottom:1px solid rgba(255,255,255,0.08)}
+.sidebar{width:200px;min-height:100vh;background:#0f1f3d;display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:100;transition:width .2s}
+.sidebar-logo{padding:20px 16px 16px;border-bottom:1px solid rgba(255,255,255,0.08);background:#0a1628}
 .sidebar-logo h1{font-size:14px;font-weight:700;color:#fff;line-height:1.4}
 .sidebar-logo p{font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px}
 .sidebar-nav{flex:1;padding:8px 0;overflow-y:auto}
 .nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;color:rgba(255,255,255,0.6);cursor:pointer;font-size:13px;font-weight:400;transition:all .15s;border-left:3px solid transparent;user-select:none}
 .nav-item:hover{background:rgba(255,255,255,0.06);color:#fff}
-.nav-item.active{background:rgba(255,255,255,0.1);color:#fff;font-weight:600;border-left-color:#fff}
+.nav-item.active{background:rgba(255,255,255,0.12);color:#fff;font-weight:600;border-left-color:#C9A84C}
 .nav-item i{font-size:17px;flex-shrink:0}
-.sidebar-bottom{padding:12px 16px;border-top:1px solid rgba(255,255,255,0.08)}
+.sidebar-bottom{padding:12px 16px;border-top:1px solid rgba(255,255,255,0.08);background:#0a1628}
 .sidebar-user{font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sidebar-logout{display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(255,255,255,0.5);cursor:pointer;padding:6px 0;background:none;border:none;font-family:'Noto Sans KR',sans-serif;width:100%}
 .sidebar-logout:hover{color:#fff}
@@ -60,7 +60,7 @@ tr:hover td{background:#fafaf8}
 .toolbar{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
 .toolbar input,.toolbar select{font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.15);background:#fff;color:#1a1a18;font-family:'Noto Sans KR',sans-serif}
 .toolbar input{flex:1;min-width:110px}
-.btn-p{background:#1a1a18;color:#fff;border:none;padding:7px 14px;border-radius:8px;font-size:12px;cursor:pointer;white-space:nowrap;font-family:'Noto Sans KR',sans-serif;display:inline-flex;align-items:center;gap:5px;transition:opacity .15s}
+.btn-p{background:#0f1f3d;color:#fff;border:none;padding:7px 14px;border-radius:8px;font-size:12px;cursor:pointer;white-space:nowrap;font-family:'Noto Sans KR',sans-serif;display:inline-flex;align-items:center;gap:5px;transition:opacity .15s}
 .btn-p:hover{opacity:.85}
 .btn-s{background:transparent;color:#6b6b68;border:1px solid rgba(0,0,0,0.18);padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;font-family:'Noto Sans KR',sans-serif}
 .btn-s:hover{background:#f5f5f4}
@@ -81,7 +81,7 @@ tr:hover td{background:#fafaf8}
 .btn-row{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
 .alert-item{padding:8px 12px;border-radius:8px;font-size:12px;margin-bottom:7px;background:#FCEBEB;color:#A32D2D;border:1px solid #F09595;display:flex;align-items:center;gap:6px}
 .prog-bar{height:8px;background:#eeece9;border-radius:4px;overflow:hidden;margin-top:6px}
-.prog-fill{height:100%;border-radius:4px;background:#639922;transition:width .5s ease}
+.prog-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#0f1f3d,#1a3a6b);transition:width .5s ease}
 .rm-cell{display:inline-flex;flex-direction:column;align-items:center;gap:2px;min-width:56px;padding:6px 4px;border:1px solid rgba(0,0,0,0.1);border-radius:8px;cursor:pointer;background:#fff;transition:all .15s}
 .rm-cell:hover{background:#f5f5f4;transform:translateY(-1px)}
 .tab-sub{display:flex;gap:4px;margin-bottom:10px}
@@ -191,7 +191,7 @@ tr:hover td{background:#fafaf8}
         아이디 저장
       </label>
     </div>
-    <button class="btn-p" onclick="doLogin()" style="width:100%;margin-top:14px;padding:10px;font-size:14px;justify-content:center" id="login-btn">로그인</button>
+    <button onclick="doLogin()" style="width:100%;margin-top:14px;padding:10px;font-size:14px;background:linear-gradient(135deg,#0f1f3d,#1a3a6b);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;font-weight:600;letter-spacing:0.5px" id="login-btn">로그인</button>
     <div style="margin-top:12px;font-size:12px;color:#9b9b97">계정이 없으면 관리자에게 문의하세요</div>
   </div>
 </div>
@@ -1727,7 +1727,7 @@ function renderCost(){
   if(titleEl) titleEl.textContent=`${month.replace('-','년 ')}월 ${catLabel} 비용 내역`;
   const el=document.getElementById('cost-metrics');
   if(el) el.innerHTML=`
-    <div style="background:#1a1a18;border-radius:14px;padding:20px 24px;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between">
+    <div style="background:linear-gradient(135deg,#B8860B,#DAA520,#C9A84C);border-radius:14px;padding:20px 24px;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between">
       <div>
         <div style="font-size:11px;color:rgba(255,255,255,0.45);margin-bottom:6px">${month.replace('-','년 ')}월 전체 비용</div>
         <div style="font-size:32px;font-weight:700;color:#fff;letter-spacing:-0.5px">${fmt(total)}</div>
@@ -2527,7 +2527,7 @@ function renderAnalysis(){
   const totalWeekUsage=rows.reduce((a,r)=>a+r.weekUsage,0);
   const totalMonthUsage=rows.reduce((a,r)=>a+r.monthUsage,0);
   document.getElementById('analysis-tfoot').innerHTML=`
-    <tr style="background:#1a1a18;color:#fff;font-weight:600">
+    <tr style="background:#0f1f3d;color:#fff;font-weight:600">
       <td colspan="3" style="color:#fff">합계</td>
       <td></td>
       <td style="text-align:right;color:#fff">${totalWeekUsage.toLocaleString()}</td>
