@@ -2611,20 +2611,6 @@ function saveEditWeeklyItem(){
   renderInv();
   showToast('✅ 수정됨',`${newName} 품목이 수정됐습니다`,'grn');
 }
-  const weekKey=getWeekKey(month,currentWeek);
-  if(!weeklyData[weekKey]) weeklyData[weekKey]=[];
-  const item=weeklyData[weekKey].find(w=>w.itemName===itemName&&w.category===category);
-  if(item){
-    item.currQty=Math.max(0,item.currQty+delta);
-    dbSaveWeekly(month,currentWeek,item);
-  } else {
-    const masterItem=(weeklyItems[category]||[]).find(i=>i.name===itemName);
-    const newObj={itemName,unit:masterItem?.unit||'개',prevQty:0,inQty:0,currQty:Math.max(0,delta),minQty:masterItem?.minQty||0,category};
-    weeklyData[weekKey].push(newObj);
-    dbSaveWeekly(month,currentWeek,newObj);
-  }
-  renderInv();
-}
 
 function deleteWeeklyItem(name){
   const cat=currentInvCategory;
