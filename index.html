@@ -2535,6 +2535,30 @@ function saveInvItemReg(){
   renderInv();
 }
 
+function weeklyQtyChange(month, itemName, delta, category){
+  const weekKey=getWeekKey(month,currentWeek);
+  if(!weeklyData[weekKey]) weeklyData[weekKey]=[];
+  const item=weeklyData[weekKey].find(w=>w.itemName===itemName&&w.category===category);
+  if(item){
+    item.currQty=Math.max(0,item.currQty+delta);
+    dbSaveWeekly(month,currentWeek,item);
+  } else {
+    const masterItem=(weeklyItems[category]||[]).find(i=>i.name===itemName);
+    const newObj={
+      itemName,
+      unit:masterItem?masterItem.unit:'개',
+      prevQty:0,
+      inQty:0,
+      currQty:Math.max(0,delta),
+      minQty:masterItem?masterItem.minQty:0,
+      category:category
+    };
+    weeklyData[weekKey].push(newObj);
+    dbSaveWeekly(month,currentWeek,newObj);
+  }
+  renderInv();
+}
+
 function openEditWeeklyItem(month, name, cat){
   const weekKey=getWeekKey(month,currentWeek);
   const wd=(weeklyData[weekKey]||[]).find(w=>w.itemName===name&&w.category===cat);
