@@ -275,12 +275,14 @@ tr:hover td{background:#fafaf8}
     <div class="sub-tabs" id="sub-tabs-inventory" style="display:none">
       <button class="sub-tab active" onclick="swSub('inventory','consumable')">소모품</button>
       <button class="sub-tab" onclick="swSub('inventory','equipment')">비품</button>
+      <button class="sub-tab" onclick="swSub('inventory','maintenance')">정비용품</button>
       <button class="sub-tab" onclick="swSub('inventory','linen')">린넨</button>
       <button class="sub-tab" onclick="swSub('inventory','analysis')">소모량 분석</button>
     </div>
     <div class="sub-tabs" id="sub-tabs-purchase" style="display:none">
       <button class="sub-tab active" onclick="swSub('purchase','consumable')">소모품</button>
       <button class="sub-tab" onclick="swSub('purchase','equipment')">비품</button>
+      <button class="sub-tab" onclick="swSub('purchase','maintenance')">정비용품</button>
       <button class="sub-tab" onclick="swSub('purchase','linen')">린넨</button>
     </div>
     <div class="sub-tabs" id="sub-tabs-cost" style="display:none">
@@ -432,6 +434,7 @@ tr:hover td{background:#fafaf8}
         <option value="all">전체</option>
         <option value="consumable">소모품</option>
         <option value="equipment">비품</option>
+        <option value="maintenance">정비용품</option>
       </select>
       <div style="flex:1"></div>
       <button class="btn-s" onclick="exportAnalysis()"><i class="ti ti-download"></i> 내보내기</button>
@@ -771,6 +774,7 @@ tr:hover td{background:#fafaf8}
       <select id="pur-cat" style="font-size:13px;padding:7px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1a1a18;font-family:'Noto Sans KR',sans-serif">
         <option value="consumable">소모품</option>
         <option value="equipment">비품</option>
+        <option value="maintenance">정비용품</option>
         <option value="linen">린넨</option>
       </select>
     </div>
@@ -830,8 +834,8 @@ const MAIN_LABELS = {overview:'개요',rooms:'객실',issues:'특이사항',cp:'
 const SUB_MAP = {
   rooms:     {default:'seoul',  subs:['seoul','dorm']},
   issues:    {default:'facility', subs:['facility','clean','item']},
-  inventory: {default:'consumable', subs:['consumable','equipment','linen','analysis']},
-  purchase:  {default:'consumable', subs:['consumable','equipment','linen']},
+  inventory: {default:'consumable', subs:['consumable','equipment','maintenance','linen','analysis']},
+  purchase:  {default:'consumable', subs:['consumable','equipment','maintenance','linen']},
   cost:      {default:'room', subs:['room','linen','uniform','purchase','etc']},
 };
 let currentMain = 'overview';
@@ -1642,7 +1646,7 @@ function addPur(){
     const newObj={id:purIdSeq++,item,qty,price,date,status,category:cat};
     purData[month].push(newObj);
     dbSavePurchase(month,newObj);
-    const catName={consumable:'소모품',equipment:'비품',linen:'린넨'}[cat]||'구매';
+    const catName={consumable:'소모품',equipment:'비품',maintenance:'정비용품',linen:'린넨'}[cat]||'구매';
     const costObj={id:costIdSeq++,label:item+' 발주',type:'구매',subType:catName,amount:qty*price,date};
     if(!costData[month]) costData[month]=[];
     costData[month].push(costObj);
@@ -1748,7 +1752,7 @@ function buildCostMonthSel(forceReset=false){
 
 function getCostMonth(){return document.getElementById('cost-month-sel')?.value||thisMonthKey();}
 
-const COST_CAT_LABEL={room:'객실',linen:'린넨',uniform:'유니폼',purchase:'구매',etc:'기타'};
+const COST_CAT_LABEL={room:'객실',linen:'린넨',uniform:'유니폼',purchase:'구매',etc:'기타',maintenance:'정비용품'};
 
 // ── 예산 데이터 ──
 let budgetData = {room:0, linen:0, uniform:0, purchase:0, etc:0};
@@ -2249,8 +2253,51 @@ async function dbSaveCp(month,obj){
 async function dbDeleteCp(id){await supa.from('cp_records').delete().eq('id',id);}
 
 // ── 주간 재고 시스템 ──
-let weeklyData = {}; // { 'YYYY-MM-W1': [{itemName,unit,prevQty,inQty,currQty,minQty,category}] }
-let weeklyItems = { consumable:[], equipment:[] }; // 품목 마스터
+let weeklyData = {};
+let weeklyItems = {
+  consumable: [
+    {name:'녹차',unit:'개',minQty:0},
+    {name:'샴푸',unit:'개',minQty:0},
+    {name:'바디워시',unit:'개',minQty:0},
+    {name:'컨디셔너',unit:'개',minQty:0},
+    {name:'비누',unit:'개',minQty:0},
+    {name:'베니티킷',unit:'개',minQty:0},
+    {name:'각티슈리필',unit:'개',minQty:0},
+    {name:'롤휴지',unit:'개',minQty:0},
+    {name:'쓰레기봉투(대)',unit:'장',minQty:0},
+    {name:'쓰레기봉투(소)',unit:'장',minQty:0},
+    {name:'생수',unit:'개',minQty:0},
+    {name:'커피',unit:'개',minQty:0},
+    {name:'메모지',unit:'개',minQty:0},
+    {name:'연필',unit:'개',minQty:0},
+    {name:'건전지(AA)',unit:'개',minQty:0},
+    {name:'건전지(AAA)',unit:'개',minQty:0},
+  ],
+  equipment: [
+    {name:'유리컵',unit:'개',minQty:0},
+    {name:'머그컵',unit:'개',minQty:0},
+    {name:'드라이어포켓',unit:'개',minQty:0},
+    {name:'커피포트',unit:'개',minQty:0},
+    {name:'헤어드라이기',unit:'개',minQty:0},
+  ],
+  maintenance: [
+    {name:'필러폼장갑',unit:'개',minQty:0},
+    {name:'고무장갑',unit:'개',minQty:0},
+    {name:'3M장갑',unit:'개',minQty:0},
+    {name:'칫솔세트',unit:'개',minQty:0},
+    {name:'손걸레(정)',unit:'장',minQty:0},
+    {name:'손걸레(녹)',unit:'장',minQty:0},
+    {name:'손걸레(적)',unit:'장',minQty:0},
+    {name:'테이프크리너본체',unit:'개',minQty:0},
+    {name:'테이프크리너리필',unit:'개',minQty:0},
+    {name:'수세미',unit:'개',minQty:0},
+    {name:'공팡이제거제',unit:'개',minQty:0},
+    {name:'청소기필터',unit:'개',minQty:0},
+    {name:'청소기바퀴',unit:'개',minQty:0},
+    {name:'청소기노즐',unit:'개',minQty:0},
+    {name:'앤드커프',unit:'개',minQty:0},
+  ],
+};
 
 let currentWeek = 1;
 
@@ -2557,6 +2604,7 @@ function renderAnalysis(){
   let items=[];
   if(cat==='all'||cat==='consumable') items=[...items,...(weeklyItems.consumable||[]).map(i=>({...i,category:'consumable'}))];
   if(cat==='all'||cat==='equipment') items=[...items,...(weeklyItems.equipment||[]).map(i=>({...i,category:'equipment'}))];
+  if(cat==='all'||cat==='maintenance') items=[...items,...(weeklyItems.maintenance||[]).map(i=>({...i,category:'maintenance'}))];
 
   if(!items.length){
     document.getElementById('analysis-tbody').innerHTML=`<tr><td colspan="13" class="empty">소모품/비품 품목을 먼저 등록해주세요</td></tr>`;
@@ -2679,6 +2727,7 @@ function exportAnalysis(){
   let items=[];
   if(cat==='all'||cat==='consumable') items=[...items,...(weeklyItems.consumable||[]).map(i=>({...i,category:'consumable'}))];
   if(cat==='all'||cat==='equipment') items=[...items,...(weeklyItems.equipment||[]).map(i=>({...i,category:'equipment'}))];
+  if(cat==='all'||cat==='maintenance') items=[...items,...(weeklyItems.maintenance||[]).map(i=>({...i,category:'maintenance'}))];
   const rows=[['거래처','품목','EA단가','일간','주간','월간','연간','1실당주간','월간단가','연간단가','비율']];
   let totalYear=0;
   const data=items.map(item=>{
@@ -2727,13 +2776,14 @@ async function dbLoadWeekly(){
       weeklyData[key].push({itemName:r.item_name,unit:r.unit,prevQty:r.prev_qty,inQty:r.in_qty,currQty:r.curr_qty,minQty:r.min_qty,category:r.category});
     });
   }
-  // 품목 마스터 로드
+  // 품목 마스터 로드 (DB에 저장된 추가 품목만 merge)
   const {data:mData}=await supa.from('inv_data').select('*').eq('month','MASTER');
   if(mData){
-    weeklyItems={consumable:[],equipment:[]};
     mData.forEach(r=>{
       const cat=r.category||'consumable';
-      if(cat!=='linen'&&weeklyItems[cat]){
+      if(!weeklyItems[cat]) weeklyItems[cat]=[];
+      // 이미 있는 품목은 스킵 (기본 품목 중복 방지)
+      if(!weeklyItems[cat].find(i=>i.name===r.name)){
         weeklyItems[cat].push({name:r.name,unit:r.unit||'개',minQty:r.min_qty||0});
       }
     });
