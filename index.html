@@ -1567,15 +1567,32 @@ function renderPur(){
   const allItems=purData[month]||[];
   const filtered=allItems.filter(p=>!p.category||p.category===currentPurCategory);
   const pending=filtered.filter(p=>p.status==='pending').length;
-  const catName={consumable:'소모품',equipment:'비품',linen:'린넨'}[currentPurCategory]||'';
+  const catName={consumable:'소모품',equipment:'비품',linen:'린넨',maintenance:'정비용품'}[currentPurCategory]||'';
   const titleEl=document.getElementById('pur-title');
   if(titleEl) titleEl.textContent=`${month.replace('-','년 ')}월 ${catName} 발주 목록`;
+
+  // 전체 구매 총비용 (모든 소분류 합산)
+  const totalAll=(purData[month]||[]).reduce((a,p)=>a+p.qty*p.price,0);
+  const totalCat=filtered.reduce((a,p)=>a+p.qty*p.price,0);
+
   const el=document.getElementById('pur-metrics');
   if(el) el.innerHTML=`
-    <div class="met"><div class="met-l">전체 발주</div><div class="met-v">${filtered.length}</div></div>
-    <div class="met"><div class="met-l">발주중</div><div class="met-v amb">${pending}</div></div>
-    <div class="met"><div class="met-l">입고완료</div><div class="met-v grn">${filtered.length-pending}</div></div>
-    <div class="met"><div class="met-l">발주 총액</div><div class="met-v">${fmt(filtered.reduce((a,p)=>a+p.qty*p.price,0))}</div></div>`;
+    <div style="background:linear-gradient(135deg,#B8860B,#DAA520,#C9A84C);border-radius:14px;padding:16px 20px;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.7);margin-bottom:4px">${month.replace('-','년 ')}월 구매 총비용 (전체)</div>
+        <div style="font-size:28px;font-weight:700;color:#fff">${fmt(totalAll)}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:11px;color:rgba(255,255,255,0.7);margin-bottom:4px">${catName} 합계</div>
+        <div style="font-size:18px;font-weight:600;color:#fff">${fmt(totalCat)}</div>
+      </div>
+    </div>
+    <div class="metrics" style="margin-bottom:1rem">
+      <div class="met"><div class="met-l">전체 발주</div><div class="met-v">${filtered.length}</div></div>
+      <div class="met"><div class="met-l">발주중</div><div class="met-v amb">${pending}</div></div>
+      <div class="met"><div class="met-l">입고완료</div><div class="met-v grn">${filtered.length-pending}</div></div>
+    </div>`;
+
   const tbody=document.getElementById('pur-tbody');
   if(!tbody)return;
   if(!filtered.length){tbody.innerHTML=`<tr><td colspan="8" class="empty">발주 내역이 없습니다</td></tr>`;return;}
@@ -1585,7 +1602,7 @@ function renderPur(){
     <td style="color:#6b6b68;font-size:11px">${p.date}</td>
     <td><span class="badge" style="${p.status==='received'?'background:#EAF3DE;color:#3B6D11':'background:#FAEEDA;color:#854F0B'}">${p.status==='received'?'입고완료':'발주중'}</span></td>
     <td><div style="display:flex;gap:3px">
-      ${p.status==='pending'?`<button class="btn-i" onclick="showConfirm('${p.item} 입고 처리하시겠습니까?\n(재고에 자동 반영됩니다)',()=>recvPur('${month}','${p.id}'),{icon:'📬',title:'입고 확인',btnText:'입고 처리',btnColor:'#3B6D11'})" style="color:#3B6D11;border-color:#9FE1CB">입고</button>`:''}
+      ${p.status==='pending'?`<button class="btn-i" onclick="showConfirm('${p.item} 입고 처리하시겠습니까?\\n(재고에 자동 반영됩니다)',()=>recvPur('${month}','${p.id}'),{icon:'📬',title:'입고 확인',btnText:'입고 처리',btnColor:'#3B6D11'})" style="color:#3B6D11;border-color:#9FE1CB">입고</button>`:''}
       <button class="btn-i" onclick="editPur('${month}','${p.id}')"><i class="ti ti-edit"></i></button>
       <button class="btn-i d" onclick="showConfirm('${p.item} 발주 내역을 삭제하시겠습니까?',()=>deletePur('${month}','${p.id}'),{icon:'🛒',title:'발주 삭제',btnText:'삭제',btnColor:'#A32D2D'})"><i class="ti ti-trash"></i></button>
     </div></td>
@@ -1684,15 +1701,17 @@ function addPur(){
       if(!wasReceived&&status==='received') autoUpdateInventory(p,date);
     }
   } else {
-    // 신규 등록
+    // 신규 등록 - 비용은 발주일 기준 월에 저장
     const newObj={id:purIdSeq++,item,qty,price,date,status,category:cat};
     purData[month].push(newObj);
     dbSavePurchase(month,newObj);
     const catName={consumable:'소모품',equipment:'비품',maintenance:'정비용품',linen:'린넨'}[cat]||'구매';
-    const costObj={id:costIdSeq++,label:item+' 발주',type:'구매',subType:catName,amount:qty*price,date};
-    if(!costData[month]) costData[month]=[];
-    costData[month].push(costObj);
-    dbSaveCost(month,costObj);
+    // 발주일 기준으로 해당 월 비용에 저장 (날짜가 다른 달이면 그 달 비용으로)
+    const costMonth=date?date.substring(0,7):month;
+    const costObj={id:costIdSeq++,label:item+' 발주',type:'구매',subType:catName,amount:qty*price,date,purId:newObj.id};
+    if(!costData[costMonth]) costData[costMonth]=[];
+    costData[costMonth].push(costObj);
+    dbSaveCost(costMonth,costObj);
     // 입고완료로 등록하면 바로 재고 업데이트
     if(status==='received') autoUpdateInventory(newObj,date);
   }
@@ -1769,10 +1788,23 @@ function recvPur(month,id){
 
 function deletePur(month,id){
   const p=(purData[month]||[]).find(x=>x.id==id);
-  if(p&&(p.dbId||p.id)) dbDeletePurchase(p.dbId||p.id);
+  if(p){
+    if(p.dbId||p.id) dbDeletePurchase(p.dbId||p.id);
+    // 연결된 비용도 삭제 (purId로 매핑된 것 또는 label로 찾기)
+    const label=p.item+' 발주';
+    Object.keys(costData).forEach(costMonth=>{
+      const before=costData[costMonth].length;
+      costData[costMonth]=costData[costMonth].filter(c=>{
+        const match=(c.purId&&c.purId==p.id)||(c.label===label&&c.type==='구매'&&c.date===p.date);
+        if(match&&(c.dbId||c.id)) dbDeleteCost(c.dbId||c.id);
+        return !match;
+      });
+    });
+  }
   if(!purData[month])return;
   purData[month]=purData[month].filter(x=>x.id!=id);
   renderPur();
+  if(document.getElementById('tab-cost').classList.contains('on')) renderCost();
 }
 
 function purNewMonth(){
