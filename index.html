@@ -2492,28 +2492,31 @@ function renderInv(){
     const prevMonth=mkKey(prevMonthDate.getFullYear(),prevMonthDate.getMonth()+1);
     for(let w=5;w>=1;w--){
       const k=getWeekKey(prevMonth,w);
-      if(weeklyData[k]&&weeklyData[k].length>0){prevWeekKey=k;break;}
+      if((weeklyData[k]||[]).some(d=>d.currQty!==null&&d.currQty!==undefined)){prevWeekKey=k;break;}
     }
   }
   const items=weeklyItems[currentInvCategory]||[];
   const weekData=weeklyData[weekKey]||[];
-  const prevData=prevWeekKey?weeklyData[prevWeekKey]||[]:[];
+  // 실제 조사된 데이터만 prevData로 사용 (currQty가 null이면 제외)
+  const prevData=prevWeekKey?(weeklyData[prevWeekKey]||[]).filter(w=>w.currQty!==null&&w.currQty!==undefined):[];
   const catName={consumable:'소모품',equipment:'비품',maintenance:'정비용품'}[currentInvCategory]||'';
   const titleEl=document.getElementById('inv-title');
   if(titleEl) titleEl.textContent=`${month.replace('-','년 ')}월 ${currentWeek}주차 ${catName} 재고`;
-  // 구매 입고량 계산 (해당 주차 날짜 범위)
+
+  // 구매 입고량 계산 - DB의 inQty와 중복 안 되게 purData 기반으로만 계산
   const weekStart=new Date(month.split('-')[0],month.split('-')[1]-1,(currentWeek-1)*7+1);
   const weekEnd=new Date(month.split('-')[0],month.split('-')[1]-1,currentWeek*7);
-  const purMonth=month;
-  const purItems=(purData[purMonth]||[]).filter(p=>{
+  const purItems=(purData[month]||[]).filter(p=>{
     if(p.status!=='received') return false;
     const pd=new Date(p.date);
     return pd>=weekStart&&pd<=weekEnd&&(p.category===currentInvCategory);
   });
+
   // 메트릭
   const low=items.filter(item=>{
-    const wd=weekData.find(w=>w.itemName===item.name);
-    return wd&&wd.minQty>0&&wd.currQty<wd.minQty;
+    const wd=weekData.find(w=>w.itemName===item.name&&w.currQty!==null);
+    const minQty=(weeklyItems[currentInvCategory]||[]).find(i=>i.name===item.name)?.minQty||0;
+    return wd&&minQty>0&&wd.currQty<minQty;
   }).length;
   const metricsEl=document.getElementById('inv-metrics');
   if(metricsEl) metricsEl.innerHTML=`
@@ -2526,20 +2529,23 @@ function renderInv(){
   tbody.innerHTML=items.map(item=>{
     const wd=weekData.find(w=>w.itemName===item.name);
     const pd=prevData.find(w=>w.itemName===item.name);
+    // 전주 재고: 이전 주 실사값 (없으면 0)
     const prevQty=pd?pd.currQty:0;
-    const inQty=purItems.filter(p=>p.item===item.name).reduce((a,p)=>a+p.qty,0)
-      + (wd?.inQty||0); // DB에 저장된 입고량도 포함
-    // currQty가 null이면 입고만 기록된 미조사 상태
-    const surveyed=!!(wd && wd.currQty!==null && wd.currQty!==undefined);
+    // 입고량: 구매탭 입고 데이터 기준 (DB inQty와 중복 안 되게 purItems만 사용)
+    const inQty=purItems.filter(p=>p.item===item.name).reduce((a,p)=>a+p.qty,0);
+    // 미조사 여부: wd가 없거나 currQty가 null
+    const surveyed=!!(wd&&wd.currQty!==null&&wd.currQty!==undefined);
     const currQty=surveyed?wd.currQty:(prevQty+inQty);
-    const usage=surveyed?Math.max(0,prevQty+inQty-wd.currQty):0;
+    // 사용량 = 전주재고 + 입고 - 이번주재고 (플러스면 증가, 마이너스면 사용)
+    const usageDiff=surveyed?(prevQty+inQty-wd.currQty):0;
     const minQty=(weeklyItems[currentInvCategory]||[]).find(i=>i.name===item.name)?.minQty||item.minQty||0;
     const low2=minQty>0&&currQty<minQty;
     const warn=minQty>0&&!low2&&currQty<minQty*2;
-    const ok=minQty>0&&currQty>=minQty*2;
     const statusStyle=low2?'background:#FCEBEB;color:#A32D2D':warn?'background:#FAEEDA;color:#854F0B':'background:#EAF3DE;color:#3B6D11';
     const statusLabel=low2?'부족':warn?'주의':'충분';
-    const diffQty = surveyed ? currQty - prevQty - inQty : 0;
+    // 표시: 사용량이 양수면 사용(-), 음수면 증가(+)
+    const usageDisplay=usageDiff>0?`-${usageDiff.toLocaleString()}`:usageDiff<0?`+${Math.abs(usageDiff).toLocaleString()}`:'-';
+    const usageColor=usageDiff>0?'#A32D2D':usageDiff<0?'#3B6D11':'#d0cdc8';
     return `<tr>
       <td><strong style="font-size:13px">${item.name}</strong></td>
       <td style="color:#6b6b68;font-size:11px;text-align:center">${item.unit}</td>
@@ -2555,11 +2561,9 @@ function renderInv(){
         <div style="font-size:26px;font-weight:800;color:${surveyed?'#0f1f3d':'#c0bdb8'};line-height:1">${currQty.toLocaleString()}</div>
       </td>
       <td style="text-align:right;padding-right:12px">
-        ${surveyed
-          ? diffQty!==0
-            ? `<div style="font-size:18px;font-weight:700;color:${diffQty<0?'#A32D2D':'#3B6D11'};line-height:1">${diffQty>0?'+':''}${diffQty.toLocaleString()}</div>`
-            : `<div style="font-size:16px;color:#d0cdc8">-</div>`
-          : `<div style="font-size:16px;color:#d0cdc8">-</div>`}
+        ${surveyed&&usageDiff!==0
+          ?`<div style="font-size:18px;font-weight:700;color:${usageColor};line-height:1">${usageDisplay}</div>`
+          :`<div style="font-size:16px;color:#d0cdc8">-</div>`}
       </td>
       <td style="text-align:center">
         ${minQty>0
@@ -2591,7 +2595,7 @@ function openWeeklyCheckModal(){
     const prevMonth=mkKey(new Date(y,m-2,1).getFullYear(),new Date(y,m-2,1).getMonth()+1);
     for(let w=5;w>=1;w--){
       const k=getWeekKey(prevMonth,w);
-      if(weeklyData[k]&&weeklyData[k].length>0){prevWeekKey=k;break;}
+      if((weeklyData[k]||[]).some(d=>d.currQty!==null&&d.currQty!==undefined)){prevWeekKey=k;break;}
     }
   }
   const items=weeklyItems[currentInvCategory]||[];
@@ -2630,7 +2634,7 @@ async function saveWeeklyCheck(){
     const prevMonth=mkKey(new Date(y,m-2,1).getFullYear(),new Date(y,m-2,1).getMonth()+1);
     for(let w=5;w>=1;w--){
       const k=getWeekKey(prevMonth,w);
-      if(weeklyData[k]&&weeklyData[k].length>0){prevWeekKey=k;break;}
+      if((weeklyData[k]||[]).some(d=>d.currQty!==null&&d.currQty!==undefined)){prevWeekKey=k;break;}
     }
   }
   const items=weeklyItems[currentInvCategory]||[];
