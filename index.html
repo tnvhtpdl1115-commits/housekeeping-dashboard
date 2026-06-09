@@ -800,9 +800,17 @@ tr:hover td{background:#fafaf8}
     <div class="fg"><label>발주일 *</label><input type="date" id="pur-date" style="font-size:13px;padding:7px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1a1a18;font-family:'Noto Sans KR',sans-serif;width:100%"></div>
   </div>
   <div class="fr">
-    <div class="fg"><label>품목명 *</label><input type="text" id="pur-item" placeholder="품목명 직접 입력"></div>
+    <div class="fg" style="flex:2"><label>품목명 *</label>
+      <div style="display:flex;gap:4px">
+        <input type="text" id="pur-item" placeholder="직접 입력 또는 아래서 선택" style="flex:1" oninput="if(document.getElementById('pur-item-list').style.display!=='none')updatePurItemList()">
+        <button type="button" class="btn-s" onclick="togglePurItemList()" style="white-space:nowrap;font-size:11px">📦 재고 선택</button>
+      </div>
+      <div id="pur-item-list" style="display:none;margin-top:4px;border:1px solid rgba(0,0,0,0.15);border-radius:8px;max-height:180px;overflow-y:auto;background:#fff;box-shadow:0 4px 12px rgba(0,0,0,0.1)">
+        <div id="pur-item-list-inner"></div>
+      </div>
+    </div>
     <div class="fg"><label>분류</label>
-      <select id="pur-cat" style="font-size:13px;padding:7px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1a1a18;font-family:'Noto Sans KR',sans-serif">
+      <select id="pur-cat" onchange="updatePurItemList()" style="font-size:13px;padding:7px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1a1a18;font-family:'Noto Sans KR',sans-serif">
         <option value="consumable">소모품</option>
         <option value="equipment">비품</option>
         <option value="maintenance">정비용품</option>
@@ -1463,46 +1471,6 @@ function buildInvMonthSel(forceReset=false){
 
 function getInvMonth(){return document.getElementById('inv-month-sel')?.value||thisMonthKey();}
 
-function renderInv(){
-  buildInvMonthSel();
-  const month=getInvMonth();
-  const allItems=invData[month]||[];
-  const catFilter=currentInvCategory;
-  const catName={consumable:'소모품',equipment:'비품',linen:'린넨'}[catFilter]||catFilter;
-  const filtered=allItems.filter(i=>!i.category||i.category===catFilter);
-  const low=filtered.filter(i=>i.qty<i.min).length;
-  const el=document.getElementById('inv-metrics');
-  if(el) el.innerHTML=`
-    <div class="met"><div class="met-l">등록 품목</div><div class="met-v">${filtered.length}</div></div>
-    <div class="met"><div class="met-l">재고 부족</div><div class="met-v red">${low}</div></div>
-    <div class="met"><div class="met-l">충분</div><div class="met-v grn">${filtered.length-low}</div></div>`;
-  const tbody=document.getElementById('inv-tbody');
-  if(!tbody)return;
-  const titleEl=document.getElementById('inv-title');
-  if(titleEl) titleEl.textContent=`${month.replace('-','년 ')}월 ${catName} 재고 현황`;
-  if(!filtered.length){tbody.innerHTML=`<tr><td colspan="7" class="empty">등록된 품목이 없습니다</td></tr>`;return;}
-  tbody.innerHTML=filtered.map(item=>{
-    const low2=item.qty<item.min;
-    const warn=!low2&&item.min>0&&item.qty<item.min*2;
-    const statusStyle=low2?'background:#FCEBEB;color:#A32D2D':warn?'background:#FAEEDA;color:#854F0B':'background:#EAF3DE;color:#3B6D11';
-    const statusLabel=low2?'부족':warn?'주의':'충분';
-    return `<tr>
-      <td><strong>${item.name}</strong></td>
-      <td>${item.qty.toLocaleString()}</td>
-      <td style="color:#6b6b68">${item.unit}</td>
-      <td>${item.min.toLocaleString()}</td>
-      <td style="color:#6b6b68">${item.price?fmt(item.price):'-'}</td>
-      <td><span class="badge" style="${statusStyle}">${statusLabel}</span></td>
-      <td><div style="display:flex;gap:3px">
-        <button class="btn-i" onclick="quickUse('${month}','${item.id}')">-1</button>
-        <button class="btn-i" onclick="quickAdd('${month}','${item.id}')" style="color:#3B6D11;border-color:#9FE1CB">+1</button>
-        <button class="btn-i" onclick="openInvModal('${month}','${item.id}')"><i class="ti ti-edit"></i></button>
-        <button class="btn-i d" onclick="showConfirm('${item.name} 품목을 삭제하시겠습니까?',()=>deleteInvItem('${month}','${item.id}'),{icon:'📦',title:'재고 삭제',btnText:'삭제',btnColor:'#A32D2D'})"><i class="ti ti-trash"></i></button>
-      </div></td>
-    </tr>`;
-  }).join('');
-}
-
 function openInvModal(month=null,id=null){
   const m=month||getInvMonth();
   document.getElementById('inv-modal-title').textContent=id?'품목 수정':'품목 등록';
@@ -1624,6 +1592,47 @@ function renderPur(){
   </tr>`).join('');
 }
 
+function togglePurItemList(){
+  const list=document.getElementById('pur-item-list');
+  if(list.style.display==='none'){
+    updatePurItemList();
+    list.style.display='block';
+  } else {
+    list.style.display='none';
+  }
+}
+
+function updatePurItemList(){
+  const cat=document.getElementById('pur-cat').value;
+  const inner=document.getElementById('pur-item-list-inner');
+  if(!inner) return;
+  let items=[];
+  if(cat==='linen'){
+    // 린넨은 invData에서 가져옴
+    Object.values(invData).flat().filter(i=>i.category==='linen').forEach(i=>{
+      if(!items.includes(i.name)) items.push(i.name);
+    });
+  } else {
+    items=(weeklyItems[cat]||[]).map(i=>i.name);
+  }
+  if(!items.length){
+    inner.innerHTML=`<div style="padding:10px;font-size:12px;color:#9b9b97;text-align:center">등록된 품목 없음</div>`;
+    return;
+  }
+  // 현재 입력된 텍스트로 필터링
+  const q=(document.getElementById('pur-item').value||'').toLowerCase();
+  const filtered=q?items.filter(n=>n.toLowerCase().includes(q)):items;
+  inner.innerHTML=filtered.map(name=>`
+    <div onclick="selectPurItem('${name}')" style="padding:9px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid rgba(0,0,0,0.06);transition:background .1s"
+      onmouseover="this.style.background='#f5f5f4'" onmouseout="this.style.background=''">${name}</div>
+  `).join('');
+}
+
+function selectPurItem(name){
+  document.getElementById('pur-item').value=name;
+  document.getElementById('pur-item-list').style.display='none';
+}
+
 function openPurModal(){
   document.getElementById('pur-modal-title').textContent='발주 등록';
   document.getElementById('pur-edit-id').value='';
@@ -1634,6 +1643,7 @@ function openPurModal(){
   document.getElementById('pur-price').value=0;
   document.getElementById('pur-cat').value=currentPurCategory||'consumable';
   document.getElementById('pur-status').value='pending';
+  document.getElementById('pur-item-list').style.display='none';
   openModal('pur-modal');
 }
 
