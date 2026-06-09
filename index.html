@@ -612,9 +612,11 @@ tr:hover td{background:#fafaf8}
     <div style="flex:1"></div>
     <button class="btn-p" onclick="openCostModal()"><i class="ti ti-plus"></i> 비용 등록</button>
   </div>
-  <!-- 월 전체 비용 + 전월 대비 -->
+
+  <!-- ① 고정 영역: 월 전체비용 + 전월대비 -->
   <div id="cost-metrics"></div>
-  <!-- 도넛차트 + 예산진행률 -->
+
+  <!-- ② 고정 영역: 도넛차트 + 예산진행률 -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
     <div class="card" style="margin-bottom:0">
       <div class="ct">소분류별 비용 비율</div>
@@ -628,18 +630,30 @@ tr:hover td{background:#fafaf8}
       <div id="cost-budget-bars"></div>
     </div>
   </div>
-  <!-- 내역 테이블 -->
-  <div class="card">
-    <div class="ct" id="cost-title">비용 내역</div>
-    <table><thead><tr><th>항목</th><th>분류</th><th>금액</th><th>날짜</th><th></th></tr></thead>
-    <tbody id="cost-tbody"></tbody></table>
-  </div>
-  <!-- 월별 추이 차트 -->
+
+  <!-- ③ 고정 영역: 월별 추이 차트 -->
   <div class="card">
     <div class="ct">월별 비용 추이</div>
     <div style="position:relative;width:100%;height:220px">
       <canvas id="costChart"></canvas>
     </div>
+  </div>
+
+  <!-- 구분선 -->
+  <div style="display:flex;align-items:center;gap:12px;margin:20px 0 16px">
+    <div style="flex:1;height:1px;background:rgba(0,0,0,0.1)"></div>
+    <div style="font-size:12px;font-weight:600;color:#6b6b68;white-space:nowrap;display:flex;align-items:center;gap:6px">
+      <i class="ti ti-list" style="font-size:14px"></i>
+      소분류별 내역
+    </div>
+    <div style="flex:1;height:1px;background:rgba(0,0,0,0.1)"></div>
+  </div>
+
+  <!-- ④ 변동 영역: 소분류 내역 테이블 -->
+  <div class="card">
+    <div class="ct" id="cost-title">비용 내역</div>
+    <table><thead><tr><th>항목</th><th>분류</th><th>금액</th><th>날짜</th><th></th></tr></thead>
+    <tbody id="cost-tbody"></tbody></table>
   </div>
 </div>
 
