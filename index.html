@@ -754,7 +754,7 @@ tr:hover td{background:#fafaf8}
     <div class="fg"><label>현재 수량 *</label><input type="number" id="inv-qty" value="0" min="0"></div>
     <div class="fg"><label>최소 기준 수량</label><input type="number" id="inv-min" value="0" min="0"></div>
   </div>
-  <div class="fg"><label>단가 (원)</label><input type="number" id="inv-price" value="0" min="0"></div>
+  <div class="fg"><label>단가 (원)</label><input type="number" id="inv-price" value="0" min="0" step="0.01"></div>
   <div class="btn-row">
     <button class="btn-s" onclick="closeModal('inv-modal')">취소</button>
     <button class="btn-p" onclick="saveInvItem()">저장</button>
@@ -834,7 +834,7 @@ tr:hover td{background:#fafaf8}
   </div>
   <div class="fr">
     <div class="fg"><label>수량</label><input type="number" id="pur-qty" value="100" min="1"></div>
-    <div class="fg"><label>단가 (원)</label><input type="number" id="pur-price" value="0" min="0"></div>
+    <div class="fg"><label>단가 (원)</label><input type="number" id="pur-price" value="0" min="0" step="0.01"></div>
   </div>
   <div class="fg"><label>상태</label>
     <select id="pur-status" style="font-size:13px;padding:7px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1a1a18;font-family:'Noto Sans KR',sans-serif">
@@ -864,7 +864,11 @@ const TD={DTW:'DTW',DFT:'DFT',PTW:'PTW',PFT:'PFT',DDB:'DDB',PDB:'PDB',MSD:'MSD',
 const TC={DTW:'#E6F1FB',DFT:'#E6F1FB',PTW:'#EAF3DE',PFT:'#EAF3DE',DDB:'#FAEEDA',PDB:'#FAEEDA',MSD:'#FBEAF0',MSQ:'#FBEAF0',MSK:'#FBEAF0',JSD:'#EEEDFE',JSF:'#EEEDFE',CSD:'#E1F5EE',DIS:'#F1EFE8',IFT:'#FCEBEB',CMR:'#FAF0E6',CHB:'#F1EFE8',CHD:'#F1EFE8',CSK:'#E1F5EE'};
 const TX={DTW:'#185FA5',DFT:'#185FA5',PTW:'#3B6D11',PFT:'#3B6D11',DDB:'#854F0B',PDB:'#854F0B',MSD:'#993556',MSQ:'#993556',MSK:'#993556',JSD:'#534AB7',JSF:'#534AB7',CSD:'#0F6E56',DIS:'#5F5E5A',IFT:'#A32D2D',CMR:'#854F0B',CHB:'#5F5E5A',CHD:'#5F5E5A',CSK:'#0F6E56'};
 function tb(t){return`<span class="badge" style="background:${TC[t]||'#F1EFE8'};color:${TX[t]||'#5F5E5A'}">${t}</span>`;}
-const fmt=n=>'₩'+n.toLocaleString('ko-KR');
+const fmt=n=>{
+  if(!n&&n!==0) return '₩0';
+  const v=Math.round(n);
+  return '₩'+v.toLocaleString('ko-KR');
+};
 const todayStr=new Date().toISOString().slice(0,10);
 const nowT=()=>new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
 const SR=[[203,'DIS'],[204,'DIS'],[205,'IFT'],[213,'DTW'],[214,'DTW'],[215,'DTW'],[216,'DTW'],[218,'DTW'],[238,'DTW'],[239,'DDB'],[246,'DTW'],[247,'DTW'],[249,'DTW'],[252,'DTW'],[254,'DFT'],[262,'DTW'],[263,'DTW'],[267,'DTW'],[269,'DTW'],[270,'DIS'],[305,'DFT'],[318,'DTW'],[319,'DTW'],[320,'DTW'],[321,'DTW'],[322,'DTW'],[324,'DTW'],[325,'DTW'],[326,'DTW'],[328,'CSD'],[337,'CHB'],[338,'CHD'],[344,'DTW'],[345,'DTW'],[346,'DTW'],[347,'DFT'],[350,'DTW'],[351,'DTW'],[353,'DTW'],[354,'DTW'],[501,'DFT'],[502,'DFT'],[504,'DFT'],[505,'DFT'],[506,'DTW'],[508,'DTW'],[509,'DTW'],[511,'DTW'],[512,'DTW'],[515,'DTW'],[517,'DTW'],[519,'DTW'],[520,'DTW'],[522,'DTW'],[525,'DTW'],[526,'DTW'],[528,'CSD'],[530,'DFT'],[531,'DFT'],[536,'DFT'],[537,'DTW'],[540,'DTW'],[541,'DTW'],[542,'DFT'],[544,'DTW'],[545,'DTW'],[546,'DTW'],[547,'DFT'],[548,'DFT'],[549,'DFT'],[554,'DFT'],[559,'MSK'],[561,'IFT'],[562,'IFT'],[566,'IFT'],[569,'IFT'],[601,'DFT'],[602,'DFT'],[603,'DFT'],[604,'DFT'],[608,'DTW'],[609,'DTW'],[610,'DTW'],[617,'DTW'],[618,'DTW'],[619,'DTW'],[621,'DTW'],[623,'DTW'],[624,'DTW'],[626,'DTW'],[627,'DTW'],[628,'CSD'],[629,'DDB'],[630,'DFT'],[632,'DFT'],[635,'DFT'],[637,'DTW'],[638,'DTW'],[640,'DTW'],[641,'DTW'],[647,'DFT'],[649,'DFT'],[650,'DFT'],[651,'DFT'],[652,'DFT'],[653,'DFT'],[654,'DFT'],[655,'DFT'],[658,'MSD'],[659,'MSK'],[660,'IFT'],[662,'IFT'],[663,'IFT'],[664,'IFT'],[665,'IFT'],[666,'IFT'],[667,'IFT'],[668,'IFT'],[670,'IFT'],[701,'DFT'],[702,'DFT'],[703,'DFT'],[704,'DFT'],[706,'DTW'],[708,'DTW'],[711,'DTW'],[712,'DTW'],[715,'DTW'],[716,'DTW'],[717,'DTW'],[719,'DTW'],[721,'DTW'],[722,'DTW'],[723,'DTW'],[725,'DTW'],[727,'DTW'],[728,'CSD'],[729,'DDB'],[730,'DFT'],[731,'DFT'],[734,'DFT'],[735,'DFT'],[736,'DFT'],[737,'DTW'],[738,'DTW'],[740,'DTW'],[741,'DTW'],[742,'DFT'],[743,'CSK'],[744,'DTW'],[745,'DTW'],[746,'DTW'],[747,'DFT'],[749,'DFT'],[750,'DFT'],[751,'DFT'],[752,'DFT'],[753,'DFT'],[754,'DFT'],[755,'DFT'],[757,'MSD'],[759,'MSK'],[760,'IFT'],[761,'IFT'],[764,'IFT'],[766,'IFT'],[767,'IFT'],[768,'IFT'],[769,'IFT'],[770,'IFT'],[802,'DFT'],[803,'DFT'],[809,'DFT'],[811,'DFT'],[815,'DFT'],[817,'DFT'],[819,'DFT'],[820,'DTW'],[821,'DFT'],[822,'DTW'],[824,'DTW'],[825,'DFT'],[826,'DTW'],[827,'DFT'],[829,'DDB'],[831,'DTW'],[832,'DTW'],[833,'DTW'],[834,'DTW'],[836,'DTW'],[838,'DTW'],[840,'DFT'],[842,'DFT'],[847,'DFT'],[848,'DFT'],[850,'DFT'],[851,'DFT'],[854,'DFT'],[856,'MSQ'],[858,'CMR'],[859,'MSK'],[860,'IFT'],[861,'IFT'],[863,'IFT'],[864,'IFT'],[865,'IFT'],[866,'IFT'],[901,'PFT'],[902,'PFT'],[903,'PFT'],[905,'PFT'],[908,'PTW'],[910,'PTW'],[911,'PFT'],[913,'PFT'],[914,'PTW'],[915,'PFT'],[916,'PTW'],[919,'PFT'],[920,'PTW'],[921,'PFT'],[922,'PTW'],[923,'PFT'],[924,'PTW'],[927,'PFT'],[928,'CSD'],[929,'PDB'],[930,'PFT'],[931,'PFT'],[932,'PFT'],[934,'PFT'],[935,'PFT'],[937,'PFT'],[938,'PFT'],[939,'PFT'],[941,'PFT'],[943,'CSK'],[944,'PTW'],[946,'PTW'],[948,'PFT'],[949,'PFT'],[950,'PFT'],[951,'PFT'],[954,'PFT'],[955,'PFT'],[958,'CMR'],[959,'MSK'],[960,'IFT'],[961,'IFT'],[963,'PDB'],[965,'IFT'],[968,'IFT'],[1001,'PFT'],[1002,'PFT'],[1003,'PFT'],[1004,'PFT'],[1006,'PTW'],[1007,'PTW'],[1008,'PTW'],[1011,'PFT'],[1012,'PTW'],[1014,'PTW'],[1016,'PTW'],[1017,'PFT'],[1020,'PTW'],[1021,'PFT'],[1022,'PTW'],[1023,'PFT'],[1024,'PTW'],[1025,'PFT'],[1026,'PTW'],[1027,'PFT'],[1028,'CSD'],[1029,'PDB'],[1032,'PFT'],[1033,'PFT'],[1035,'PFT'],[1036,'PFT'],[1038,'PFT'],[1041,'PFT'],[1043,'CSK'],[1045,'PTW'],[1046,'PTW'],[1047,'PFT'],[1048,'PFT'],[1052,'PFT'],[1053,'PFT'],[1054,'PFT'],[1055,'PFT'],[1058,'CMR'],[1060,'PDB'],[1061,'PDB'],[1062,'PDB'],[1063,'PDB'],[1064,'PDB'],[1065,'PDB'],[1066,'IFT'],[1067,'PDB'],[1069,'PDB'],[1101,'PFT'],[1105,'PFT'],[1110,'PTW'],[1111,'PFT'],[1112,'PTW'],[1113,'PFT'],[1114,'PTW'],[1118,'PTW'],[1119,'PFT'],[1120,'PTW'],[1121,'PFT'],[1122,'PTW'],[1123,'PFT'],[1124,'PTW'],[1125,'PFT'],[1126,'PTW'],[1127,'PFT'],[1128,'CSD'],[1129,'PDB'],[1132,'PFT'],[1134,'PFT'],[1135,'PFT'],[1136,'PFT'],[1141,'PFT'],[1142,'PFT'],[1144,'PTW'],[1148,'PFT'],[1149,'PFT'],[1150,'PFT'],[1151,'PFT'],[1154,'PFT'],[1155,'PFT'],[1156,'MSQ'],[1159,'MSK'],[1160,'PDB'],[1161,'PDB'],[1162,'PDB'],[1163,'PDB'],[1165,'PDB'],[1167,'PDB'],[1169,'PDB'],[1170,'PDB'],[1201,'PFT'],[1202,'PFT'],[1203,'PFT'],[1207,'PTW'],[1214,'PTW'],[1216,'PTW'],[1219,'PFT'],[1220,'PTW'],[1221,'PFT'],[1223,'PFT'],[1226,'PTW'],[1228,'CSD'],[1229,'PDB'],[1231,'PFT'],[1233,'PFT'],[1234,'PFT'],[1235,'PFT'],[1236,'PFT'],[1237,'PFT'],[1239,'PFT'],[1240,'PFT'],[1242,'PFT'],[1243,'CSK'],[1245,'PTW'],[1246,'PTW'],[1247,'PFT'],[1248,'PFT'],[1249,'PFT'],[1250,'PFT'],[1254,'PFT'],[1257,'CMR'],[1258,'CMR'],[1259,'MSK'],[1260,'PDB'],[1261,'PDB'],[1263,'PDB'],[1264,'PDB'],[1265,'PDB'],[1266,'PDB'],[1267,'PDB'],[1268,'PDB'],[1270,'PDB'],[1405,'PFT'],[1406,'PTW'],[1408,'PTW'],[1409,'PFT'],[1413,'PFT'],[1415,'PFT'],[1416,'PTW'],[1417,'PFT'],[1419,'PFT'],[1423,'PFT'],[1424,'PTW'],[1425,'PFT'],[1429,'PDB'],[1432,'PFT'],[1433,'PFT'],[1434,'PFT'],[1436,'PFT'],[1438,'PFT'],[1440,'PFT'],[1443,'CSK'],[1444,'PTW'],[1446,'PFT'],[1449,'PFT'],[1451,'PFT'],[1453,'PFT'],[1454,'PFT'],[1456,'MSQ'],[1458,'MSD'],[1461,'PDB'],[1463,'PDB'],[1464,'PDB'],[1465,'PDB'],[1469,'PDB'],[1501,'PFT'],[1503,'PFT'],[1507,'PTW'],[1511,'PFT'],[1512,'PTW'],[1513,'PFT'],[1515,'PFT'],[1517,'PFT'],[1518,'PTW'],[1521,'PFT'],[1522,'PTW'],[1526,'PTW'],[1528,'CSD'],[1529,'PDB'],[1530,'PFT'],[1531,'PFT'],[1532,'PFT'],[1533,'PFT'],[1534,'PFT'],[1535,'PFT'],[1537,'PFT'],[1541,'PFT'],[1543,'CSK'],[1544,'PTW'],[1546,'PTW'],[1547,'PFT'],[1549,'PFT'],[1550,'PFT'],[1552,'PFT'],[1554,'PFT'],[1558,'CMR'],[1559,'MSK'],[1560,'PDB'],[1561,'PDB'],[1564,'PDB'],[1565,'PDB'],[1566,'PDB'],[1569,'PDB'],[1570,'PDB'],[1601,'JSF'],[1607,'JSF'],[1609,'PFT'],[1614,'JSF'],[1615,'PFT'],[1617,'PFT'],[1618,'JSF'],[1630,'PFT'],[1631,'PFT'],[1633,'PFT'],[1635,'PFT'],[1636,'PFT'],[1641,'JSD'],[1645,'JSD'],[1647,'JSD'],[1649,'JSD']];
@@ -1512,7 +1516,7 @@ function saveInvItem(){
   const unit=document.getElementById('inv-unit').value.trim();
   const qty=parseInt(document.getElementById('inv-qty').value)||0;
   const min=parseInt(document.getElementById('inv-min').value)||0;
-  const price=parseInt(document.getElementById('inv-price').value)||0;
+  const price=parseFloat(document.getElementById('inv-price').value)||0;
   const eid=document.getElementById('inv-edit-id').value;
   const month=document.getElementById('inv-modal-month').value||getInvMonth();
   if(!name||!unit){alert('품목명과 단위를 입력하세요.');return;}
@@ -1612,7 +1616,7 @@ function renderPur(){
   if(!filtered.length){tbody.innerHTML=`<tr><td colspan="8" class="empty">발주 내역이 없습니다</td></tr>`;return;}
   tbody.innerHTML=filtered.map(p=>`<tr>
     <td>${p.item}</td><td>${p.qty.toLocaleString()}</td>
-    <td>${p.price.toLocaleString()}원</td><td>${fmt(p.qty*p.price)}</td>
+    <td>${p.price%1!==0?p.price.toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:2}):p.price.toLocaleString()}원</td><td>${fmt(p.qty*p.price)}</td>
     <td style="color:#6b6b68;font-size:11px">${p.date}</td>
     <td><span class="badge" style="${p.status==='received'?'background:#EAF3DE;color:#3B6D11':'background:#FAEEDA;color:#854F0B'}">${p.status==='received'?'입고완료':'발주중'}</span></td>
     <td><div style="display:flex;gap:3px">
@@ -1696,7 +1700,7 @@ function editPur(month, id){
 function addPur(){
   const item=document.getElementById('pur-item').value.trim();
   const qty=parseInt(document.getElementById('pur-qty').value)||0;
-  const price=parseInt(document.getElementById('pur-price').value)||0;
+  const price=parseFloat(document.getElementById('pur-price').value)||0;
   const cat=document.getElementById('pur-cat').value;
   const month=document.getElementById('pur-modal-month').value||getPurMonth();
   const date=document.getElementById('pur-date').value||todayStr;
