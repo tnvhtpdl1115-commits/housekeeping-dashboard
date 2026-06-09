@@ -1698,6 +1698,7 @@ function autoUpdateInventory(p, dateStr){
   const weekKey=getWeekKey(month,week);
   const cat=p.category||'consumable';
   if(cat==='linen'){
+    // 린넨은 월별 재고에 직접 반영
     if(!invData[month]) invData[month]=[];
     const invItem=invData[month].find(i=>i.name===p.item&&i.category==='linen');
     if(invItem){
@@ -1711,7 +1712,7 @@ function autoUpdateInventory(p, dateStr){
       showToast(`📦 린넨 재고 신규 등록`,`${p.item} ${p.qty}개`,'grn');
     }
   } else {
-    // 품목 마스터에 없으면 추가
+    // 소모품/비품/정비용품: 입고 기록만 남기고 실사 수량은 건드리지 않음
     if(!weeklyItems[cat]) weeklyItems[cat]=[];
     const masterItem=weeklyItems[cat].find(i=>i.name===p.item);
     if(!masterItem){
@@ -1719,21 +1720,28 @@ function autoUpdateInventory(p, dateStr){
       weeklyItems[cat].push(newMaster);
       dbSaveWeeklyItem(cat,newMaster);
     }
-    // 주간 재고 업데이트
     if(!weeklyData[weekKey]) weeklyData[weekKey]=[];
     const wItem=weeklyData[weekKey].find(w=>w.itemName===p.item&&w.category===cat);
     if(wItem){
+      // 입고량만 누적, currQty는 건드리지 않음
       wItem.inQty=(wItem.inQty||0)+p.qty;
-      wItem.currQty=(wItem.currQty||0)+p.qty;
       dbSaveWeekly(month,week,wItem);
-      showToast(`📦 재고 자동 업데이트`,`${p.item} ${p.qty}개 → ${month}월 ${week}주차 반영`,'grn');
     } else {
+      // 해당 주차 데이터 없으면 입고량만 기록 (currQty=0 미조사 상태)
       const mi=weeklyItems[cat].find(i=>i.name===p.item);
-      const newWItem={itemName:p.item,unit:mi?.unit||'개',prevQty:0,inQty:p.qty,currQty:p.qty,minQty:mi?.minQty||0,category:cat};
+      const newWItem={
+        itemName:p.item,
+        unit:mi?.unit||'개',
+        prevQty:0,
+        inQty:p.qty,
+        currQty:null, // null = 미조사
+        minQty:mi?.minQty||0,
+        category:cat
+      };
       weeklyData[weekKey].push(newWItem);
       dbSaveWeekly(month,week,newWItem);
-      showToast(`📦 재고 자동 등록`,`${p.item} ${p.qty}개 → ${month}월 ${week}주차 신규 등록`,'grn');
     }
+    showToast(`📦 입고 기록됨`,`${p.item} ${p.qty}개 → ${month}월 ${week}주차 입고 반영`,'grn');
   }
   if(document.getElementById('tab-inventory').classList.contains('on')) renderInv();
 }
@@ -2459,13 +2467,13 @@ function renderInv(){
   if(!tbody)return;
   if(!items.length){tbody.innerHTML=`<tr><td colspan="8" class="empty">등록된 품목이 없습니다<br><button class="btn-s" style="margin-top:8px" onclick="openInvItemRegModal()">품목 등록</button></td></tr>`;return;}
   tbody.innerHTML=items.map(item=>{
-    const wd=weekData.find(w=>w.itemName===item.name); // undefined이면 미조사
+    const wd=weekData.find(w=>w.itemName===item.name);
     const pd=prevData.find(w=>w.itemName===item.name);
     const prevQty=pd?pd.currQty:0;
-    // 이번 주 입고량
-    const inQty=purItems.filter(p=>p.item===item.name).reduce((a,p)=>a+p.qty,0);
-    // 재고조사 여부 판단: weeklyData에 해당 품목이 있으면 조사한 것
-    const surveyed=!!wd;
+    const inQty=purItems.filter(p=>p.item===item.name).reduce((a,p)=>a+p.qty,0)
+      + (wd?.inQty||0); // DB에 저장된 입고량도 포함
+    // currQty가 null이면 입고만 기록된 미조사 상태
+    const surveyed=!!(wd && wd.currQty!==null && wd.currQty!==undefined);
     const currQty=surveyed?wd.currQty:(prevQty+inQty);
     const usage=surveyed?Math.max(0,prevQty+inQty-wd.currQty):0;
     const minQty=(weeklyItems[currentInvCategory]||[]).find(i=>i.name===item.name)?.minQty||item.minQty||0;
@@ -2969,7 +2977,15 @@ async function dbLoadWeekly(){
     wData.forEach(r=>{
       const key=getWeekKey(r.month,r.week);
       if(!weeklyData[key]) weeklyData[key]=[];
-      weeklyData[key].push({itemName:r.item_name,unit:r.unit,prevQty:r.prev_qty,inQty:r.in_qty,currQty:r.curr_qty,minQty:r.min_qty,category:r.category});
+      weeklyData[key].push({
+        itemName:r.item_name,
+        unit:r.unit,
+        prevQty:r.prev_qty||0,
+        inQty:r.in_qty||0,
+        currQty:r.curr_qty, // null 그대로 유지 (미조사)
+        minQty:r.min_qty||0,
+        category:r.category
+      });
     });
   }
   // 품목 마스터 로드 - DB에 MASTER 데이터가 있으면 DB 우선, 없으면 기본값 사용
