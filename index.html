@@ -1877,6 +1877,7 @@ function saveBudget(){
   budgetData.uniform=parseInt(document.getElementById('budget-uniform').value)||0;
   budgetData.purchase=parseInt(document.getElementById('budget-purchase').value)||0;
   budgetData.etc=parseInt(document.getElementById('budget-etc').value)||0;
+  dbSaveSettings('budget',budgetData);
   closeModal('budget-modal');renderCost();
 }
 
@@ -3132,6 +3133,19 @@ async function dbSaveCost(month,obj){
 }
 async function dbDeleteCost(id){await supa.from('cost_data').delete().eq('id',id);}
 
+// ── Settings DB (예산 등 앱 설정) ──
+async function dbSaveSettings(key,value){
+  await supa.from('settings').upsert({key,value,updated_at:new Date().toISOString()},{onConflict:'key'});
+}
+async function dbLoadSettings(){
+  const {data}=await supa.from('settings').select('*');
+  if(data){
+    data.forEach(r=>{
+      if(r.key==='budget'&&r.value) Object.assign(budgetData,r.value);
+    });
+  }
+}
+
 async function dbLoadRooms(){
   const {data}=await supa.from('rooms').select('*').order('no');
   if(data&&data.length>0){
@@ -3287,6 +3301,7 @@ async function initApp(){
       dbLoadPurchases(),
       dbLoadCosts(),
       dbLoadMaster(),
+      dbLoadSettings(),
     ]);
     showLoading(false);
     // 이번 달 초기화
