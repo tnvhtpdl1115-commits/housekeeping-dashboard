@@ -2417,11 +2417,23 @@ function renderInv(){
   document.getElementById('inv-weekly-section').style.display='block';
   document.getElementById('inv-monthly-section').style.display='none';
   const weekKey=getWeekKey(month,currentWeek);
-  const prevWeekKey=currentWeek>1?getWeekKey(month,currentWeek-1):null;
+  // 1주차면 지난달 마지막 주차 참조
+  let prevWeekKey=null;
+  if(currentWeek>1){
+    prevWeekKey=getWeekKey(month,currentWeek-1);
+  } else {
+    const [y,m]=month.split('-').map(Number);
+    const prevMonthDate=new Date(y,m-2,1);
+    const prevMonth=mkKey(prevMonthDate.getFullYear(),prevMonthDate.getMonth()+1);
+    for(let w=5;w>=1;w--){
+      const k=getWeekKey(prevMonth,w);
+      if(weeklyData[k]&&weeklyData[k].length>0){prevWeekKey=k;break;}
+    }
+  }
   const items=weeklyItems[currentInvCategory]||[];
   const weekData=weeklyData[weekKey]||[];
   const prevData=prevWeekKey?weeklyData[prevWeekKey]||[]:[];
-  const catName={consumable:'소모품',equipment:'비품'}[currentInvCategory]||'';
+  const catName={consumable:'소모품',equipment:'비품',maintenance:'정비용품'}[currentInvCategory]||'';
   const titleEl=document.getElementById('inv-title');
   if(titleEl) titleEl.textContent=`${month.replace('-','년 ')}월 ${currentWeek}주차 ${catName} 재고`;
   // 구매 입고량 계산 (해당 주차 날짜 범위)
@@ -2506,7 +2518,17 @@ function renderInv(){
 function openWeeklyCheckModal(){
   const month=getInvMonth();
   const weekKey=getWeekKey(month,currentWeek);
-  const prevWeekKey=currentWeek>1?getWeekKey(month,currentWeek-1):null;
+  let prevWeekKey=null;
+  if(currentWeek>1){
+    prevWeekKey=getWeekKey(month,currentWeek-1);
+  } else {
+    const [y,m]=month.split('-').map(Number);
+    const prevMonth=mkKey(new Date(y,m-2,1).getFullYear(),new Date(y,m-2,1).getMonth()+1);
+    for(let w=5;w>=1;w--){
+      const k=getWeekKey(prevMonth,w);
+      if(weeklyData[k]&&weeklyData[k].length>0){prevWeekKey=k;break;}
+    }
+  }
   const items=weeklyItems[currentInvCategory]||[];
   const weekData=weeklyData[weekKey]||[];
   const prevData=prevWeekKey?weeklyData[prevWeekKey]||[]:[];
@@ -2534,7 +2556,18 @@ function openWeeklyCheckModal(){
 async function saveWeeklyCheck(){
   const month=getInvMonth();
   const weekKey=getWeekKey(month,currentWeek);
-  const prevWeekKey=currentWeek>1?getWeekKey(month,currentWeek-1):null;
+  // 1주차면 지난달 마지막 주차 참조
+  let prevWeekKey=null;
+  if(currentWeek>1){
+    prevWeekKey=getWeekKey(month,currentWeek-1);
+  } else {
+    const [y,m]=month.split('-').map(Number);
+    const prevMonth=mkKey(new Date(y,m-2,1).getFullYear(),new Date(y,m-2,1).getMonth()+1);
+    for(let w=5;w>=1;w--){
+      const k=getWeekKey(prevMonth,w);
+      if(weeklyData[k]&&weeklyData[k].length>0){prevWeekKey=k;break;}
+    }
+  }
   const items=weeklyItems[currentInvCategory]||[];
   const prevData=prevWeekKey?weeklyData[prevWeekKey]||[]:[];
   if(!weeklyData[weekKey]) weeklyData[weekKey]=[];
