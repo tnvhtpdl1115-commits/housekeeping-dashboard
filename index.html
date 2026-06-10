@@ -278,6 +278,8 @@ tr:hover td{background:#fafaf8}
       <button class="sub-tab active" onclick="swSub('inventory','consumable')">소모품</button>
       <button class="sub-tab" onclick="swSub('inventory','equipment')">비품</button>
       <button class="sub-tab" onclick="swSub('inventory','maintenance')">정비용품</button>
+      <button class="sub-tab" onclick="swSub('inventory','rental')">대여품</button>
+      <button class="sub-tab" onclick="swSub('inventory','facility')">시설용품</button>
       <button class="sub-tab" onclick="swSub('inventory','linen')">린넨</button>
       <button class="sub-tab" onclick="swSub('inventory','analysis')">소모량 분석</button>
     </div>
@@ -285,6 +287,8 @@ tr:hover td{background:#fafaf8}
       <button class="sub-tab active" onclick="swSub('purchase','consumable')">소모품</button>
       <button class="sub-tab" onclick="swSub('purchase','equipment')">비품</button>
       <button class="sub-tab" onclick="swSub('purchase','maintenance')">정비용품</button>
+      <button class="sub-tab" onclick="swSub('purchase','rental')">대여품</button>
+      <button class="sub-tab" onclick="swSub('purchase','facility')">시설용품</button>
       <button class="sub-tab" onclick="swSub('purchase','linen')">린넨</button>
     </div>
     <div class="sub-tabs" id="sub-tabs-cost" style="display:none">
@@ -446,6 +450,8 @@ tr:hover td{background:#fafaf8}
         <option value="consumable">소모품</option>
         <option value="equipment">비품</option>
         <option value="maintenance">정비용품</option>
+        <option value="rental">대여품</option>
+        <option value="facility">시설용품</option>
       </select>
       <div style="flex:1"></div>
       <button class="btn-s" onclick="exportAnalysis()"><i class="ti ti-download"></i> 내보내기</button>
@@ -828,6 +834,8 @@ tr:hover td{background:#fafaf8}
         <option value="consumable">소모품</option>
         <option value="equipment">비품</option>
         <option value="maintenance">정비용품</option>
+        <option value="rental">대여품</option>
+        <option value="facility">시설용품</option>
         <option value="linen">린넨</option>
       </select>
     </div>
@@ -892,8 +900,8 @@ const MAIN_LABELS = {overview:'개요',rooms:'객실',issues:'특이사항',cp:'
 const SUB_MAP = {
   rooms:     {default:'seoul',  subs:['seoul','dorm']},
   issues:    {default:'facility', subs:['facility','clean','item']},
-  inventory: {default:'consumable', subs:['consumable','equipment','maintenance','linen','analysis']},
-  purchase:  {default:'consumable', subs:['consumable','equipment','maintenance','linen']},
+  inventory: {default:'consumable', subs:['consumable','equipment','maintenance','rental','facility','linen','analysis']},
+  purchase:  {default:'consumable', subs:['consumable','equipment','maintenance','rental','facility','linen']},
   cost:      {default:'room', subs:['room','linen','uniform','purchase','etc']},
 };
 let currentMain = 'overview';
@@ -2439,6 +2447,22 @@ let weeklyItems = {
     {name:'청소기노즐',unit:'개',minQty:0},
     {name:'앤드커프',unit:'개',minQty:0},
   ],
+  rental: [
+    {name:'엑스트라베드',unit:'개',minQty:0},
+    {name:'베이비가드',unit:'개',minQty:0},
+    {name:'아기침대',unit:'개',minQty:0},
+    {name:'써큘레이터',unit:'개',minQty:0},
+    {name:'공기청정기',unit:'개',minQty:0},
+    {name:'가습기',unit:'개',minQty:0},
+    {name:'온풍기',unit:'개',minQty:0},
+  ],
+  facility: [
+    {name:'LED',unit:'개',minQty:0},
+    {name:'콘센트',unit:'개',minQty:0},
+    {name:'세면대배수트랩',unit:'개',minQty:0},
+    {name:'비데고정볼트',unit:'개',minQty:0},
+    {name:'도어체인',unit:'개',minQty:0},
+  ],
 };
 
 let currentWeek = 1;
@@ -2503,7 +2527,7 @@ function renderInv(){
   const weekData=weeklyData[weekKey]||[];
   // 실제 조사된 데이터만 prevData로 사용 (currQty가 null이면 제외)
   const prevData=prevWeekKey?(weeklyData[prevWeekKey]||[]).filter(w=>w.currQty!==null&&w.currQty!==undefined):[];
-  const catName={consumable:'소모품',equipment:'비품',maintenance:'정비용품'}[currentInvCategory]||'';
+  const catName={consumable:'소모품',equipment:'비품',maintenance:'정비용품',rental:'대여품',facility:'시설용품'}[currentInvCategory]||'';
   const titleEl=document.getElementById('inv-title');
   if(titleEl) titleEl.textContent=`${month.replace('-','년 ')}월 ${currentWeek}주차 ${catName} 재고`;
 
@@ -2872,6 +2896,8 @@ function renderAnalysis(){
   if(cat==='all'||cat==='consumable') items=[...items,...(weeklyItems.consumable||[]).map(i=>({...i,category:'consumable'}))];
   if(cat==='all'||cat==='equipment') items=[...items,...(weeklyItems.equipment||[]).map(i=>({...i,category:'equipment'}))];
   if(cat==='all'||cat==='maintenance') items=[...items,...(weeklyItems.maintenance||[]).map(i=>({...i,category:'maintenance'}))];
+  if(cat==='all'||cat==='rental') items=[...items,...(weeklyItems.rental||[]).map(i=>({...i,category:'rental'}))];
+  if(cat==='all'||cat==='facility') items=[...items,...(weeklyItems.facility||[]).map(i=>({...i,category:'facility'}))];
 
   if(!items.length){
     document.getElementById('analysis-tbody').innerHTML=`<tr><td colspan="13" class="empty">소모품/비품 품목을 먼저 등록해주세요</td></tr>`;
@@ -2995,6 +3021,8 @@ function exportAnalysis(){
   if(cat==='all'||cat==='consumable') items=[...items,...(weeklyItems.consumable||[]).map(i=>({...i,category:'consumable'}))];
   if(cat==='all'||cat==='equipment') items=[...items,...(weeklyItems.equipment||[]).map(i=>({...i,category:'equipment'}))];
   if(cat==='all'||cat==='maintenance') items=[...items,...(weeklyItems.maintenance||[]).map(i=>({...i,category:'maintenance'}))];
+  if(cat==='all'||cat==='rental') items=[...items,...(weeklyItems.rental||[]).map(i=>({...i,category:'rental'}))];
+  if(cat==='all'||cat==='facility') items=[...items,...(weeklyItems.facility||[]).map(i=>({...i,category:'facility'}))];
   const rows=[['거래처','품목','EA단가','일간','주간','월간','연간','1실당주간','월간단가','연간단가','비율']];
   let totalYear=0;
   const data=items.map(item=>{
