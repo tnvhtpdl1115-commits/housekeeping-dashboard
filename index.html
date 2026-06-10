@@ -3085,7 +3085,7 @@ async function dbLoadWeekly(){
   const {data:mData}=await supa.from('inv_data').select('*').eq('month','MASTER');
   if(mData && mData.length>0){
     // DB에 마스터 데이터가 있으면 DB 기준으로 완전 교체
-    weeklyItems={consumable:[],equipment:[],maintenance:[]};
+    weeklyItems={consumable:[],equipment:[],maintenance:[],rental:[],facility:[]};
     mData.forEach(r=>{
       const cat=r.category||'consumable';
       if(cat!=='linen'&&weeklyItems[cat]){
