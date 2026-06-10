@@ -562,6 +562,7 @@ tr:hover td{background:#fafaf8}
 <div id="tab-linen-discard" class="sec">
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
     <select id="linen-discard-month-sel" onchange="renderLinenDiscard()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1a1a18;font-family:'Noto Sans KR',sans-serif"></select>
+    <button class="btn-s" onclick="linenDiscardNewMonth()"><i class="ti ti-calendar-plus"></i> 새 달 시작</button>
     <div style="flex:1"></div>
     <button class="btn-p" onclick="saveLinenDiscard()"><i class="ti ti-device-floppy"></i> 저장</button>
   </div>
@@ -588,6 +589,7 @@ tr:hover td{background:#fafaf8}
 <div id="tab-linen-contamination" class="sec">
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
     <select id="linen-contam-month-sel" onchange="renderLinenContam()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1a1a18;font-family:'Noto Sans KR',sans-serif"></select>
+    <button class="btn-s" onclick="linencontamNewMonth()"><i class="ti ti-calendar-plus"></i> 새 달 시작</button>
     <div style="flex:1"></div>
     <button class="btn-p" onclick="saveLinenContam()"><i class="ti ti-device-floppy"></i> 저장</button>
   </div>
@@ -3346,6 +3348,86 @@ function updateLinenDiscardTotals(month){
     <div class="met"><div class="met-l">수량 합계</div><div class="met-v">${totQty.toLocaleString()}</div></div>`;
 }
 
+function linenDiscardNewMonth(){
+  const now=new Date();
+  const defKey=mkKey(now.getFullYear(),now.getMonth()+1);
+  const input=prompt('추가할 월을 입력하세요 (예: 2026-05)',defKey);
+  if(!input||!/^\d{4}-\d{2}$/.test(input)){alert('형식이 맞지 않습니다.');return;}
+  if(linenDiscardData[input]&&linenDiscardData[input].length>0){
+    if(!confirm(`${input.replace('-','년 ')}월 데이터가 이미 있습니다. 덮어쓰시겠습니까?`))return;
+  }
+  // 이전달 키
+  const [y,m]=input.split('-').map(Number);
+  const prevMonth=mkKey(new Date(y,m-2,1).getFullYear(),new Date(y,m-2,1).getMonth()+1);
+  const prevRows=linenDiscardData[prevMonth]||[];
+
+  if(!linenDiscardData[input]) linenDiscardData[input]=[];
+  linenItems.forEach(name=>{
+    const prev=prevRows.find(r=>r.item_name===name);
+    const existing=linenDiscardData[input].find(r=>r.item_name===name);
+    if(existing){
+      // 원가·폐기율만 이전달에서 복사, 수량은 0으로
+      existing.unit_price=prev?prev.unit_price:existing.unit_price;
+      existing.discard_rate=prev?prev.discard_rate:existing.discard_rate;
+      existing.qty=0;existing.qty_adj=0;
+    } else {
+      linenDiscardData[input].push({
+        item_name:name,
+        unit_price:prev?prev.unit_price:0,
+        discard_rate:prev?prev.discard_rate:30,
+        qty:0,qty_adj:0
+      });
+    }
+  });
+  buildLinenDiscardMonthSel();
+  document.getElementById('linen-discard-month-sel').value=input;
+  renderLinenDiscard();
+  // 자동 DB 저장
+  (async()=>{
+    for(const row of linenDiscardData[input]||[]) await dbSaveLinenDiscardRow(input,row);
+    showToast('📅 새 달 시작',`${input.replace('-','년 ')}월 폐기 내역이 저장됐습니다 (원가 자동 복사)`,'blu');
+  })();
+}
+
+function linencontamNewMonth(){
+  const now=new Date();
+  const defKey=mkKey(now.getFullYear(),now.getMonth()+1);
+  const input=prompt('추가할 월을 입력하세요 (예: 2026-05)',defKey);
+  if(!input||!/^\d{4}-\d{2}$/.test(input)){alert('형식이 맞지 않습니다.');return;}
+  if(linencontamData[input]&&linencontamData[input].length>0){
+    if(!confirm(`${input.replace('-','년 ')}월 데이터가 이미 있습니다. 덮어쓰시겠습니까?`))return;
+  }
+  // 이전달 키
+  const [y,m]=input.split('-').map(Number);
+  const prevMonth=mkKey(new Date(y,m-2,1).getFullYear(),new Date(y,m-2,1).getMonth()+1);
+  const prevRows=linencontamData[prevMonth]||[];
+
+  if(!linencontamData[input]) linencontamData[input]=[];
+  linenItems.forEach(name=>{
+    const prev=prevRows.find(r=>r.item_name===name);
+    const existing=linencontamData[input].find(r=>r.item_name===name);
+    if(existing){
+      // cost만 이전달에서 복사, 수량은 0으로
+      existing.cost=prev?prev.cost:existing.cost;
+      existing.qty=0;
+    } else {
+      linencontamData[input].push({
+        item_name:name,
+        cost:prev?prev.cost:0,
+        qty:0
+      });
+    }
+  });
+  buildLinenContamMonthSel();
+  document.getElementById('linen-contam-month-sel').value=input;
+  renderLinenContam();
+  // 자동 DB 저장
+  (async()=>{
+    for(const row of linencontamData[input]||[]) await dbSaveLinenContamRow(input,row);
+    showToast('📅 새 달 시작',`${input.replace('-','년 ')}월 오염 내역이 저장됐습니다 (Cost 자동 복사)`,'blu');
+  })();
+}
+
 async function saveLinenDiscard(){
   const month=getLinenDiscardMonth();
   const rows=linenDiscardData[month]||[];
@@ -3508,12 +3590,54 @@ function buildLinenMonthSel(){
 }
 
 function linenNewMonth(){
-  const input=prompt('추가할 월을 입력하세요 (예: 2026-05)','2026-05');
+  const now=new Date();
+  const defKey=mkKey(now.getFullYear(),now.getMonth()+1);
+  const input=prompt('추가할 월을 입력하세요 (예: 2026-05)',defKey);
   if(!input||!/^\d{4}-\d{2}$/.test(input)){alert('형식이 맞지 않습니다.');return;}
+  if(linenStockData[input]&&linenStockData[input].length>0){
+    if(!confirm(`${input.replace('-','년 ')}월 데이터가 이미 있습니다. 덮어쓰시겠습니까?`))return;
+  }
+  // 이전달 키 계산
+  const [y,m]=input.split('-').map(Number);
+  const prevMonth=mkKey(new Date(y,m-2,1).getFullYear(),new Date(y,m-2,1).getMonth()+1);
+  const prevRows=linenStockData[prevMonth]||[];
+
   if(!linenStockData[input]) linenStockData[input]=[];
+  // 이전달 데이터 기반으로 새 달 초기화
+  linenItems.forEach(name=>{
+    const prev=prevRows.find(r=>r.item_name===name);
+    // 이전달 당월마감 계산
+    let prevClosing=0;
+    if(prev){
+      const ft=prev.field_setting+prev.field_floor+prev.field_storage;
+      const vt=prev.vendor_in1+prev.vendor_in2+prev.vendor_estimate;
+      const dt=prev.discard_didi+prev.discard_gng;
+      prevClosing=ft+vt-dt;
+    }
+    const existing=linenStockData[input].find(r=>r.item_name===name);
+    if(existing){
+      // 기존 행이 있으면 base_qty와 prev_closing만 업데이트
+      existing.base_qty=prev?prev.base_qty:existing.base_qty;
+      existing.prev_closing=prevClosing;
+    } else {
+      linenStockData[input].push({
+        item_name:name,
+        base_qty:prev?prev.base_qty:0,
+        prev_closing:prevClosing,
+        field_setting:0,field_floor:0,field_storage:0,
+        vendor_in1:0,vendor_in2:0,vendor_estimate:0,
+        discard_didi:0,discard_gng:0,note:''
+      });
+    }
+  });
   buildLinenMonthSel();
   document.getElementById('linen-month-sel').value=input;
   renderLinenStock();
+  // 자동 DB 저장
+  (async()=>{
+    for(const row of linenStockData[input]||[]) await dbSaveLinenStock(input,row);
+    showToast('📅 새 달 시작',`${input.replace('-','년 ')}월 린넨 재고가 저장됐습니다 (기본세팅량·전달마감 자동 복사)`,'blu');
+  })();
 }
 
 function saveLinenDateInline(){
