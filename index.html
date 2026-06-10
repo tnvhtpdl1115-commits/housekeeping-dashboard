@@ -560,10 +560,52 @@ tr:hover td{background:#fafaf8}
   </div>
 </div>
 <div id="tab-linen-discard" class="sec">
-  <div class="card"><div class="empty" style="padding:40px">폐기 관리 - 준비 중</div></div>
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+    <select id="linen-discard-month-sel" onchange="renderLinenDiscard()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1a1a18;font-family:'Noto Sans KR',sans-serif"></select>
+    <div style="flex:1"></div>
+    <button class="btn-p" onclick="saveLinenDiscard()"><i class="ti ti-device-floppy"></i> 저장</button>
+  </div>
+  <div class="metrics" id="linen-discard-metrics"></div>
+  <div class="card" style="overflow-x:auto;padding:0">
+    <table style="width:100%;min-width:700px;border-collapse:collapse;font-size:13px">
+      <thead>
+        <tr style="background:#2c5282;color:#fff;font-weight:600;font-size:12px">
+          <th style="padding:11px 12px;text-align:left;min-width:140px;color:#fff">Description</th>
+          <th style="padding:11px 10px;text-align:right;min-width:90px;color:#fff">원가</th>
+          <th style="padding:11px 10px;text-align:right;min-width:110px;color:#fff">폐기차감(30%)</th>
+          <th style="padding:11px 10px;text-align:center;min-width:80px;color:#fff">수량</th>
+          <th style="padding:11px 10px;text-align:center;min-width:90px;color:#fff">수량(수정)</th>
+          <th style="padding:11px 10px;text-align:right;min-width:90px;color:#fff">TOTAL</th>
+          <th style="padding:11px 10px;text-align:right;min-width:100px;color:#fff">TOTAL(수정)</th>
+        </tr>
+      </thead>
+      <tbody id="linen-discard-tbody"></tbody>
+      <tfoot id="linen-discard-tfoot"></tfoot>
+    </table>
+  </div>
 </div>
+
 <div id="tab-linen-contamination" class="sec">
-  <div class="card"><div class="empty" style="padding:40px">오염 관리 - 준비 중</div></div>
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+    <select id="linen-contam-month-sel" onchange="renderLinenContam()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1a1a18;font-family:'Noto Sans KR',sans-serif"></select>
+    <div style="flex:1"></div>
+    <button class="btn-p" onclick="saveLinenContam()"><i class="ti ti-device-floppy"></i> 저장</button>
+  </div>
+  <div class="metrics" id="linen-contam-metrics"></div>
+  <div class="card" style="overflow-x:auto;padding:0">
+    <table style="width:100%;max-width:600px;border-collapse:collapse;font-size:13px">
+      <thead>
+        <tr style="background:#2c5282;color:#fff;font-weight:600;font-size:12px">
+          <th style="padding:11px 12px;text-align:left;min-width:160px;color:#fff">Description</th>
+          <th style="padding:11px 10px;text-align:right;min-width:90px;color:#fff">Cost</th>
+          <th style="padding:11px 10px;text-align:center;min-width:100px;color:#fff;border-left:2px solid rgba(255,255,255,0.3)">재세탁(수량)</th>
+          <th style="padding:11px 10px;text-align:right;min-width:90px;color:#fff">TOTAL</th>
+        </tr>
+      </thead>
+      <tbody id="linen-contam-tbody"></tbody>
+      <tfoot id="linen-contam-tfoot"></tfoot>
+    </table>
+  </div>
 </div>
 <div id="tab-linen-setting" class="sec">
   <div class="card"><div class="empty" style="padding:40px">세팅현황 - 준비 중</div></div>
@@ -1046,6 +1088,8 @@ function swSub(main, sub){
   } else if(main==='linen'){
     document.getElementById('tab-linen-'+sub).classList.add('on');
     if(sub==='stock') renderLinenStock();
+    else if(sub==='discard') renderLinenDiscard();
+    else if(sub==='contamination') renderLinenContam();
   } else if(main==='purchase'){
     document.getElementById('tab-purchase').classList.add('on');
     currentPurCategory = sub;
@@ -3182,7 +3226,270 @@ async function dbLoadWeekly(){
     }
   }
 }
-// ── 린넨 관리 ──
+// ── 린넨 폐기 ──
+let linenDiscardData = {};
+
+function getLinenDiscardMonth(){return document.getElementById('linen-discard-month-sel')?.value||thisMonthKey();}
+
+function buildLinenDiscardMonthSel(){
+  const key=thisMonthKey();
+  const months=[...new Set([...Object.keys(linenDiscardData),key])].sort();
+  const sel=document.getElementById('linen-discard-month-sel');
+  if(!sel)return;
+  const cur=sel.value||key;
+  sel.innerHTML=months.map(m=>`<option value="${m}"${m===cur?' selected':''}>${m.replace('-','년 ')}월</option>`).join('');
+  sel.value=cur;
+}
+
+function getLinenDiscardRow(month,name){
+  if(!linenDiscardData[month]) linenDiscardData[month]=[];
+  let row=linenDiscardData[month].find(r=>r.item_name===name);
+  if(!row){
+    row={item_name:name,unit_price:0,discard_rate:30,qty:0,qty_adj:0};
+    linenDiscardData[month].push(row);
+  }
+  return row;
+}
+
+function renderLinenDiscard(){
+  buildLinenDiscardMonthSel();
+  const month=getLinenDiscardMonth();
+  if(!linenDiscardData[month]) linenDiscardData[month]=[];
+  const tbody=document.getElementById('linen-discard-tbody');
+  const tfoot=document.getElementById('linen-discard-tfoot');
+  if(!tbody)return;
+  const iN='width:100%;font-size:13px;padding:5px 6px;border:1px solid rgba(0,0,0,0.15);border-radius:4px;text-align:right;font-family:\'Noto Sans KR\',sans-serif;background:#fff;color:#1a1a18';
+  let totQty=0,totQtyAdj=0,totTotal=0,totTotalAdj=0;
+  let tabIdx=1;
+  tbody.innerHTML=linenItems.map((name,idx)=>{
+    const row=getLinenDiscardRow(month,name);
+    const discardPrice=Math.round(row.unit_price*(row.discard_rate/100));
+    const total=discardPrice*row.qty;
+    const totalAdj=discardPrice*row.qty_adj;
+    totQty+=row.qty;totQtyAdj+=row.qty_adj;
+    totTotal+=total;totTotalAdj+=totalAdj;
+    const rowBg=idx%2===0?'#ffffff':'#f9f9f8';
+    const safeId='linen-dis-row-'+name.replace(/[\s()]/g,'_');
+    return `<tr id="${safeId}" style="background:${rowBg};border-bottom:1px solid rgba(0,0,0,0.07)" onmouseover="this.style.background='#eef4ff'" onmouseout="this.style.background='${rowBg}'">
+      <td style="padding:7px 12px;font-weight:600;color:#1a1a18">${name}</td>
+      <td style="padding:5px 6px;background:#f5f5f4">
+        <input type="number" tabindex="${tabIdx++}" style="${iN}" value="${row.unit_price||''}" placeholder="0" onchange="updateLinenDiscard('${month}','${name}','unit_price',this.value)">
+      </td>
+      <td class="ldcalc-dp" style="padding:7px 10px;text-align:right;background:#fff8e1;color:#854F0B;font-weight:600">${discardPrice.toLocaleString()}</td>
+      <td style="padding:5px 6px">
+        <input type="number" tabindex="${tabIdx++}" style="${iN};text-align:center" value="${row.qty||''}" placeholder="0" onchange="updateLinenDiscard('${month}','${name}','qty',this.value)">
+      </td>
+      <td style="padding:5px 6px;background:#f0f8ff">
+        <input type="number" tabindex="${tabIdx++}" style="${iN};text-align:center" value="${row.qty_adj||''}" placeholder="0" onchange="updateLinenDiscard('${month}','${name}','qty_adj',this.value)">
+      </td>
+      <td class="ldcalc-tot" style="padding:7px 10px;text-align:right;font-weight:700;color:#1a1a18">${total?total.toLocaleString():0}</td>
+      <td class="ldcalc-totadj" style="padding:7px 10px;text-align:right;font-weight:700;color:#0f1f3d">${totalAdj?totalAdj.toLocaleString():0}</td>
+    </tr>`;
+  }).join('');
+  tfoot.innerHTML=`<tr style="background:#0f1f3d;color:#fff;font-weight:700">
+    <td style="padding:9px 12px">합계</td>
+    <td></td><td></td>
+    <td style="padding:9px 10px;text-align:center">${totQty.toLocaleString()}</td>
+    <td style="padding:9px 10px;text-align:center">${totQtyAdj.toLocaleString()}</td>
+    <td style="padding:9px 10px;text-align:right;color:#ffcc88">${totTotal.toLocaleString()}</td>
+    <td style="padding:9px 10px;text-align:right;color:#88ccff">${totTotalAdj.toLocaleString()}</td>
+  </tr>`;
+  const el=document.getElementById('linen-discard-metrics');
+  if(el) el.innerHTML=`
+    <div class="met"><div class="met-l">폐기 합계 (TOTAL)</div><div class="met-v amb">${totTotal.toLocaleString()}</div></div>
+    <div class="met"><div class="met-l">폐기 합계 (수정)</div><div class="met-v">${totTotalAdj.toLocaleString()}</div></div>
+    <div class="met"><div class="met-l">수량 합계</div><div class="met-v">${totQty.toLocaleString()}</div></div>`;
+}
+
+function updateLinenDiscard(month,name,field,value){
+  const row=getLinenDiscardRow(month,name);
+  row[field]=parseFloat(value)||0;
+  // 해당 행 계산 셀 업데이트
+  const safeId='linen-dis-row-'+name.replace(/[\s()]/g,'_');
+  const rowEl=document.getElementById(safeId);
+  if(rowEl){
+    const discardPrice=Math.round(row.unit_price*(row.discard_rate/100));
+    const total=discardPrice*row.qty;
+    const totalAdj=discardPrice*row.qty_adj;
+    const dpEl=rowEl.querySelector('.ldcalc-dp');
+    const totEl=rowEl.querySelector('.ldcalc-tot');
+    const totAdjEl=rowEl.querySelector('.ldcalc-totadj');
+    if(dpEl) dpEl.textContent=discardPrice.toLocaleString();
+    if(totEl) totEl.textContent=total.toLocaleString();
+    if(totAdjEl) totAdjEl.textContent=totalAdj.toLocaleString();
+  }
+  // 합계 업데이트
+  updateLinenDiscardTotals(month);
+  dbSaveLinenDiscardRow(month,row);
+}
+
+function updateLinenDiscardTotals(month){
+  let totQty=0,totQtyAdj=0,totTotal=0,totTotalAdj=0;
+  linenItems.forEach(name=>{
+    const row=getLinenDiscardRow(month,name);
+    const dp=Math.round(row.unit_price*(row.discard_rate/100));
+    totQty+=row.qty;totQtyAdj+=row.qty_adj;
+    totTotal+=dp*row.qty;totTotalAdj+=dp*row.qty_adj;
+  });
+  const tfoot=document.getElementById('linen-discard-tfoot');
+  if(tfoot) tfoot.innerHTML=`<tr style="background:#0f1f3d;color:#fff;font-weight:700">
+    <td style="padding:9px 12px">합계</td><td></td><td></td>
+    <td style="padding:9px 10px;text-align:center">${totQty.toLocaleString()}</td>
+    <td style="padding:9px 10px;text-align:center">${totQtyAdj.toLocaleString()}</td>
+    <td style="padding:9px 10px;text-align:right;color:#ffcc88">${totTotal.toLocaleString()}</td>
+    <td style="padding:9px 10px;text-align:right;color:#88ccff">${totTotalAdj.toLocaleString()}</td>
+  </tr>`;
+  const el=document.getElementById('linen-discard-metrics');
+  if(el) el.innerHTML=`
+    <div class="met"><div class="met-l">폐기 합계 (TOTAL)</div><div class="met-v amb">${totTotal.toLocaleString()}</div></div>
+    <div class="met"><div class="met-l">폐기 합계 (수정)</div><div class="met-v">${totTotalAdj.toLocaleString()}</div></div>
+    <div class="met"><div class="met-l">수량 합계</div><div class="met-v">${totQty.toLocaleString()}</div></div>`;
+}
+
+async function saveLinenDiscard(){
+  const month=getLinenDiscardMonth();
+  const rows=linenDiscardData[month]||[];
+  for(const row of rows) await dbSaveLinenDiscardRow(month,row);
+  showToast('✅ 저장됨',`${month.replace('-','년 ')}월 폐기 내역이 저장됐습니다`,'grn');
+}
+
+async function dbSaveLinenDiscardRow(month,obj){
+  const payload={month,item_name:obj.item_name,unit_price:obj.unit_price||0,discard_rate:obj.discard_rate||30,discard_price:Math.round((obj.unit_price||0)*((obj.discard_rate||30)/100)),qty:obj.qty||0,qty_adj:obj.qty_adj||0,total:Math.round((obj.unit_price||0)*((obj.discard_rate||30)/100))*(obj.qty||0),total_adj:Math.round((obj.unit_price||0)*((obj.discard_rate||30)/100))*(obj.qty_adj||0)};
+  const {data:existing}=await supa.from('linen_discard').select('id').eq('month',month).eq('item_name',obj.item_name);
+  if(existing&&existing.length>0){await supa.from('linen_discard').update(payload).eq('id',existing[0].id);}
+  else{await supa.from('linen_discard').insert(payload);}
+}
+
+async function dbLoadLinenDiscard(){
+  const {data}=await supa.from('linen_discard').select('*').order('id',{ascending:true});
+  if(data){
+    linenDiscardData={};
+    data.forEach(r=>{
+      if(!linenDiscardData[r.month]) linenDiscardData[r.month]=[];
+      linenDiscardData[r.month].push({item_name:r.item_name,unit_price:r.unit_price||0,discard_rate:r.discard_rate||30,qty:r.qty||0,qty_adj:r.qty_adj||0});
+    });
+  }
+}
+
+// ── 린넨 오염 ──
+let linencontamData = {};
+
+function getLinenContamMonth(){return document.getElementById('linen-contam-month-sel')?.value||thisMonthKey();}
+
+function buildLinenContamMonthSel(){
+  const key=thisMonthKey();
+  const months=[...new Set([...Object.keys(linencontamData),key])].sort();
+  const sel=document.getElementById('linen-contam-month-sel');
+  if(!sel)return;
+  const cur=sel.value||key;
+  sel.innerHTML=months.map(m=>`<option value="${m}"${m===cur?' selected':''}>${m.replace('-','년 ')}월</option>`).join('');
+  sel.value=cur;
+}
+
+function getLinenContamRow(month,name){
+  if(!linencontamData[month]) linencontamData[month]=[];
+  let row=linencontamData[month].find(r=>r.item_name===name);
+  if(!row){
+    row={item_name:name,cost:0,qty:0};
+    linencontamData[month].push(row);
+  }
+  return row;
+}
+
+function renderLinenContam(){
+  buildLinenContamMonthSel();
+  const month=getLinenContamMonth();
+  if(!linencontamData[month]) linencontamData[month]=[];
+  const tbody=document.getElementById('linen-contam-tbody');
+  const tfoot=document.getElementById('linen-contam-tfoot');
+  if(!tbody)return;
+  const iN='width:100%;font-size:13px;padding:5px 6px;border:1px solid rgba(0,0,0,0.15);border-radius:4px;text-align:right;font-family:\'Noto Sans KR\',sans-serif;background:#fff;color:#1a1a18';
+  let totQty=0,totTotal=0;
+  let tabIdx=1;
+  tbody.innerHTML=linenItems.map((name,idx)=>{
+    const row=getLinenContamRow(month,name);
+    const total=row.cost*row.qty;
+    totQty+=row.qty;totTotal+=total;
+    const rowBg=idx%2===0?'#ffffff':'#f9f9f8';
+    const safeId='linen-con-row-'+name.replace(/[\s()]/g,'_');
+    return `<tr id="${safeId}" style="background:${rowBg};border-bottom:1px solid rgba(0,0,0,0.07)" onmouseover="this.style.background='#eef4ff'" onmouseout="this.style.background='${rowBg}'">
+      <td style="padding:7px 12px;font-weight:600;color:#1a1a18">${name}</td>
+      <td style="padding:5px 6px;background:#f5f5f4">
+        <input type="number" tabindex="${tabIdx++}" style="${iN}" value="${row.cost||''}" placeholder="0" onchange="updateLinenContam('${month}','${name}','cost',this.value)">
+      </td>
+      <td style="padding:5px 6px;border-left:2px solid #d6eaf8">
+        <input type="number" tabindex="${tabIdx++}" style="${iN};text-align:center" value="${row.qty||''}" placeholder="0" onchange="updateLinenContam('${month}','${name}','qty',this.value)">
+      </td>
+      <td class="lccon-tot" style="padding:7px 10px;text-align:right;font-weight:700;color:#1a1a18">${total?total.toLocaleString():0}</td>
+    </tr>`;
+  }).join('');
+  tfoot.innerHTML=`<tr style="background:#0f1f3d;color:#fff;font-weight:700">
+    <td style="padding:9px 12px">합계</td><td></td>
+    <td style="padding:9px 10px;text-align:center">${totQty.toLocaleString()}</td>
+    <td style="padding:9px 10px;text-align:right;color:#ffcc88">${totTotal.toLocaleString()}</td>
+  </tr>`;
+  const el=document.getElementById('linen-contam-metrics');
+  if(el) el.innerHTML=`
+    <div class="met"><div class="met-l">재세탁 총 비용</div><div class="met-v amb">${totTotal.toLocaleString()}</div></div>
+    <div class="met"><div class="met-l">재세탁 수량</div><div class="met-v">${totQty.toLocaleString()}</div></div>`;
+}
+
+function updateLinenContam(month,name,field,value){
+  const row=getLinenContamRow(month,name);
+  row[field]=parseFloat(value)||0;
+  const safeId='linen-con-row-'+name.replace(/[\s()]/g,'_');
+  const rowEl=document.getElementById(safeId);
+  if(rowEl){
+    const total=row.cost*row.qty;
+    const totEl=rowEl.querySelector('.lccon-tot');
+    if(totEl) totEl.textContent=total.toLocaleString();
+  }
+  updateLinenContamTotals(month);
+  dbSaveLinenContamRow(month,row);
+}
+
+function updateLinenContamTotals(month){
+  let totQty=0,totTotal=0;
+  linenItems.forEach(name=>{
+    const row=getLinenContamRow(month,name);
+    totQty+=row.qty;totTotal+=row.cost*row.qty;
+  });
+  const tfoot=document.getElementById('linen-contam-tfoot');
+  if(tfoot) tfoot.innerHTML=`<tr style="background:#0f1f3d;color:#fff;font-weight:700">
+    <td style="padding:9px 12px">합계</td><td></td>
+    <td style="padding:9px 10px;text-align:center">${totQty.toLocaleString()}</td>
+    <td style="padding:9px 10px;text-align:right;color:#ffcc88">${totTotal.toLocaleString()}</td>
+  </tr>`;
+  const el=document.getElementById('linen-contam-metrics');
+  if(el) el.innerHTML=`
+    <div class="met"><div class="met-l">재세탁 총 비용</div><div class="met-v amb">${totTotal.toLocaleString()}</div></div>
+    <div class="met"><div class="met-l">재세탁 수량</div><div class="met-v">${totQty.toLocaleString()}</div></div>`;
+}
+
+async function saveLinenContam(){
+  const month=getLinenContamMonth();
+  const rows=linencontamData[month]||[];
+  for(const row of rows) await dbSaveLinenContamRow(month,row);
+  showToast('✅ 저장됨',`${month.replace('-','년 ')}월 오염 내역이 저장됐습니다`,'grn');
+}
+
+async function dbSaveLinenContamRow(month,obj){
+  const payload={month,item_name:obj.item_name,cost:obj.cost||0,qty:obj.qty||0,total:(obj.cost||0)*(obj.qty||0)};
+  const {data:existing}=await supa.from('linen_contamination').select('id').eq('month',month).eq('item_name',obj.item_name);
+  if(existing&&existing.length>0){await supa.from('linen_contamination').update(payload).eq('id',existing[0].id);}
+  else{await supa.from('linen_contamination').insert(payload);}
+}
+
+async function dbLoadLinenContam(){
+  const {data}=await supa.from('linen_contamination').select('*').order('id',{ascending:true});
+  if(data){
+    linencontamData={};
+    data.forEach(r=>{
+      if(!linencontamData[r.month]) linencontamData[r.month]=[];
+      linencontamData[r.month].push({item_name:r.item_name,cost:r.cost||0,qty:r.qty||0});
+    });
+  }
+}
 let linenItems = [];
 let linenStockData = {};
 let linenDates = {};
@@ -3682,6 +3989,8 @@ async function initApp(){
       dbLoadMaster(),
       dbLoadSettings(),
       dbLoadLinenStock(),
+      dbLoadLinenDiscard(),
+      dbLoadLinenContam(),
     ]);
     showLoading(false);
     // 이번 달 초기화
