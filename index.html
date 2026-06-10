@@ -283,7 +283,6 @@ tr:hover td{background:#fafaf8}
       <button class="sub-tab" onclick="swSub('inventory','maintenance')">정비용품</button>
       <button class="sub-tab" onclick="swSub('inventory','rental')">대여품</button>
       <button class="sub-tab" onclick="swSub('inventory','facility')">시설용품</button>
-      <button class="sub-tab" onclick="swSub('inventory','linen')">린넨</button>
       <button class="sub-tab" onclick="swSub('inventory','analysis')">소모량 분석</button>
     </div>
     <div class="sub-tabs" id="sub-tabs-purchase" style="display:none">
@@ -300,6 +299,7 @@ tr:hover td{background:#fafaf8}
       <button class="sub-tab" onclick="swSub('linen','contamination')">오염</button>
       <button class="sub-tab" onclick="swSub('linen','setting')">세팅현황</button>
     </div>
+    <div class="sub-tabs" id="sub-tabs-cost" style="display:none">
       <button class="sub-tab active" onclick="swSub('cost','room')">객실</button>
       <button class="sub-tab" onclick="swSub('cost','linen')">린넨</button>
       <button class="sub-tab" onclick="swSub('cost','uniform')">유니폼</button>
@@ -974,7 +974,7 @@ const MAIN_LABELS = {overview:'개요',rooms:'객실',issues:'특이사항',cp:'
 const SUB_MAP = {
   rooms:     {default:'seoul',  subs:['seoul','dorm']},
   issues:    {default:'facility', subs:['facility','clean','item']},
-  inventory: {default:'consumable', subs:['consumable','equipment','maintenance','rental','facility','linen','analysis']},
+  inventory: {default:'consumable', subs:['consumable','equipment','maintenance','rental','facility','analysis']},
   purchase:  {default:'consumable', subs:['consumable','equipment','maintenance','rental','facility','linen']},
   linen:     {default:'stock', subs:['stock','discard','contamination','setting']},
   cost:      {default:'room', subs:['room','linen','uniform','purchase','etc']},
