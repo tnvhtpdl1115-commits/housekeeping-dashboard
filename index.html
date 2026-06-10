@@ -235,6 +235,9 @@ tr:hover td{background:#fafaf8}
     <div class="nav-item" onclick="swMain('inventory')" id="nav-inventory">
       <i class="ti ti-package"></i><span>재고</span>
     </div>
+    <div class="nav-item" onclick="swMain('linen')" id="nav-linen">
+      <i class="ti ti-bed"></i><span>린넨관리</span>
+    </div>
     <div class="nav-item" onclick="swMain('purchase')" id="nav-purchase">
       <i class="ti ti-shopping-cart"></i><span>구매</span>
     </div>
@@ -291,7 +294,12 @@ tr:hover td{background:#fafaf8}
       <button class="sub-tab" onclick="swSub('purchase','facility')">시설용품</button>
       <button class="sub-tab" onclick="swSub('purchase','linen')">린넨</button>
     </div>
-    <div class="sub-tabs" id="sub-tabs-cost" style="display:none">
+    <div class="sub-tabs" id="sub-tabs-linen" style="display:none">
+      <button class="sub-tab active" onclick="swSub('linen','stock')">재고</button>
+      <button class="sub-tab" onclick="swSub('linen','discard')">폐기</button>
+      <button class="sub-tab" onclick="swSub('linen','contamination')">오염</button>
+      <button class="sub-tab" onclick="swSub('linen','setting')">세팅현황</button>
+    </div>
       <button class="sub-tab active" onclick="swSub('cost','room')">객실</button>
       <button class="sub-tab" onclick="swSub('cost','linen')">린넨</button>
       <button class="sub-tab" onclick="swSub('cost','uniform')">유니폼</button>
@@ -505,6 +513,72 @@ tr:hover td{background:#fafaf8}
   </div>
 </div>
 </div>
+<!-- 린넨관리 - 재고 -->
+<div id="tab-linen-stock" class="sec">
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+    <select id="linen-month-sel" onchange="renderLinenStock()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1a1a18;font-family:'Noto Sans KR',sans-serif"></select>
+    <button class="btn-s" onclick="linenNewMonth()"><i class="ti ti-calendar-plus"></i> 새 달 시작</button>
+    <button class="btn-s" onclick="openLinenDateModal()"><i class="ti ti-calendar"></i> 입고일 설정</button>
+    <div style="flex:1"></div>
+    <button class="btn-p" onclick="saveLinenStock()"><i class="ti ti-device-floppy"></i> 저장</button>
+  </div>
+  <div class="metrics" id="linen-metrics"></div>
+  <div class="card" style="overflow-x:auto;padding:0">
+    <table id="linen-stock-table" style="width:100%;min-width:1100px;border-collapse:collapse;font-size:12px">
+      <thead>
+        <tr style="background:#0f1f3d;color:#fff">
+          <th rowspan="2" style="padding:10px 8px;text-align:left;min-width:80px;border-right:1px solid rgba(255,255,255,0.1)">품목</th>
+          <th rowspan="2" style="padding:10px 8px;text-align:center;min-width:60px;border-right:1px solid rgba(255,255,255,0.1)">기본<br>세팅량</th>
+          <th rowspan="2" style="padding:10px 8px;text-align:center;min-width:60px;border-right:1px solid rgba(255,255,255,0.1)">전달<br>마감</th>
+          <th colspan="3" style="padding:10px 8px;text-align:center;border-right:1px solid rgba(255,255,255,0.1)">현장 재고</th>
+          <th colspan="3" style="padding:10px 8px;text-align:center;border-right:1px solid rgba(255,255,255,0.1)">업체 재고</th>
+          <th colspan="3" style="padding:10px 8px;text-align:center;border-right:1px solid rgba(255,255,255,0.1)">폐기</th>
+          <th rowspan="2" style="padding:10px 8px;text-align:center;min-width:65px;background:#7B0000;border-right:1px solid rgba(255,255,255,0.15)">당월<br>마감</th>
+          <th rowspan="2" style="padding:10px 8px;text-align:center;min-width:50px;border-right:1px solid rgba(255,255,255,0.1)">LOSS</th>
+          <th rowspan="2" style="padding:10px 8px;text-align:center;min-width:55px;border-right:1px solid rgba(255,255,255,0.1)">LOSS율</th>
+          <th rowspan="2" style="padding:10px 8px;text-align:center;min-width:55px;border-right:1px solid rgba(255,255,255,0.1)">회전율</th>
+          <th rowspan="2" style="padding:10px 8px;text-align:center;min-width:80px">비고</th>
+        </tr>
+        <tr style="background:#1a3a6b;color:#fff">
+          <th style="padding:7px 8px;text-align:center;font-size:11px;border-right:1px solid rgba(255,255,255,0.1)">실설<br>세팅분</th>
+          <th style="padding:7px 8px;text-align:center;font-size:11px;border-right:1px solid rgba(255,255,255,0.1)">전층<br>린넨실</th>
+          <th style="padding:7px 8px;text-align:center;font-size:11px;border-right:1px solid rgba(255,255,255,0.1)">창고</th>
+          <th style="padding:7px 8px;text-align:center;font-size:11px;border-right:1px solid rgba(255,255,255,0.1)" id="linen-in1-header">입고1</th>
+          <th style="padding:7px 8px;text-align:center;font-size:11px;border-right:1px solid rgba(255,255,255,0.1)" id="linen-in2-header">입고2</th>
+          <th style="padding:7px 8px;text-align:center;font-size:11px;border-right:1px solid rgba(255,255,255,0.1)">추측값</th>
+          <th style="padding:7px 8px;text-align:center;font-size:11px;border-right:1px solid rgba(255,255,255,0.1)">디디</th>
+          <th style="padding:7px 8px;text-align:center;font-size:11px;border-right:1px solid rgba(255,255,255,0.1)">GNG</th>
+          <th style="padding:7px 8px;text-align:center;font-size:11px;border-right:1px solid rgba(255,255,255,0.1)">합계</th>
+        </tr>
+      </thead>
+      <tbody id="linen-stock-tbody"></tbody>
+      <tfoot id="linen-stock-tfoot"></tfoot>
+    </table>
+  </div>
+</div>
+<div id="tab-linen-discard" class="sec">
+  <div class="card"><div class="empty" style="padding:40px">폐기 관리 - 준비 중</div></div>
+</div>
+<div id="tab-linen-contamination" class="sec">
+  <div class="card"><div class="empty" style="padding:40px">오염 관리 - 준비 중</div></div>
+</div>
+<div id="tab-linen-setting" class="sec">
+  <div class="card"><div class="empty" style="padding:40px">세팅현황 - 준비 중</div></div>
+</div>
+
+<!-- 모달: 린넨 입고일 설정 -->
+<div class="modal-bg" id="linen-date-modal">
+<div class="modal" style="width:320px">
+  <h3>업체 입고일 설정</h3>
+  <div class="fg"><label>입고1 날짜</label><input type="date" id="linen-in1-date"></div>
+  <div class="fg"><label>입고2 날짜</label><input type="date" id="linen-in2-date"></div>
+  <div class="btn-row">
+    <button class="btn-s" onclick="closeModal('linen-date-modal')">취소</button>
+    <button class="btn-p" onclick="saveLinenDates()">저장</button>
+  </div>
+</div>
+</div>
+
 <div class="modal-bg" id="weekly-check-modal">
 <div class="modal" style="width:500px">
   <h3 id="weekly-check-title">주간 재고조사</h3>
@@ -895,13 +969,14 @@ function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
 // ── 탭 전환 ──
-const MAIN_TABS = ['overview','rooms','issues','cp','inventory','purchase','cost'];
-const MAIN_LABELS = {overview:'개요',rooms:'객실',issues:'특이사항',cp:'CP관리',inventory:'재고',purchase:'구매',cost:'비용'};
+const MAIN_TABS = ['overview','rooms','issues','cp','inventory','linen','purchase','cost'];
+const MAIN_LABELS = {overview:'개요',rooms:'객실',issues:'특이사항',cp:'CP관리',inventory:'재고',linen:'린넨관리',purchase:'구매',cost:'비용'};
 const SUB_MAP = {
   rooms:     {default:'seoul',  subs:['seoul','dorm']},
   issues:    {default:'facility', subs:['facility','clean','item']},
   inventory: {default:'consumable', subs:['consumable','equipment','maintenance','rental','facility','linen','analysis']},
   purchase:  {default:'consumable', subs:['consumable','equipment','maintenance','rental','facility','linen']},
+  linen:     {default:'stock', subs:['stock','discard','contamination','setting']},
   cost:      {default:'room', subs:['room','linen','uniform','purchase','etc']},
 };
 let currentMain = 'overview';
@@ -965,6 +1040,9 @@ function swSub(main, sub){
       document.getElementById('inv-analysis-section').style.display='none';
       renderInv();
     }
+  } else if(main==='linen'){
+    document.getElementById('tab-linen-'+sub).classList.add('on');
+    if(sub==='stock') renderLinenStock();
   } else if(main==='purchase'){
     document.getElementById('tab-purchase').classList.add('on');
     currentPurCategory = sub;
@@ -3101,6 +3179,194 @@ async function dbLoadWeekly(){
     }
   }
 }
+// ── 린넨 관리 ──
+let linenItems = [];
+let linenStockData = {};
+let linenDates = {};
+
+function getLinenMonth(){return document.getElementById('linen-month-sel')?.value||thisMonthKey();}
+
+function buildLinenMonthSel(){
+  const now=new Date();
+  const key=mkKey(now.getFullYear(),now.getMonth()+1);
+  const months=[...new Set([...Object.keys(linenStockData),key])].sort();
+  const sel=document.getElementById('linen-month-sel');
+  if(!sel)return;
+  const cur=sel.value||key;
+  sel.innerHTML=months.map(m=>`<option value="${m}"${m===cur?' selected':''}>${m.replace('-','년 ')}월</option>`).join('');
+  sel.value=cur;
+}
+
+function linenNewMonth(){
+  const input=prompt('추가할 월을 입력하세요 (예: 2026-05)','2026-05');
+  if(!input||!/^\d{4}-\d{2}$/.test(input)){alert('형식이 맞지 않습니다.');return;}
+  if(!linenStockData[input]) linenStockData[input]=[];
+  buildLinenMonthSel();
+  document.getElementById('linen-month-sel').value=input;
+  renderLinenStock();
+}
+
+function openLinenDateModal(){
+  const month=getLinenMonth();
+  const dates=linenDates[month]||{};
+  document.getElementById('linen-in1-date').value=dates.in1_date||'';
+  document.getElementById('linen-in2-date').value=dates.in2_date||'';
+  openModal('linen-date-modal');
+}
+
+function saveLinenDates(){
+  const month=getLinenMonth();
+  linenDates[month]={in1_date:document.getElementById('linen-in1-date').value,in2_date:document.getElementById('linen-in2-date').value};
+  dbSaveSettings('linen_dates_'+month,linenDates[month]);
+  closeModal('linen-date-modal');
+  renderLinenStock();
+}
+
+function getLinenRow(month,name){
+  if(!linenStockData[month]) linenStockData[month]=[];
+  let row=linenStockData[month].find(r=>r.item_name===name);
+  if(!row){
+    row={item_name:name,base_qty:0,prev_closing:0,field_setting:0,field_floor:0,field_storage:0,vendor_in1:0,vendor_in2:0,vendor_estimate:0,discard_didi:0,discard_gng:0,note:''};
+    linenStockData[month].push(row);
+  }
+  return row;
+}
+
+function getPrevMonthClosing(month,name){
+  const [y,m]=month.split('-').map(Number);
+  const prevMonth=mkKey(new Date(y,m-2,1).getFullYear(),new Date(y,m-2,1).getMonth()+1);
+  const prevRow=(linenStockData[prevMonth]||[]).find(r=>r.item_name===name);
+  if(prevRow){
+    return (prevRow.field_setting+prevRow.field_floor+prevRow.field_storage)
+          +(prevRow.vendor_in1+prevRow.vendor_in2+prevRow.vendor_estimate)
+          -(prevRow.discard_didi+prevRow.discard_gng);
+  }
+  return 0;
+}
+
+function renderLinenStock(){
+  buildLinenMonthSel();
+  const month=getLinenMonth();
+  if(!linenStockData[month]) linenStockData[month]=[];
+  const dates=linenDates[month]||{};
+  const h1=document.getElementById('linen-in1-header');
+  const h2=document.getElementById('linen-in2-header');
+  if(h1) h1.innerHTML=dates.in1_date?dates.in1_date.slice(5)+'<br>입고':'입고1';
+  if(h2) h2.innerHTML=dates.in2_date?dates.in2_date.slice(5)+'<br>입고':'입고2';
+  const tbody=document.getElementById('linen-stock-tbody');
+  const tfoot=document.getElementById('linen-stock-tfoot');
+  if(!tbody)return;
+  let totBase=0,totPrev=0,totFS=0,totFF=0,totFST=0,totVI1=0,totVI2=0,totVE=0,totDD=0,totGNG=0,totClose=0,totLoss=0;
+  const iN='width:100%;font-size:12px;padding:4px 5px;border:1px solid rgba(0,0,0,0.12);border-radius:4px;text-align:right;font-family:\'Noto Sans KR\',sans-serif;background:#fff';
+  const iT=iN.replace('text-align:right','text-align:left');
+  tbody.innerHTML=linenItems.map(name=>{
+    const row=getLinenRow(month,name);
+    const prev=row.prev_closing||getPrevMonthClosing(month,name);
+    row.prev_closing=prev;
+    const ft=row.field_setting+row.field_floor+row.field_storage;
+    const vt=row.vendor_in1+row.vendor_in2+row.vendor_estimate;
+    const dt=row.discard_didi+row.discard_gng;
+    const closing=ft+vt-dt;
+    const loss=closing-prev;
+    const lossRate=row.base_qty>0?((loss/row.base_qty)*100).toFixed(0)+'%':'-';
+    const turnover=row.base_qty>0?(closing/row.base_qty).toFixed(1):'-';
+    const lc=loss<0?'#A32D2D':loss>0?'#3B6D11':'#6b6b68';
+    totBase+=row.base_qty;totPrev+=prev;totFS+=row.field_setting;totFF+=row.field_floor;
+    totFST+=row.field_storage;totVI1+=row.vendor_in1;totVI2+=row.vendor_in2;
+    totVE+=row.vendor_estimate;totDD+=row.discard_didi;totGNG+=row.discard_gng;
+    totClose+=closing;totLoss+=loss;
+    return `<tr style="border-bottom:1px solid rgba(0,0,0,0.06)" onmouseover="this.style.background='#fafaf8'" onmouseout="this.style.background=''">
+      <td style="padding:6px 8px;font-weight:600;white-space:nowrap">${name}</td>
+      <td style="padding:4px 6px;text-align:right;background:#f5f5f4;font-weight:600">${row.base_qty||'-'}</td>
+      <td style="padding:4px 6px;text-align:right;background:#f5f5f4;color:#6b6b68">${prev||'-'}</td>
+      <td style="padding:3px 4px"><input type="number" style="${iN}" value="${row.field_setting||''}" placeholder="-" oninput="updateLinenRow('${month}','${name}','field_setting',this.value)"></td>
+      <td style="padding:3px 4px"><input type="number" style="${iN}" value="${row.field_floor||''}" placeholder="-" oninput="updateLinenRow('${month}','${name}','field_floor',this.value)"></td>
+      <td style="padding:3px 4px"><input type="number" style="${iN}" value="${row.field_storage||''}" placeholder="-" oninput="updateLinenRow('${month}','${name}','field_storage',this.value)"></td>
+      <td style="padding:3px 4px"><input type="number" style="${iN}" value="${row.vendor_in1||''}" placeholder="-" oninput="updateLinenRow('${month}','${name}','vendor_in1',this.value)"></td>
+      <td style="padding:3px 4px"><input type="number" style="${iN}" value="${row.vendor_in2||''}" placeholder="-" oninput="updateLinenRow('${month}','${name}','vendor_in2',this.value)"></td>
+      <td style="padding:3px 4px"><input type="number" style="${iN}" value="${row.vendor_estimate||''}" placeholder="-" oninput="updateLinenRow('${month}','${name}','vendor_estimate',this.value)"></td>
+      <td style="padding:3px 4px"><input type="number" style="${iN}" value="${row.discard_didi||''}" placeholder="-" oninput="updateLinenRow('${month}','${name}','discard_didi',this.value)"></td>
+      <td style="padding:3px 4px"><input type="number" style="${iN}" value="${row.discard_gng||''}" placeholder="-" oninput="updateLinenRow('${month}','${name}','discard_gng',this.value)"></td>
+      <td style="padding:4px 6px;text-align:center;font-weight:600;color:#A32D2D;background:#FFF5F5">${dt||'-'}</td>
+      <td style="padding:4px 8px;text-align:right;font-weight:700;font-size:14px;background:#FFF0F0;border-left:2px solid #A32D2D">${closing.toLocaleString()}</td>
+      <td style="padding:4px 6px;text-align:right;font-weight:600;color:${lc}">${loss>0?'+':''}${loss.toLocaleString()}</td>
+      <td style="padding:4px 6px;text-align:right;color:${lc};font-size:11px">${lossRate}</td>
+      <td style="padding:4px 6px;text-align:right;color:#6b6b68">${turnover}</td>
+      <td style="padding:3px 4px"><input type="text" style="${iT}" value="${row.note||''}" placeholder="비고" oninput="updateLinenRow('${month}','${name}','note',this.value)"></td>
+    </tr>`;
+  }).join('');
+  const totLc=totLoss<0?'color:#A32D2D':totLoss>0?'color:#3B6D11':'';
+  tfoot.innerHTML=`<tr style="background:#0f1f3d;color:#fff;font-weight:600">
+    <td style="padding:8px 8px">합계</td>
+    <td style="padding:8px;text-align:right">${totBase.toLocaleString()}</td>
+    <td style="padding:8px;text-align:right;color:rgba(255,255,255,0.5)">${totPrev.toLocaleString()}</td>
+    <td style="padding:8px;text-align:right">${totFS.toLocaleString()}</td>
+    <td style="padding:8px;text-align:right">${totFF.toLocaleString()}</td>
+    <td style="padding:8px;text-align:right">${totFST.toLocaleString()}</td>
+    <td style="padding:8px;text-align:right">${totVI1.toLocaleString()}</td>
+    <td style="padding:8px;text-align:right">${totVI2.toLocaleString()}</td>
+    <td style="padding:8px;text-align:right">${totVE.toLocaleString()}</td>
+    <td style="padding:8px;text-align:right">${totDD.toLocaleString()}</td>
+    <td style="padding:8px;text-align:right">${totGNG.toLocaleString()}</td>
+    <td style="padding:8px;text-align:right">${(totDD+totGNG).toLocaleString()}</td>
+    <td style="padding:8px;text-align:right;background:#7B0000;font-size:14px;border-left:2px solid #ff6666">${totClose.toLocaleString()}</td>
+    <td style="padding:8px;text-align:right;${totLc}">${totLoss>0?'+':''}${totLoss.toLocaleString()}</td>
+    <td style="padding:8px;text-align:right">${totBase>0?((totLoss/totBase)*100).toFixed(0)+'%':'-'}</td>
+    <td style="padding:8px;text-align:right">${totBase>0?(totClose/totBase).toFixed(1):'-'}</td>
+    <td></td>
+  </tr>`;
+  const el=document.getElementById('linen-metrics');
+  if(el) el.innerHTML=`
+    <div class="met"><div class="met-l">당월 마감 합계</div><div class="met-v">${totClose.toLocaleString()}</div></div>
+    <div class="met"><div class="met-l">전달 대비 LOSS</div><div class="met-v ${totLoss<0?'red':totLoss>0?'grn':''}">${totLoss>0?'+':''}${totLoss.toLocaleString()}</div></div>
+    <div class="met"><div class="met-l">총 폐기</div><div class="met-v amb">${(totDD+totGNG).toLocaleString()}</div></div>
+    <div class="met"><div class="met-l">평균 회전율</div><div class="met-v">${totBase>0?(totClose/totBase).toFixed(1):'-'}</div></div>`;
+}
+
+function updateLinenRow(month,name,field,value){
+  const row=getLinenRow(month,name);
+  row[field]=field==='note'?value:(parseFloat(value)||0);
+  // 계산값 실시간 업데이트 (tbody 전체 재렌더 없이 해당 행만)
+  renderLinenStockRow(month,name);
+}
+
+function renderLinenStockRow(month,name){
+  // 간단하게 전체 재렌더 (품목 수가 많지 않아서 성능 OK)
+  renderLinenStock();
+}
+
+async function saveLinenStock(){
+  const month=getLinenMonth();
+  const rows=linenStockData[month]||[];
+  for(const row of rows){
+    await dbSaveLinenStock(month,row);
+  }
+  showToast('✅ 저장됨',`${month.replace('-','년 ')}월 린넨 재고가 저장됐습니다`,'grn');
+}
+
+async function dbSaveLinenStock(month,obj){
+  const payload={month,item_name:obj.item_name,base_qty:obj.base_qty||0,prev_closing:obj.prev_closing||0,field_setting:obj.field_setting||0,field_floor:obj.field_floor||0,field_storage:obj.field_storage||0,vendor_in1:obj.vendor_in1||0,vendor_in2:obj.vendor_in2||0,vendor_estimate:obj.vendor_estimate||0,discard_didi:obj.discard_didi||0,discard_gng:obj.discard_gng||0,note:obj.note||''};
+  const {data:existing}=await supa.from('linen_stock').select('id').eq('month',month).eq('item_name',obj.item_name);
+  if(existing&&existing.length>0){await supa.from('linen_stock').update(payload).eq('id',existing[0].id);}
+  else{await supa.from('linen_stock').insert(payload);}
+}
+
+async function dbLoadLinenStock(){
+  const {data:items}=await supa.from('linen_items').select('*').order('sort_order',{ascending:true});
+  if(items&&items.length>0) linenItems=items.map(r=>r.name);
+  const {data}=await supa.from('linen_stock').select('*').order('id',{ascending:true});
+  if(data){
+    linenStockData={};
+    data.forEach(r=>{
+      if(!linenStockData[r.month]) linenStockData[r.month]=[];
+      linenStockData[r.month].push({item_name:r.item_name,base_qty:r.base_qty||0,prev_closing:r.prev_closing||0,field_setting:r.field_setting||0,field_floor:r.field_floor||0,field_storage:r.field_storage||0,vendor_in1:r.vendor_in1||0,vendor_in2:r.vendor_in2||0,vendor_estimate:r.vendor_estimate||0,discard_didi:r.discard_didi||0,discard_gng:r.discard_gng||0,note:r.note||''});
+    });
+  }
+  // 입고일 설정 로드
+  const {data:sd}=await supa.from('settings').select('*').like('key','linen_dates_%');
+  if(sd) sd.forEach(r=>{const m=r.key.replace('linen_dates_','');linenDates[m]=r.value;});
+}
+
 async function dbLoadInventory(){
   const {data}=await supa.from('inv_data').select('*').order('id',{ascending:true});
   if(data){
@@ -3338,6 +3604,7 @@ async function initApp(){
       dbLoadCosts(),
       dbLoadMaster(),
       dbLoadSettings(),
+      dbLoadLinenStock(),
     ]);
     showLoading(false);
     // 이번 달 초기화
