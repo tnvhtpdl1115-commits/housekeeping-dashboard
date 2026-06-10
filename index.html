@@ -2705,20 +2705,20 @@ function renderInv(){
       <td><strong style="font-size:13px">${item.name}</strong></td>
       <td style="color:#6b6b68;font-size:11px;text-align:center">${item.unit}</td>
       <td style="text-align:right;padding-right:12px">
-        <div style="font-size:22px;font-weight:700;color:#9b9b97;line-height:1">${prevQty.toLocaleString()}</div>
+        <div style="font-size:13px;font-weight:500;color:#b0aead;line-height:1">${prevQty.toLocaleString()}</div>
       </td>
       <td style="text-align:right;padding-right:12px">
         ${inQty>0
-          ?`<div style="font-size:18px;font-weight:700;color:#3B6D11;line-height:1">+${inQty.toLocaleString()}</div>`
-          :`<div style="font-size:16px;font-weight:400;color:#d0cdc8;line-height:1">-</div>`}
+          ?`<div style="font-size:12px;font-weight:600;color:#6aaa82;line-height:1">+${inQty.toLocaleString()}</div>`
+          :`<div style="font-size:12px;color:#d8d5d0;line-height:1">-</div>`}
       </td>
       <td style="text-align:right;padding-right:12px">
         <div style="font-size:26px;font-weight:800;color:${surveyed?'#0f1f3d':'#c0bdb8'};line-height:1">${currQty.toLocaleString()}</div>
       </td>
       <td style="text-align:right;padding-right:12px">
         ${surveyed&&usageDiff!==0
-          ?`<div style="font-size:18px;font-weight:700;color:${usageColor};line-height:1">${usageDisplay}</div>`
-          :`<div style="font-size:16px;color:#d0cdc8">-</div>`}
+          ?`<div style="font-size:12px;font-weight:600;color:${usageDiff>0?'#c47a7a':'#6aaa82'};line-height:1">${usageDisplay}</div>`
+          :`<div style="font-size:12px;color:#d8d5d0">-</div>`}
       </td>
       <td style="text-align:center">
         ${minQty>0
