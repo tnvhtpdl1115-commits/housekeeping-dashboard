@@ -3268,6 +3268,7 @@ function renderLinenStock(){
   let totBase=0,totPrev=0,totFS=0,totFF=0,totFST=0,totVI1=0,totVI2=0,totVE=0,totDD=0,totGNG=0,totClose=0,totLoss=0;
   const iN='width:100%;font-size:13px;padding:5px 6px;border:1px solid rgba(0,0,0,0.15);border-radius:4px;text-align:right;font-family:\'Noto Sans KR\',sans-serif;background:#fff;color:#1a1a18';
   const iT=iN.replace('text-align:right','text-align:left');
+  let tabIdx=1;
   tbody.innerHTML=linenItems.map((name,idx)=>{
     const row=getLinenRow(month,name);
     const prev=row.prev_closing||getPrevMonthClosing(month,name);
@@ -3281,28 +3282,30 @@ function renderLinenStock(){
     const turnover=row.base_qty>0?(closing/row.base_qty).toFixed(1):'-';
     const lc=loss<0?'#A32D2D':loss>0?'#3B6D11':'#6b6b68';
     const rowBg=idx%2===0?'#ffffff':'#f9f9f8';
+    const safeId='linen-row-'+name.replace(/[\s()]/g,'_');
     totBase+=row.base_qty;totPrev+=prev;totFS+=row.field_setting;totFF+=row.field_floor;
     totFST+=row.field_storage;totVI1+=row.vendor_in1;totVI2+=row.vendor_in2;
     totVE+=row.vendor_estimate;totDD+=row.discard_didi;totGNG+=row.discard_gng;
     totClose+=closing;totLoss+=loss;
-    return `<tr style="background:${rowBg};border-bottom:1px solid rgba(0,0,0,0.08)" onmouseover="this.style.background='#eef4ff'" onmouseout="this.style.background='${rowBg}'">
+    const ti=()=>tabIdx++;
+    return `<tr id="${safeId}" style="background:${rowBg};border-bottom:1px solid rgba(0,0,0,0.08)" onmouseover="this.style.background='#eef4ff'" onmouseout="this.style.background='${rowBg}'">
       <td style="padding:7px 10px;font-weight:700;font-size:13px;color:#1a1a18;border-right:1px solid rgba(0,0,0,0.06);white-space:nowrap">${name}</td>
       <td style="padding:7px 8px;text-align:right;background:#f0f4ff;font-weight:700;font-size:14px;color:#0f1f3d;border-right:1px solid rgba(0,0,0,0.08)">${row.base_qty||'-'}</td>
       <td style="padding:7px 8px;text-align:right;background:#f5f5f4;font-size:13px;color:#6b6b68;border-right:1px solid rgba(0,0,0,0.1)">${prev||'-'}</td>
-      <td style="padding:4px 4px;background:#eef6ff;border-right:1px solid rgba(0,0,0,0.06)"><input type="number" style="${iN}" value="${row.field_setting||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','field_setting',this.value)"></td>
-      <td style="padding:4px 4px;background:#eef6ff;border-right:1px solid rgba(0,0,0,0.06)"><input type="number" style="${iN}" value="${row.field_floor||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','field_floor',this.value)"></td>
-      <td style="padding:4px 4px;background:#eef6ff;border-right:1px solid rgba(0,0,0,0.1)"><input type="number" style="${iN}" value="${row.field_storage||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','field_storage',this.value)"></td>
-      <td style="padding:4px 4px;background:#eefff4;border-right:1px solid rgba(0,0,0,0.06)"><input type="number" style="${iN}" value="${row.vendor_in1||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','vendor_in1',this.value)"></td>
-      <td style="padding:4px 4px;background:#eefff4;border-right:1px solid rgba(0,0,0,0.06)"><input type="number" style="${iN}" value="${row.vendor_in2||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','vendor_in2',this.value)"></td>
-      <td style="padding:4px 4px;background:#eefff4;border-right:1px solid rgba(0,0,0,0.1)"><input type="number" style="${iN}" value="${row.vendor_estimate||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','vendor_estimate',this.value)"></td>
-      <td style="padding:4px 4px;background:#fff5f5;border-right:1px solid rgba(0,0,0,0.06)"><input type="number" style="${iN}" value="${row.discard_didi||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','discard_didi',this.value)"></td>
-      <td style="padding:4px 4px;background:#fff5f5;border-right:1px solid rgba(0,0,0,0.06)"><input type="number" style="${iN}" value="${row.discard_gng||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','discard_gng',this.value)"></td>
-      <td style="padding:7px 8px;text-align:right;font-weight:700;font-size:14px;color:#A32D2D;background:#fff0f0;border-right:1px solid rgba(0,0,0,0.1)">${dt||'-'}</td>
-      <td style="padding:7px 10px;text-align:right;font-weight:800;font-size:15px;color:#fff;background:#8B0000;border-left:2px solid #cc0000;border-right:1px solid rgba(0,0,0,0.15)">${closing.toLocaleString()}</td>
-      <td style="padding:7px 8px;text-align:right;font-weight:700;font-size:13px;color:${lc};border-right:1px solid rgba(0,0,0,0.06)">${loss>0?'+':''}${loss.toLocaleString()}</td>
-      <td style="padding:7px 8px;text-align:right;font-size:12px;color:${lc};border-right:1px solid rgba(0,0,0,0.06)">${lossRate}</td>
-      <td style="padding:7px 8px;text-align:right;font-size:13px;color:#1a1a18;border-right:1px solid rgba(0,0,0,0.06)">${turnover}</td>
-      <td style="padding:4px 4px"><input type="text" style="${iT}" value="${row.note||''}" placeholder="비고" onchange="updateLinenRow('${month}','${name}','note',this.value)"></td>
+      <td style="padding:4px 4px;background:#eef6ff;border-right:1px solid rgba(0,0,0,0.06)"><input type="number" tabindex="${ti()}" style="${iN}" value="${row.field_setting||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','field_setting',this.value)"></td>
+      <td style="padding:4px 4px;background:#eef6ff;border-right:1px solid rgba(0,0,0,0.06)"><input type="number" tabindex="${ti()}" style="${iN}" value="${row.field_floor||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','field_floor',this.value)"></td>
+      <td style="padding:4px 4px;background:#eef6ff;border-right:1px solid rgba(0,0,0,0.1)"><input type="number" tabindex="${ti()}" style="${iN}" value="${row.field_storage||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','field_storage',this.value)"></td>
+      <td style="padding:4px 4px;background:#eefff4;border-right:1px solid rgba(0,0,0,0.06)"><input type="number" tabindex="${ti()}" style="${iN}" value="${row.vendor_in1||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','vendor_in1',this.value)"></td>
+      <td style="padding:4px 4px;background:#eefff4;border-right:1px solid rgba(0,0,0,0.06)"><input type="number" tabindex="${ti()}" style="${iN}" value="${row.vendor_in2||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','vendor_in2',this.value)"></td>
+      <td style="padding:4px 4px;background:#eefff4;border-right:1px solid rgba(0,0,0,0.1)"><input type="number" tabindex="${ti()}" style="${iN}" value="${row.vendor_estimate||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','vendor_estimate',this.value)"></td>
+      <td style="padding:4px 4px;background:#fff5f5;border-right:1px solid rgba(0,0,0,0.06)"><input type="number" tabindex="${ti()}" style="${iN}" value="${row.discard_didi||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','discard_didi',this.value)"></td>
+      <td style="padding:4px 4px;background:#fff5f5;border-right:1px solid rgba(0,0,0,0.06)"><input type="number" tabindex="${ti()}" style="${iN}" value="${row.discard_gng||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','discard_gng',this.value)"></td>
+      <td class="lcalc" style="padding:7px 8px;text-align:right;font-weight:700;font-size:14px;color:#A32D2D;background:#fff0f0;border-right:1px solid rgba(0,0,0,0.1)">${dt||'-'}</td>
+      <td class="lcalc" style="padding:7px 10px;text-align:right;font-weight:800;font-size:15px;color:#fff;background:#8B0000;border-left:2px solid #cc0000;border-right:1px solid rgba(0,0,0,0.15)">${closing.toLocaleString()}</td>
+      <td class="lcalc" style="padding:7px 8px;text-align:right;font-weight:700;font-size:13px;color:${lc};border-right:1px solid rgba(0,0,0,0.06)">${loss>0?'+':''}${loss.toLocaleString()}</td>
+      <td class="lcalc" style="padding:7px 8px;text-align:right;font-size:12px;color:${lc};border-right:1px solid rgba(0,0,0,0.06)">${lossRate}</td>
+      <td class="lcalc" style="padding:7px 8px;text-align:right;font-size:13px;color:#1a1a18;border-right:1px solid rgba(0,0,0,0.06)">${turnover}</td>
+      <td style="padding:4px 4px"><input type="text" tabindex="${ti()}" style="${iT}" value="${row.note||''}" placeholder="비고" onchange="updateLinenRow('${month}','${name}','note',this.value)"></td>
     </tr>`;
   }).join('');
   const totLc=totLoss<0?'color:#A32D2D':totLoss>0?'color:#3B6D11':'';
@@ -3336,13 +3339,77 @@ function renderLinenStock(){
 function updateLinenRow(month,name,field,value){
   const row=getLinenRow(month,name);
   row[field]=field==='note'?value:(parseFloat(value)||0);
-  // 계산값 실시간 업데이트 (tbody 전체 재렌더 없이 해당 행만)
-  renderLinenStockRow(month,name);
+  // 자동 DB 저장
+  dbSaveLinenStock(month,row);
+  // 계산 셀만 업데이트 (전체 재렌더 없음 → 포커스 유지)
+  updateLinenCalcCells(month,name);
 }
 
-function renderLinenStockRow(month,name){
-  // 간단하게 전체 재렌더 (품목 수가 많지 않아서 성능 OK)
-  renderLinenStock();
+function updateLinenCalcCells(month,name){
+  const row=getLinenRow(month,name);
+  const prev=row.prev_closing||getPrevMonthClosing(month,name);
+  const ft=row.field_setting+row.field_floor+row.field_storage;
+  const vt=row.vendor_in1+row.vendor_in2+row.vendor_estimate;
+  const dt=row.discard_didi+row.discard_gng;
+  const closing=ft+vt-dt;
+  const loss=closing-prev;
+  const lossRate=row.base_qty>0?((loss/row.base_qty)*100).toFixed(0)+'%':'-';
+  const turnover=row.base_qty>0?(closing/row.base_qty).toFixed(1):'-';
+  const lc=loss<0?'#A32D2D':loss>0?'#3B6D11':'#6b6b68';
+  const safeId='linen-row-'+name.replace(/[\s()]/g,'_');
+  const rowEl=document.getElementById(safeId);
+  if(!rowEl)return;
+  const cells=rowEl.querySelectorAll('.lcalc');
+  if(cells[0]) cells[0].textContent=dt||'-';
+  if(cells[1]){cells[1].textContent=closing.toLocaleString();}
+  if(cells[2]){cells[2].textContent=(loss>0?'+':'')+loss.toLocaleString();cells[2].style.color=lc;}
+  if(cells[3]){cells[3].textContent=lossRate;cells[3].style.color=lc;}
+  if(cells[4]) cells[4].textContent=turnover;
+  updateLinenTotals(month);
+}
+
+function updateLinenTotals(month){
+  if(!linenStockData[month])return;
+  let totBase=0,totPrev=0,totFS=0,totFF=0,totFST=0,totVI1=0,totVI2=0,totVE=0,totDD=0,totGNG=0,totClose=0,totLoss=0;
+  linenItems.forEach(name=>{
+    const row=getLinenRow(month,name);
+    const prev=row.prev_closing||getPrevMonthClosing(month,name);
+    totBase+=row.base_qty;totPrev+=prev;
+    totFS+=row.field_setting;totFF+=row.field_floor;totFST+=row.field_storage;
+    totVI1+=row.vendor_in1;totVI2+=row.vendor_in2;totVE+=row.vendor_estimate;
+    totDD+=row.discard_didi;totGNG+=row.discard_gng;
+    const closing=(row.field_setting+row.field_floor+row.field_storage)+(row.vendor_in1+row.vendor_in2+row.vendor_estimate)-(row.discard_didi+row.discard_gng);
+    totClose+=closing;totLoss+=closing-prev;
+  });
+  const tfoot=document.getElementById('linen-stock-tfoot');
+  if(tfoot){
+    const totLc=totLoss<0?'color:#A32D2D':totLoss>0?'color:#3B6D11':'';
+    tfoot.innerHTML=`<tr style="background:#0f1f3d;color:#fff;font-weight:600">
+      <td style="padding:8px 10px">합계</td>
+      <td style="padding:8px;text-align:right">${totBase.toLocaleString()}</td>
+      <td style="padding:8px;text-align:right;color:rgba(255,255,255,0.6)">${totPrev.toLocaleString()}</td>
+      <td style="padding:8px;text-align:right">${totFS.toLocaleString()}</td>
+      <td style="padding:8px;text-align:right">${totFF.toLocaleString()}</td>
+      <td style="padding:8px;text-align:right">${totFST.toLocaleString()}</td>
+      <td style="padding:8px;text-align:right">${totVI1.toLocaleString()}</td>
+      <td style="padding:8px;text-align:right">${totVI2.toLocaleString()}</td>
+      <td style="padding:8px;text-align:right">${totVE.toLocaleString()}</td>
+      <td style="padding:8px;text-align:right">${totDD.toLocaleString()}</td>
+      <td style="padding:8px;text-align:right">${totGNG.toLocaleString()}</td>
+      <td style="padding:8px;text-align:right;color:#ffaaaa">${(totDD+totGNG).toLocaleString()}</td>
+      <td style="padding:8px;text-align:right;background:#7B0000;font-size:14px">${totClose.toLocaleString()}</td>
+      <td style="padding:8px;text-align:right;${totLc}">${totLoss>0?'+':''}${totLoss.toLocaleString()}</td>
+      <td style="padding:8px;text-align:right">${totBase>0?((totLoss/totBase)*100).toFixed(0)+'%':'-'}</td>
+      <td style="padding:8px;text-align:right">${totBase>0?(totClose/totBase).toFixed(1):'-'}</td>
+      <td></td>
+    </tr>`;
+  }
+  const el=document.getElementById('linen-metrics');
+  if(el) el.innerHTML=`
+    <div class="met"><div class="met-l">당월 마감 합계</div><div class="met-v">${totClose.toLocaleString()}</div></div>
+    <div class="met"><div class="met-l">전달 대비 LOSS</div><div class="met-v ${totLoss<0?'red':totLoss>0?'grn':''}">${totLoss>0?'+':''}${totLoss.toLocaleString()}</div></div>
+    <div class="met"><div class="met-l">총 폐기</div><div class="met-v amb">${(totDD+totGNG).toLocaleString()}</div></div>
+    <div class="met"><div class="met-l">평균 회전율</div><div class="met-v">${totBase>0?(totClose/totBase).toFixed(1):'-'}</div></div>`;
 }
 
 async function saveLinenStock(){
