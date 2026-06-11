@@ -401,7 +401,7 @@ tr:hover td{background:#fafaf8}
   <!-- 소모품/비품: 주간 재고 -->
   <div id="inv-weekly-section">
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-      <select id="inv-month-sel" onchange="renderInv()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1a1a18;font-family:'Noto Sans KR',sans-serif"></select>
+      <select id="inv-month-sel" onchange="renderInv()" style="font-size:14px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;background:#1a3a5f;color:#ffffff;font-family:'Noto Sans KR',sans-serif;cursor:pointer;min-width:110px"></select>
       <div class="tab-sub" id="inv-week-tabs">
         <button class="on" onclick="selWeek(1)">1주차</button>
         <button onclick="selWeek(2)">2주차</button>
@@ -436,7 +436,7 @@ tr:hover td{background:#fafaf8}
   <!-- 린넨: 월간 재고 -->
   <div id="inv-monthly-section" style="display:none">
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-      <select id="inv-linen-month-sel" onchange="renderLinenInv()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1a1a18;font-family:'Noto Sans KR',sans-serif"></select>
+      <select id="inv-linen-month-sel" onchange="renderLinenInv()" style="font-size:14px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;background:#1a3a5f;color:#ffffff;font-family:'Noto Sans KR',sans-serif;cursor:pointer;min-width:110px"></select>
       <div style="flex:1"></div>
       <button class="btn-p" onclick="openInvModal()"><i class="ti ti-plus"></i> 품목 등록</button>
     </div>
@@ -453,7 +453,7 @@ tr:hover td{background:#fafaf8}
   <!-- 소모량 분석 -->
   <div id="inv-analysis-section" style="display:none">
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-      <select id="analysis-cat" onchange="renderAnalysis()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1a1a18;font-family:'Noto Sans KR',sans-serif">
+      <select id="analysis-cat" onchange="renderAnalysis()" style="font-size:14px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;background:#1a3a5f;color:#ffffff;font-family:'Noto Sans KR',sans-serif;cursor:pointer;min-width:110px">
         <option value="all">전체</option>
         <option value="consumable">소모품</option>
         <option value="equipment">비품</option>
@@ -516,7 +516,7 @@ tr:hover td{background:#fafaf8}
 <!-- 린넨관리 - 재고 -->
 <div id="tab-linen-stock" class="sec">
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-    <select id="linen-month-sel" onchange="renderLinenStock()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1a1a18;font-family:'Noto Sans KR',sans-serif"></select>
+    <select id="linen-month-sel" onchange="renderLinenStock()" style="font-size:14px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;background:#1a3a5f;color:#ffffff;font-family:'Noto Sans KR',sans-serif;cursor:pointer;min-width:110px"></select>
     <button class="btn-s" onclick="linenNewMonth()"><i class="ti ti-calendar-plus"></i> 새 달 시작</button>
     <div style="flex:1"></div>
     <button class="btn-p" onclick="saveLinenStock()"><i class="ti ti-device-floppy"></i> 저장</button>
@@ -561,7 +561,7 @@ tr:hover td{background:#fafaf8}
 </div>
 <div id="tab-linen-discard" class="sec">
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-    <select id="linen-discard-month-sel" onchange="renderLinenDiscard()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1a1a18;font-family:'Noto Sans KR',sans-serif"></select>
+    <select id="linen-discard-month-sel" onchange="renderLinenDiscard()" style="font-size:14px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;background:#1a3a5f;color:#ffffff;font-family:'Noto Sans KR',sans-serif;cursor:pointer;min-width:110px"></select>
     <button class="btn-s" onclick="linenDiscardNewMonth()"><i class="ti ti-calendar-plus"></i> 새 달 시작</button>
     <div style="flex:1"></div>
     <button class="btn-p" onclick="saveLinenDiscard()"><i class="ti ti-device-floppy"></i> 저장</button>
@@ -588,7 +588,7 @@ tr:hover td{background:#fafaf8}
 
 <div id="tab-linen-contamination" class="sec">
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-    <select id="linen-contam-month-sel" onchange="renderLinenContam()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1a1a18;font-family:'Noto Sans KR',sans-serif"></select>
+    <select id="linen-contam-month-sel" onchange="renderLinenContam()" style="font-size:14px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;background:#1a3a5f;color:#ffffff;font-family:'Noto Sans KR',sans-serif;cursor:pointer;min-width:110px"></select>
     <button class="btn-s" onclick="linencontamNewMonth()"><i class="ti ti-calendar-plus"></i> 새 달 시작</button>
     <div style="flex:1"></div>
     <button class="btn-p" onclick="saveLinenContam()"><i class="ti ti-device-floppy"></i> 저장</button>
@@ -723,7 +723,7 @@ tr:hover td{background:#fafaf8}
 <!-- CP관리 -->
 <div id="tab-cp" class="sec">
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-    <select id="cp-month-sel" onchange="renderCP()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1a1a18;font-family:'Noto Sans KR',sans-serif"></select>
+    <select id="cp-month-sel" onchange="renderCP()" style="font-size:14px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;background:#1a3a5f;color:#ffffff;font-family:'Noto Sans KR',sans-serif;cursor:pointer;min-width:110px"></select>
     <button class="btn-s" onclick="cpNewMonth()"><i class="ti ti-calendar-plus"></i> 새 달 시작</button>
     <div style="flex:1"></div>
     <button class="btn-p" onclick="openModal('cp-reg-modal')"><i class="ti ti-plus"></i> CP 등록</button>
@@ -731,7 +731,7 @@ tr:hover td{background:#fafaf8}
   <div class="metrics" id="cp-metrics"></div>
   <div class="toolbar">
     <input type="text" id="cp-q" placeholder="객실 번호·담당자 검색..." oninput="renderCP()">
-    <select id="cp-status-filter" onchange="renderCP()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1a1a18;font-family:'Noto Sans KR',sans-serif">
+    <select id="cp-status-filter" onchange="renderCP()" style="font-size:14px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;background:#1a3a5f;color:#ffffff;font-family:'Noto Sans KR',sans-serif;cursor:pointer;min-width:110px">
       <option value="">전체 상태</option>
       <option value="open">미해결</option>
       <option value="resolved">해결완료</option>
@@ -758,7 +758,7 @@ tr:hover td{background:#fafaf8}
 <!-- 구매 -->
 <div id="tab-purchase" class="sec">
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-    <select id="pur-month-sel" onchange="renderPur()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1a1a18;font-family:'Noto Sans KR',sans-serif"></select>
+    <select id="pur-month-sel" onchange="renderPur()" style="font-size:14px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;background:#1a3a5f;color:#ffffff;font-family:'Noto Sans KR',sans-serif;cursor:pointer;min-width:110px"></select>
     <button class="btn-s" onclick="purNewMonth()"><i class="ti ti-calendar-plus"></i> 새 달 시작</button>
     <div style="flex:1"></div>
     <button class="btn-p" onclick="openPurModal()"><i class="ti ti-plus"></i> 발주 등록</button>
@@ -776,7 +776,7 @@ tr:hover td{background:#fafaf8}
 <!-- 비용 -->
 <div id="tab-cost" class="sec">
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-    <select id="cost-month-sel" onchange="renderCost()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1a1a18;font-family:'Noto Sans KR',sans-serif"></select>
+    <select id="cost-month-sel" onchange="renderCost()" style="font-size:14px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;background:#1a3a5f;color:#ffffff;font-family:'Noto Sans KR',sans-serif;cursor:pointer;min-width:110px"></select>
     <button class="btn-s" onclick="costNewMonth()"><i class="ti ti-calendar-plus"></i> 새 달 시작</button>
     <button class="btn-s" onclick="openBudgetModal()"><i class="ti ti-target"></i> 예산 설정</button>
     <div style="flex:1"></div>
@@ -3729,31 +3729,42 @@ function getPrevMonthClosing(month,name){
 
 // 세팅현황 → 재고 기본세팅량 자동 계산
 function calcLinenBaseQty(){
+  // 세팅현황 합계행과 동일한 방식: 각 타입의 (수량 × rooms) 합산
   const cnt = getRoomCountByType();
   const rows = linenSettingRows;
 
-  // 타입별 합산 헬퍼
-  function sum(fn){ return rows.reduce((s,r)=>{ const rooms=r.code==='CHD'?(cnt['CHD']||0)+(cnt['CHB']||0):(cnt[r.code]||0); return s+fn(r)*rooms; },0); }
+  const totals = {};
+  const LS_FIELD_LIST = ['sheet_s','sheet_d','sheet_k','cover_s','cover_d','cover_k','cover_p','towel_bath','towel_face','towel_mat','robe'];
+  LS_FIELD_LIST.forEach(f=>{
+    totals[f] = rows.reduce((s,r)=>{
+      const rooms = r.code==='CHD' ? (cnt['CHD']||0)+(cnt['CHB']||0) : (cnt[r.code]||0);
+      return s + (r[f]||0) * rooms;
+    }, 0);
+  });
+
+  // 디버그: 콘솔에 cnt 출력
+  console.log('getRoomCountByType:', JSON.stringify(cnt));
+  console.log('calcLinenBaseQty totals:', JSON.stringify(totals));
 
   return {
-    '이불S':  sum(r=>r.sheet_s),
-    '이불D':  sum(r=>r.sheet_d),
-    '이불K':  sum(r=>r.sheet_k),
-    '커버S':  sum(r=>r.cover_s),
-    '커버D':  sum(r=>r.cover_d),
-    '커버K':  sum(r=>r.cover_k),
-    '시트S':  sum(r=>r.sheet_s),
-    '시트D':  sum(r=>r.sheet_d),
-    '시트K':  sum(r=>r.sheet_k),
-    '패드S':  sum(r=>r.sheet_s),
-    '패드D':  sum(r=>r.sheet_d),
-    '베개':   sum(r=>r.cover_p),
-    '이너케이스': sum(r=>r.cover_p),
-    '베개커버':   sum(r=>r.cover_p),
-    '페이스타올': sum(r=>r.towel_face),
-    '베스타올':   sum(r=>r.towel_bath),
-    '풋매트':     sum(r=>r.towel_mat),
-    '가운':       sum(r=>r.robe),
+    '이불S':  totals.sheet_s,
+    '이불D':  totals.sheet_d,
+    '이불K':  totals.sheet_k,
+    '커버S':  totals.cover_s,
+    '커버D':  totals.cover_d,
+    '커버K':  totals.cover_k,
+    '시트S':  totals.sheet_s,
+    '시트D':  totals.sheet_d,
+    '시트K':  totals.sheet_k,
+    '패드S':  totals.sheet_s,
+    '패드D':  totals.sheet_d,
+    '베개':       totals.cover_p,
+    '이너케이스': totals.cover_p,
+    '베개커버':   totals.cover_p,
+    '페이스타올': totals.towel_face,
+    '베스타올':   totals.towel_bath,
+    '풋매트':     totals.towel_mat,
+    '가운':       totals.robe,
   };
 }
 
