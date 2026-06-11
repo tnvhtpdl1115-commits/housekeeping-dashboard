@@ -618,34 +618,34 @@ tr:hover td{background:#fafaf8}
       <button class="btn-p" onclick="saveLinenSetting()"><i class="ti ti-device-floppy"></i> 저장</button>
     </div>
     <div style="overflow-x:auto">
-    <table id="linen-setting-table" style="width:100%;border-collapse:collapse;font-size:12px;min-width:1100px">
+    <table id="linen-setting-table" style="width:100%;border-collapse:collapse;font-size:13px;min-width:1100px">
       <thead>
-        <tr style="background:#1a3a5f;color:#fff">
-          <th rowspan="3" style="padding:8px 10px;text-align:left;border-right:1px solid rgba(255,255,255,0.15);min-width:150px">Room Type Name</th>
-          <th rowspan="3" style="padding:8px 6px;text-align:center;border-right:1px solid rgba(255,255,255,0.15);min-width:52px">Code</th>
-          <th rowspan="3" style="padding:8px 6px;text-align:center;border-right:1px solid rgba(255,255,255,0.15);min-width:48px">rooms</th>
-          <th rowspan="3" style="padding:8px 6px;text-align:center;border-right:1px solid rgba(255,255,255,0.15);min-width:42px">Gsts</th>
-          <th rowspan="3" style="padding:8px 6px;text-align:center;border-right:1px solid rgba(255,255,255,0.15);min-width:42px">Bed</th>
-          <th colspan="10" style="padding:8px;text-align:center;border-right:1px solid rgba(255,255,255,0.15)">린넨류 투입수량</th>
-          <th rowspan="3" style="padding:8px 6px;text-align:center;min-width:80px">실당 세탁비</th>
+        <tr style="background:#4a6fa5;color:#fff">
+          <th rowspan="3" style="padding:10px 12px;text-align:left;border-right:1px solid rgba(255,255,255,0.2);min-width:160px;font-size:13px">Room Type Name</th>
+          <th rowspan="3" style="padding:10px 8px;text-align:center;border-right:1px solid rgba(255,255,255,0.2);min-width:56px;font-size:13px">Code</th>
+          <th rowspan="3" style="padding:10px 8px;text-align:center;border-right:1px solid rgba(255,255,255,0.2);min-width:50px;font-size:13px">rooms</th>
+          <th rowspan="3" style="padding:10px 8px;text-align:center;border-right:1px solid rgba(255,255,255,0.2);min-width:46px;font-size:13px">Gsts</th>
+          <th rowspan="3" style="padding:10px 8px;text-align:center;border-right:1px solid rgba(255,255,255,0.2);min-width:46px;font-size:13px">Bed</th>
+          <th colspan="11" style="padding:10px;text-align:center;border-right:1px solid rgba(255,255,255,0.2);font-size:13px">린넨류 투입수량</th>
+          <th rowspan="3" style="padding:10px 8px;text-align:center;min-width:88px;font-size:13px">실당 세탁비</th>
         </tr>
-        <tr style="background:#2a4a6f;color:#fff">
-          <th colspan="3" style="padding:6px;text-align:center;border-right:1px solid rgba(255,255,255,0.15)">시트</th>
-          <th colspan="4" style="padding:6px;text-align:center;border-right:1px solid rgba(255,255,255,0.15)">커버</th>
-          <th colspan="3" style="padding:6px;text-align:center;border-right:1px solid rgba(255,255,255,0.15)">타올</th>
+        <tr style="background:#5a7fb5;color:#fff">
+          <th colspan="3" style="padding:8px;text-align:center;border-right:1px solid rgba(255,255,255,0.2);font-size:13px">시트</th>
+          <th colspan="4" style="padding:8px;text-align:center;border-right:1px solid rgba(255,255,255,0.2);font-size:13px">커버</th>
+          <th colspan="4" style="padding:8px;text-align:center;border-right:1px solid rgba(255,255,255,0.2);font-size:13px">타올</th>
         </tr>
-        <tr style="background:#3a5a7f;color:#fff;font-size:11px">
-          <th style="padding:5px 4px;text-align:center;min-width:44px">S<br><span id="ls-price-sheet-s" style="font-size:10px;color:#b0d4f8;cursor:pointer" onclick="editLinenSettingPrice('sheet_s',this)">440</span></th>
-          <th style="padding:5px 4px;text-align:center;min-width:44px">D<br><span id="ls-price-sheet-d" style="font-size:10px;color:#b0d4f8;cursor:pointer" onclick="editLinenSettingPrice('sheet_d',this)">550</span></th>
-          <th style="padding:5px 4px;text-align:center;border-right:1px solid rgba(255,255,255,0.15);min-width:44px">K<br><span id="ls-price-sheet-k" style="font-size:10px;color:#b0d4f8;cursor:pointer" onclick="editLinenSettingPrice('sheet_k',this)">660</span></th>
-          <th style="padding:5px 4px;text-align:center;min-width:44px">S<br><span id="ls-price-cover-s" style="font-size:10px;color:#b0d4f8;cursor:pointer" onclick="editLinenSettingPrice('cover_s',this)">990</span></th>
-          <th style="padding:5px 4px;text-align:center;min-width:44px">D<br><span id="ls-price-cover-d" style="font-size:10px;color:#b0d4f8;cursor:pointer" onclick="editLinenSettingPrice('cover_d',this)">1100</span></th>
-          <th style="padding:5px 4px;text-align:center;min-width:44px">K<br><span id="ls-price-cover-k" style="font-size:10px;color:#b0d4f8;cursor:pointer" onclick="editLinenSettingPrice('cover_k',this)">1320</span></th>
-          <th style="padding:5px 4px;text-align:center;border-right:1px solid rgba(255,255,255,0.15);min-width:44px">P<br><span id="ls-price-cover-p" style="font-size:10px;color:#b0d4f8;cursor:pointer" onclick="editLinenSettingPrice('cover_p',this)">220</span></th>
-          <th style="padding:5px 4px;text-align:center;min-width:44px">바스<br><span id="ls-price-towel-bath" style="font-size:10px;color:#b0d4f8;cursor:pointer" onclick="editLinenSettingPrice('towel_bath',this)">385</span></th>
-          <th style="padding:5px 4px;text-align:center;min-width:44px">페이스<br><span id="ls-price-towel-face" style="font-size:10px;color:#b0d4f8;cursor:pointer" onclick="editLinenSettingPrice('towel_face',this)">220</span></th>
-          <th style="padding:5px 4px;text-align:center;border-right:1px solid rgba(255,255,255,0.15);min-width:44px">매트<br><span id="ls-price-towel-mat" style="font-size:10px;color:#b0d4f8;cursor:pointer" onclick="editLinenSettingPrice('towel_mat',this)">330</span></th>
-          <th style="padding:5px 4px;text-align:center;min-width:44px">가운<br><span id="ls-price-robe" style="font-size:10px;color:#b0d4f8;cursor:pointer" onclick="editLinenSettingPrice('robe',this)">770</span></th>
+        <tr style="background:#6a8fc5;color:#fff;font-size:13px">
+          <th style="padding:7px 4px;text-align:center;min-width:46px">S<br><span id="ls-price-sheet-s" style="font-size:11px;color:#fff;opacity:0.85;cursor:pointer;text-decoration:underline dotted" onclick="editLinenSettingPrice('sheet_s',this)">440</span></th>
+          <th style="padding:7px 4px;text-align:center;min-width:46px">D<br><span id="ls-price-sheet-d" style="font-size:11px;color:#fff;opacity:0.85;cursor:pointer;text-decoration:underline dotted" onclick="editLinenSettingPrice('sheet_d',this)">550</span></th>
+          <th style="padding:7px 4px;text-align:center;border-right:1px solid rgba(255,255,255,0.2);min-width:46px">K<br><span id="ls-price-sheet-k" style="font-size:11px;color:#fff;opacity:0.85;cursor:pointer;text-decoration:underline dotted" onclick="editLinenSettingPrice('sheet_k',this)">660</span></th>
+          <th style="padding:7px 4px;text-align:center;min-width:46px">S<br><span id="ls-price-cover-s" style="font-size:11px;color:#fff;opacity:0.85;cursor:pointer;text-decoration:underline dotted" onclick="editLinenSettingPrice('cover_s',this)">990</span></th>
+          <th style="padding:7px 4px;text-align:center;min-width:46px">D<br><span id="ls-price-cover-d" style="font-size:11px;color:#fff;opacity:0.85;cursor:pointer;text-decoration:underline dotted" onclick="editLinenSettingPrice('cover_d',this)">1100</span></th>
+          <th style="padding:7px 4px;text-align:center;min-width:46px">K<br><span id="ls-price-cover-k" style="font-size:11px;color:#fff;opacity:0.85;cursor:pointer;text-decoration:underline dotted" onclick="editLinenSettingPrice('cover_k',this)">1320</span></th>
+          <th style="padding:7px 4px;text-align:center;border-right:1px solid rgba(255,255,255,0.2);min-width:46px">P<br><span id="ls-price-cover-p" style="font-size:11px;color:#fff;opacity:0.85;cursor:pointer;text-decoration:underline dotted" onclick="editLinenSettingPrice('cover_p',this)">220</span></th>
+          <th style="padding:7px 4px;text-align:center;min-width:46px">바스<br><span id="ls-price-towel-bath" style="font-size:11px;color:#fff;opacity:0.85;cursor:pointer;text-decoration:underline dotted" onclick="editLinenSettingPrice('towel_bath',this)">385</span></th>
+          <th style="padding:7px 4px;text-align:center;min-width:46px">페이스<br><span id="ls-price-towel-face" style="font-size:11px;color:#fff;opacity:0.85;cursor:pointer;text-decoration:underline dotted" onclick="editLinenSettingPrice('towel_face',this)">220</span></th>
+          <th style="padding:7px 4px;text-align:center;min-width:46px">매트<br><span id="ls-price-towel-mat" style="font-size:11px;color:#fff;opacity:0.85;cursor:pointer;text-decoration:underline dotted" onclick="editLinenSettingPrice('towel_mat',this)">330</span></th>
+          <th style="padding:7px 4px;text-align:center;border-right:1px solid rgba(255,255,255,0.2);min-width:46px">가운<br><span id="ls-price-robe" style="font-size:11px;color:#fff;opacity:0.85;cursor:pointer;text-decoration:underline dotted" onclick="editLinenSettingPrice('robe',this)">770</span></th>
         </tr>
       </thead>
       <tbody id="linen-setting-tbody"></tbody>
@@ -4035,7 +4035,7 @@ function renderLinenSetting(){
       <td style="padding:5px 6px;text-align:center;border-bottom:1px solid #ebebea">${row.gsts}</td>
       <td style="padding:5px 6px;text-align:center;border-bottom:1px solid #ebebea;color:#666">${row.bed}</td>
       ${LS_FIELDS.map((f,fi)=>{
-        const sep=(fi===2||fi===6||fi===9)?'border-right:2px solid #c0cce0;':'';
+        const sep=(fi===2||fi===6||fi===10)?'border-right:2px solid #c0cce0;':'';
         const val=row[f]||0;
         return `<td style="padding:3px 4px;text-align:center;border-bottom:1px solid #ebebea;${sep}">
           ${val>0?`<input type="number" min="0" value="${val}" style="${iStyle}" onchange="updateLinenSettingCell(${i},'${f}',this.value)">`:`<input type="number" min="0" value="0" style="${iStyle};color:#c0bdb8" onchange="updateLinenSettingCell(${i},'${f}',this.value)">`}
@@ -4058,7 +4058,7 @@ function renderLinenSettingFooter(){
   tfoot.innerHTML=`<tr style="background:#eef2f8;font-weight:700;border-top:2px solid #1a3a5f">
     <td colspan="2" style="padding:7px 10px;text-align:center;font-size:13px">합계(${totalRooms})</td>
     <td></td><td></td><td></td>
-    ${fieldTotals.map((v,fi)=>{const sep=(fi===2||fi===6||fi===9)?'border-right:2px solid #c0cce0;':'';return `<td style="padding:7px 4px;text-align:center;${sep}">${v||''}</td>`;}).join('')}
+    ${fieldTotals.map((v,fi)=>{const sep=(fi===2||fi===6||fi===10)?'border-right:2px solid #c0cce0;':'';return `<td style="padding:7px 4px;text-align:center;${sep}">${v||''}</td>`;}).join('')}
     <td style="padding:7px 8px;text-align:right;color:#185FA5">${totalCost.toLocaleString()}</td>
   </tr>`;
 }
