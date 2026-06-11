@@ -3811,6 +3811,8 @@ function renderLinenStock(){
     const row=getLinenRow(month,name);
     const prev=row.prev_closing||getPrevMonthClosing(month,name);
     row.prev_closing=prev;
+    // 현장재고 기본세팅량이 비어있으면 base_qty로 채움 (계산 반영)
+    if(!row.field_setting && row.base_qty) row.field_setting=row.base_qty;
     const ft=row.field_setting+row.field_floor+row.field_storage;
     const vt=row.vendor_in1+row.vendor_in2+row.vendor_estimate;
     const dt=row.discard_didi+row.discard_gng;
@@ -3886,6 +3888,7 @@ function updateLinenRow(month,name,field,value){
 function updateLinenCalcCells(month,name){
   const row=getLinenRow(month,name);
   const prev=row.prev_closing||getPrevMonthClosing(month,name);
+  if(!row.field_setting && row.base_qty) row.field_setting=row.base_qty;
   const ft=row.field_setting+row.field_floor+row.field_storage;
   const vt=row.vendor_in1+row.vendor_in2+row.vendor_estimate;
   const dt=row.discard_didi+row.discard_gng;
