@@ -539,19 +539,19 @@ tr:hover td{background:#fafaf8}
           <th rowspan="2" style="padding:10px 8px;text-align:center;min-width:90px;color:#fff">비고</th>
         </tr>
         <tr style="font-size:12px;font-weight:600">
-          <th style="padding:8px;text-align:center;background:#d6eaf8;color:#1a3a5f;border-right:1px solid #b0cce4;color:#ffffff">기본<br>세팅량</th>
-          <th style="padding:8px;text-align:center;background:#d6eaf8;color:#1a3a5f;border-right:1px solid #b0cce4;color:#ffffff">전층<br>린넨실</th>
-          <th style="padding:8px;text-align:center;background:#d6eaf8;color:#1a3a5f;border-right:2px solid #7fb3d3;color:#ffffff">창고</th>
+          <th style="padding:8px;text-align:center;background:#d6eaf8;color:#1a3a5f;border-right:1px solid #b0cce4">기본<br>세팅량</th>
+          <th style="padding:8px;text-align:center;background:#d6eaf8;color:#1a3a5f;border-right:1px solid #b0cce4">전층<br>린넨실</th>
+          <th style="padding:8px;text-align:center;background:#d6eaf8;color:#1a3a5f;border-right:2px solid #7fb3d3">창고</th>
           <th style="padding:6px 4px;text-align:center;background:#d5f5e3;border-right:1px solid #a9dfbf">
             <input type="date" id="linen-in1-date" onchange="saveLinenDateInline()" style="font-size:11px;padding:3px 4px;border-radius:4px;border:1px solid #a9dfbf;background:#fff;color:#1a1a18;font-family:'Noto Sans KR',sans-serif;width:100%">
           </th>
           <th style="padding:6px 4px;text-align:center;background:#d5f5e3;border-right:1px solid #a9dfbf">
             <input type="date" id="linen-in2-date" onchange="saveLinenDateInline()" style="font-size:11px;padding:3px 4px;border-radius:4px;border:1px solid #a9dfbf;background:#fff;color:#1a1a18;font-family:'Noto Sans KR',sans-serif;width:100%">
           </th>
-          <th style="padding:8px;text-align:center;background:#d5f5e3;color:#1a4a2e;border-right:2px solid #82c9a0;color:#ffffff">추측값</th>
-          <th style="padding:8px;text-align:center;background:#fadbd8;color:#7B0000;border-right:1px solid #f1948a;color:#ffffff">디디<br>컴퍼니</th>
-          <th style="padding:8px;text-align:center;background:#fadbd8;color:#7B0000;border-right:1px solid #f1948a;color:#ffffff">GNG</th>
-          <th style="padding:8px;text-align:center;background:#fadbd8;color:#7B0000;border-right:2px solid #e74c3c;color:#ffffff">합계</th>
+          <th style="padding:8px;text-align:center;background:#d5f5e3;color:#1a4a2e;border-right:2px solid #82c9a0">추측값</th>
+          <th style="padding:8px;text-align:center;background:#fadbd8;color:#7B0000;border-right:1px solid #f1948a">디디<br>컴퍼니</th>
+          <th style="padding:8px;text-align:center;background:#fadbd8;color:#7B0000;border-right:1px solid #f1948a">GNG</th>
+          <th style="padding:8px;text-align:center;background:#fadbd8;color:#7B0000;border-right:2px solid #e74c3c">합계</th>
         </tr>
       </thead>
       <tbody id="linen-stock-tbody"></tbody>
@@ -2669,6 +2669,8 @@ function buildInvMonthSel(forceReset=false){
   const cur=forceReset?key:(sel.value||key);
   sel.innerHTML=months.map(m=>`<option value="${m}"${m===cur?' selected':''}>${m.replace('-','년 ')}월</option>`).join('');
   sel.value=cur;
+  updateMonthBadge('inv-month-sel','inv-month-badge');
+  updateMonthBadge('inv-linen-month-sel','inv-linen-month-badge');
 }
 
 function getInvMonth(){return document.getElementById('inv-month-sel')?.value||thisMonthKey();}
@@ -3638,6 +3640,7 @@ function buildLinenMonthSel(){
   const cur=sel.value||key;
   sel.innerHTML=months.map(m=>`<option value="${m}"${m===cur?' selected':''}>${m.replace('-','년 ')}월</option>`).join('');
   sel.value=cur;
+  updateMonthBadge('linen-month-sel','linen-month-badge');
 }
 
 function linenNewMonth(){
