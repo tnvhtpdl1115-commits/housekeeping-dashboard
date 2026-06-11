@@ -4054,7 +4054,12 @@ const LS_FIELDS=['sheet_s','sheet_d','sheet_k','cover_s','cover_d','cover_k','co
 let linenSettingRows=JSON.parse(JSON.stringify(LS_DEFAULT));
 let linenSettingPrices={...LS_PRICE_DEFAULT};
 
-function getRoomCountByType(){const cnt={};(seoulRooms||[]).forEach(r=>{cnt[r.type]=(cnt[r.type]||0)+1;});return cnt;}
+function getRoomCountByType(){
+  const src = (seoulRooms && seoulRooms.length > 0) ? seoulRooms : SR.map(([no,type])=>({no,type}));
+  const cnt={};
+  src.forEach(r=>{ cnt[r.type]=(cnt[r.type]||0)+1; });
+  return cnt;
+}
 function calcLinenSettingCost(row){let t=0;LS_FIELDS.forEach(f=>{t+=(row[f]||0)*(linenSettingPrices[f]||0);});return t;}
 
 function renderLinenSetting(){
