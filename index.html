@@ -3730,7 +3730,8 @@ function getPrevMonthClosing(month,name){
   const prevMonth=mkKey(new Date(y,m-2,1).getFullYear(),new Date(y,m-2,1).getMonth()+1);
   const prevRow=(linenStockData[prevMonth]||[]).find(r=>r.item_name===name);
   if(prevRow){
-    return (prevRow.field_setting+prevRow.field_floor+prevRow.field_storage)
+    const fs = prevRow.field_setting || prevRow.base_qty || 0;
+    return (fs+prevRow.field_floor+prevRow.field_storage)
           +(prevRow.vendor_in1+prevRow.vendor_in2+prevRow.vendor_estimate)
           -(prevRow.discard_didi+prevRow.discard_gng);
   }
