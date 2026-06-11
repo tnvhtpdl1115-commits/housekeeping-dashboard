@@ -3727,10 +3727,52 @@ function getPrevMonthClosing(month,name){
   return 0;
 }
 
+// 세팅현황 → 재고 기본세팅량 자동 계산
+function calcLinenBaseQty(){
+  const cnt = getRoomCountByType();
+  const rows = linenSettingRows;
+
+  // 타입별 합산 헬퍼
+  function sum(fn){ return rows.reduce((s,r)=>{ const rooms=r.code==='CHD'?(cnt['CHD']||0)+(cnt['CHB']||0):(cnt[r.code]||0); return s+fn(r)*rooms; },0); }
+
+  return {
+    '이불S':  sum(r=>r.sheet_s),
+    '이불D':  sum(r=>r.sheet_d),
+    '이불K':  sum(r=>r.sheet_k),
+    '커버S':  sum(r=>r.cover_s),
+    '커버D':  sum(r=>r.cover_d),
+    '커버K':  sum(r=>r.cover_k),
+    '시트S':  sum(r=>r.sheet_s),
+    '시트D':  sum(r=>r.sheet_d),
+    '시트K':  sum(r=>r.sheet_k),
+    '패드S':  sum(r=>r.sheet_s),
+    '패드D':  sum(r=>r.sheet_d),
+    '베개':   sum(r=>r.cover_p),
+    '이너케이스': sum(r=>r.cover_p),
+    '베개커버':   sum(r=>r.cover_p),
+    '페이스타올': sum(r=>r.towel_face),
+    '베스타올':   sum(r=>r.towel_bath),
+    '풋매트':     sum(r=>r.towel_mat),
+    '가운':       sum(r=>r.robe),
+  };
+}
+
+function applyLinenBaseQty(month){
+  const baseMap = calcLinenBaseQty();
+  const rows = linenStockData[month];
+  if(!rows) return;
+  rows.forEach(row=>{
+    if(baseMap[row.item_name] !== undefined){
+      row.base_qty = baseMap[row.item_name];
+    }
+  });
+}
+
 function renderLinenStock(){
   buildLinenMonthSel();
   const month=getLinenMonth();
   if(!linenStockData[month]) linenStockData[month]=[];
+  applyLinenBaseQty(month);
   const dates=linenDates[month]||{};
   // 헤더 날짜 input 값 세팅
   const d1=document.getElementById('linen-in1-date');
@@ -4069,6 +4111,9 @@ function updateLinenSettingCell(i,field,val){
   const el=document.getElementById(`ls-cost-${i}`);
   if(el) el.textContent=cost.toLocaleString();
   renderLinenSettingFooter();
+  // 재고 기본세팅량 즉시 반영
+  const month=getLinenMonth();
+  if(linenStockData[month]) applyLinenBaseQty(month);
 }
 
 function editLinenSettingPrice(field,el){
@@ -4083,7 +4128,13 @@ function editLinenSettingPrice(field,el){
 async function saveLinenSetting(){
   await dbSaveSettings('linen_setting_rows',linenSettingRows);
   await dbSaveSettings('linen_setting_prices',linenSettingPrices);
-  showToast('💾 저장','린넨 세팅현황이 저장됐습니다','grn');
+  // 재고 기본세팅량 자동 반영
+  const month=getLinenMonth();
+  if(linenStockData[month]){
+    applyLinenBaseQty(month);
+    for(const row of linenStockData[month]) await dbSaveLinenStock(month,row);
+  }
+  showToast('💾 저장','린넨 세팅현황이 저장됐습니다 (기본세팅량 자동 반영)','grn');
 }
 
 function resetLinenSetting(){
