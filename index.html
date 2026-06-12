@@ -1982,7 +1982,7 @@ function addPur(){
   renderPur();renderOverview();closeModal('pur-modal');
 }
 
-function autoUpdateInventory(p, dateStr, invWeek){
+async function autoUpdateInventory(p, dateStr, invWeek){
   const d=new Date(dateStr);
   const month=mkKey(d.getFullYear(),d.getMonth()+1);
   const week=invWeek||Math.ceil(d.getDate()/7);
@@ -2015,23 +2015,22 @@ function autoUpdateInventory(p, dateStr, invWeek){
     if(!weeklyData[weekKey]) weeklyData[weekKey]=[];
     const wItem=weeklyData[weekKey].find(w=>w.itemName===p.item&&w.category===cat);
     if(wItem){
-      // 입고량만 누적, currQty는 건드리지 않음
       wItem.inQty=(wItem.inQty||0)+p.qty;
-      dbSaveWeekly(month,week,wItem);
+      await dbSaveWeekly(month,week,wItem);
     } else {
-      // 해당 주차 데이터 없으면 입고량만 기록 (currQty=0 미조사 상태)
       const mi=weeklyItems[cat].find(i=>i.name===p.item);
-      const newWItem={
-        itemName:p.item,
-        unit:mi?.unit||'개',
-        prevQty:0,
-        inQty:p.qty,
-        currQty:null, // null = 미조사
-        minQty:mi?.minQty||0,
-        category:cat
-      };
-      weeklyData[weekKey].push(newWItem);
-      dbSaveWeekly(month,week,newWItem);
+      // DB에서 기존 레코드 확인
+      const {data:existing}=await supa.from('inv_weekly').select('*').eq('month',month).eq('week',week).eq('item_name',p.item).eq('category',cat);
+      let saveItem;
+      if(existing&&existing.length>0){
+        const r=existing[0];
+        saveItem={itemName:r.item_name,unit:r.unit||mi?.unit||'개',prevQty:r.prev_qty||0,inQty:(r.in_qty||0)+p.qty,currQty:r.curr_qty,minQty:r.min_qty||0,category:cat};
+        weeklyData[weekKey].push(saveItem);
+      } else {
+        saveItem={itemName:p.item,unit:mi?.unit||'개',prevQty:0,inQty:p.qty,currQty:null,minQty:mi?.minQty||0,category:cat};
+        weeklyData[weekKey].push(saveItem);
+      }
+      await dbSaveWeekly(month,week,saveItem);
     }
     showToast(`📦 입고 기록됨`,`${p.item} ${p.qty}개 → ${month}월 ${week}주차 입고 반영`,'grn');
   }
