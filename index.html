@@ -3324,6 +3324,22 @@ function renderLinenDiscard(){
   buildLinenDiscardMonthSel();
   const month=getLinenDiscardMonth();
   if(!linenDiscardData[month]) linenDiscardData[month]=[];
+  // 이번 달 데이터가 없거나 unit_price가 전부 0이면 이전 달에서 원가 자동 복사
+  const hasPrice=(linenDiscardData[month]||[]).some(r=>r.unit_price>0);
+  if(!hasPrice){
+    const [y,m]=month.split('-').map(Number);
+    const prevMonth=mkKey(new Date(y,m-2,1).getFullYear(),new Date(y,m-2,1).getMonth()+1);
+    const prevRows=linenDiscardData[prevMonth]||[];
+    if(prevRows.some(r=>r.unit_price>0)){
+      linenItems.forEach(name=>{
+        const prev=prevRows.find(r=>r.item_name===name);
+        if(!prev||!prev.unit_price) return;
+        const existing=linenDiscardData[month].find(r=>r.item_name===name);
+        if(existing){existing.unit_price=prev.unit_price;existing.discard_rate=prev.discard_rate;}
+        else linenDiscardData[month].push({item_name:name,unit_price:prev.unit_price,discard_rate:prev.discard_rate||30,qty:0,qty_adj:0});
+      });
+    }
+  }
   const tbody=document.getElementById('linen-discard-tbody');
   const tfoot=document.getElementById('linen-discard-tfoot');
   if(!tbody)return;
@@ -3550,6 +3566,22 @@ function renderLinenContam(){
   buildLinenContamMonthSel();
   const month=getLinenContamMonth();
   if(!linencontamData[month]) linencontamData[month]=[];
+  // 이번 달 데이터가 없거나 cost가 전부 0이면 이전 달에서 cost 자동 복사
+  const hasCost=(linencontamData[month]||[]).some(r=>r.cost>0);
+  if(!hasCost){
+    const [y,m]=month.split('-').map(Number);
+    const prevMonth=mkKey(new Date(y,m-2,1).getFullYear(),new Date(y,m-2,1).getMonth()+1);
+    const prevRows=linencontamData[prevMonth]||[];
+    if(prevRows.some(r=>r.cost>0)){
+      linenItems.forEach(name=>{
+        const prev=prevRows.find(r=>r.item_name===name);
+        if(!prev||!prev.cost) return;
+        const existing=linencontamData[month].find(r=>r.item_name===name);
+        if(existing){existing.cost=prev.cost;}
+        else linencontamData[month].push({item_name:name,cost:prev.cost,qty:0});
+      });
+    }
+  }
   const tbody=document.getElementById('linen-contam-tbody');
   const tfoot=document.getElementById('linen-contam-tfoot');
   if(!tbody)return;
