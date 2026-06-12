@@ -1925,13 +1925,29 @@ function addPur(){
   if(!item){alert('품목명을 입력하세요.');return;}
   if(!purData[month]) purData[month]=[];
   if(eid){
-    // 수정
     const p=purData[month].find(x=>x.id==eid);
     if(p){
       const wasReceived=p.status==='received';
+      const oldInvWeek=p.inv_week;
+      const oldDate=p.date;
+      const oldQty=p.qty;
       Object.assign(p,{item,qty,price,date,category:cat,status,inv_week:invWeek});
       dbSavePurchase(month,p);
-      if(!wasReceived&&status==='received') autoUpdateInventory(p,date,invWeek);
+      if(status==='received'){
+        if(!wasReceived||(wasReceived&&oldInvWeek!==invWeek)){
+          // 기존 주차 입고량 차감
+          if(wasReceived){
+            const oldWeek=oldInvWeek||Math.ceil(new Date(oldDate).getDate()/7);
+            const oldWeekKey=getWeekKey(month,oldWeek);
+            const wItem=(weeklyData[oldWeekKey]||[]).find(w=>w.itemName===p.item&&w.category===cat);
+            if(wItem&&wItem.inQty>0){
+              wItem.inQty=Math.max(0,(wItem.inQty||0)-oldQty);
+              dbSaveWeekly(month,oldWeek,wItem);
+            }
+          }
+          autoUpdateInventory(p,date,invWeek);
+        }
+      }
     }
   } else {
     // 신규 등록
@@ -1954,8 +1970,8 @@ function addPur(){
 function autoUpdateInventory(p, dateStr, invWeek){
   const d=new Date(dateStr);
   const month=mkKey(d.getFullYear(),d.getMonth()+1);
-  // 지정 주차 있으면 우선 사용, 없으면 발주일 기준 자동 계산
   const week=invWeek||Math.ceil(d.getDate()/7);
+  console.log(`autoUpdateInventory: item=${p.item}, invWeek=${invWeek}, dateStr=${dateStr}, week=${week}`);
   const weekKey=getWeekKey(month,week);
   const cat=p.category||'consumable';
   if(cat==='linen'){
