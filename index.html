@@ -2010,9 +2010,13 @@ function autoUpdateInventory(p, dateStr, invWeek){
 function recvPur(month,id){
   const p=(purData[month]||[]).find(x=>x.id==id);
   if(!p) return;
+  // 재고 반영 주차 선택
+  const weekStr=prompt(`[${p.item}] 입고 반영할 주차를 선택하세요.\n\n발주일 기준 자동: 그냥 엔터\n특정 주차: 1~5 입력`,'');
+  const invWeek=(weekStr&&weekStr.trim())?parseInt(weekStr.trim())||null:null;
   p.status='received';
+  if(invWeek) p.inv_week=invWeek;
   dbSavePurchase(month,p);
-  autoUpdateInventory(p, p.date||todayStr, p.inv_week||null);
+  autoUpdateInventory(p, p.date||todayStr, invWeek||p.inv_week||null);
   renderPur();
   if(document.getElementById('tab-inventory').classList.contains('on')) renderInv();
   renderOverview();
