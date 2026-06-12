@@ -1925,29 +1925,39 @@ function addPur(){
   if(!item){alert('품목명을 입력하세요.');return;}
   if(!purData[month]) purData[month]=[];
   if(eid){
-    const p=purData[month].find(x=>x.id==eid);
+    // 모든 month에서 eid로 찾기 (month가 바뀔 수 있으므로)
+    let p=null, pMonth=month;
+    for(const m of Object.keys(purData)){
+      const found=purData[m].find(x=>x.id==eid);
+      if(found){p=found;pMonth=m;break;}
+    }
     if(p){
       const wasReceived=p.status==='received';
       const oldInvWeek=p.inv_week;
       const oldDate=p.date;
       const oldQty=p.qty;
+      const oldCat=p.category||'consumable';
       Object.assign(p,{item,qty,price,date,category:cat,status,inv_week:invWeek});
-      dbSavePurchase(month,p);
+      dbSavePurchase(pMonth,p);
       if(status==='received'){
         if(!wasReceived||(wasReceived&&oldInvWeek!==invWeek)){
           // 기존 주차 입고량 차감
           if(wasReceived){
             const oldWeek=oldInvWeek||Math.ceil(new Date(oldDate).getDate()/7);
-            const oldWeekKey=getWeekKey(month,oldWeek);
-            const wItem=(weeklyData[oldWeekKey]||[]).find(w=>w.itemName===p.item&&w.category===cat);
-            if(wItem&&wItem.inQty>0){
+            const oldWeekKey=getWeekKey(pMonth,oldWeek);
+            const wItem=(weeklyData[oldWeekKey]||[]).find(w=>w.itemName===item&&w.category===oldCat);
+            if(wItem){
               wItem.inQty=Math.max(0,(wItem.inQty||0)-oldQty);
-              dbSaveWeekly(month,oldWeek,wItem);
+              dbSaveWeekly(pMonth,oldWeek,wItem);
+              console.log(`기존 ${oldWeek}주차 입고 차감: ${item} -${oldQty}`);
             }
           }
+          console.log(`새 주차 반영: ${item} → ${invWeek}주차`);
           autoUpdateInventory(p,date,invWeek);
         }
       }
+    } else {
+      console.warn('수정 대상 발주를 찾지 못했습니다. eid='+eid);
     }
   } else {
     // 신규 등록
