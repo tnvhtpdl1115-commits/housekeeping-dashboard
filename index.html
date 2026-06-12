@@ -1000,6 +1000,18 @@ tr:hover td{background:#fafaf8}
     <div class="fg"><label>발주일 *</label><input type="date" id="pur-date" style="font-size:13px;padding:7px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1a1a18;font-family:'Noto Sans KR',sans-serif;width:100%"></div>
   </div>
   <div class="fr">
+    <div class="fg"><label>재고 반영 주차 <span style="font-size:10px;color:#9b9b97">(입고 기록될 주차)</span></label>
+      <select id="pur-inv-week" style="font-size:13px;padding:7px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1a1a18;font-family:'Noto Sans KR',sans-serif;width:100%">
+        <option value="">발주일 기준 자동</option>
+        <option value="1">1주차</option>
+        <option value="2">2주차</option>
+        <option value="3">3주차</option>
+        <option value="4">4주차</option>
+        <option value="5">5주차</option>
+      </select>
+    </div>
+  </div>
+  <div class="fr">
     <div class="fg" style="flex:2"><label>품목명 *</label>
       <div style="display:flex;gap:4px">
         <input type="text" id="pur-item" placeholder="직접 입력 또는 아래서 선택" style="flex:1" oninput="if(document.getElementById('pur-item-list').style.display!=='none')updatePurItemList()">
@@ -1879,6 +1891,7 @@ function openPurModal(){
   document.getElementById('pur-price').value=0;
   document.getElementById('pur-cat').value=currentPurCategory||'consumable';
   document.getElementById('pur-status').value='pending';
+  document.getElementById('pur-inv-week').value='';
   document.getElementById('pur-item-list').style.display='none';
   openModal('pur-modal');
 }
@@ -1895,6 +1908,7 @@ function editPur(month, id){
   document.getElementById('pur-price').value=p.price;
   document.getElementById('pur-cat').value=p.category||'consumable';
   document.getElementById('pur-status').value=p.status||'pending';
+  document.getElementById('pur-inv-week').value=p.inv_week||'';
   openModal('pur-modal');
 }
 
@@ -1906,6 +1920,7 @@ function addPur(){
   const month=document.getElementById('pur-modal-month').value||getPurMonth();
   const date=document.getElementById('pur-date').value||todayStr;
   const status=document.getElementById('pur-status').value||'pending';
+  const invWeek=parseInt(document.getElementById('pur-inv-week').value)||null;
   const eid=document.getElementById('pur-edit-id').value;
   if(!item){alert('품목명을 입력하세요.');return;}
   if(!purData[month]) purData[month]=[];
@@ -1914,35 +1929,33 @@ function addPur(){
     const p=purData[month].find(x=>x.id==eid);
     if(p){
       const wasReceived=p.status==='received';
-      Object.assign(p,{item,qty,price,date,category:cat,status});
+      Object.assign(p,{item,qty,price,date,category:cat,status,inv_week:invWeek});
       dbSavePurchase(month,p);
-      // 입고완료로 변경됐으면 재고 업데이트
-      if(!wasReceived&&status==='received') autoUpdateInventory(p,date);
+      if(!wasReceived&&status==='received') autoUpdateInventory(p,date,invWeek);
     }
   } else {
-    // 신규 등록 - 비용은 발주일 기준 월에 저장
-    const newObj={id:purIdSeq++,item,qty,price,date,status,category:cat};
+    // 신규 등록
+    const newObj={id:purIdSeq++,item,qty,price,date,status,category:cat,inv_week:invWeek};
     purData[month].push(newObj);
     dbSavePurchase(month,newObj);
     const catName={consumable:'소모품',equipment:'비품',maintenance:'정비용품',linen:'린넨'}[cat]||'구매';
-    // 발주일 기준으로 해당 월 비용에 저장 (날짜가 다른 달이면 그 달 비용으로)
     const costMonth=date?date.substring(0,7):month;
     const costObj={id:costIdSeq++,label:item+' 발주',type:'구매',subType:catName,amount:qty*price,date,purId:newObj.id};
     if(!costData[costMonth]) costData[costMonth]=[];
     costData[costMonth].push(costObj);
     dbSaveCost(costMonth,costObj);
-    // 입고완료로 등록하면 바로 재고 업데이트
-    if(status==='received') autoUpdateInventory(newObj,date);
+    if(status==='received') autoUpdateInventory(newObj,date,invWeek);
   }
   buildPurMonthSel();
   document.getElementById('pur-month-sel').value=month;
   renderPur();renderOverview();closeModal('pur-modal');
 }
 
-function autoUpdateInventory(p, dateStr){
+function autoUpdateInventory(p, dateStr, invWeek){
   const d=new Date(dateStr);
   const month=mkKey(d.getFullYear(),d.getMonth()+1);
-  const week=Math.ceil(d.getDate()/7);
+  // 지정 주차 있으면 우선 사용, 없으면 발주일 기준 자동 계산
+  const week=invWeek||Math.ceil(d.getDate()/7);
   const weekKey=getWeekKey(month,week);
   const cat=p.category||'consumable';
   if(cat==='linen'){
@@ -1999,7 +2012,7 @@ function recvPur(month,id){
   if(!p) return;
   p.status='received';
   dbSavePurchase(month,p);
-  autoUpdateInventory(p, p.date||todayStr);
+  autoUpdateInventory(p, p.date||todayStr, p.inv_week||null);
   renderPur();
   if(document.getElementById('tab-inventory').classList.contains('on')) renderInv();
   renderOverview();
