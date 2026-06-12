@@ -1945,7 +1945,11 @@ function addPur(){
           if(wasReceived){
             const oldWeek=oldInvWeek||Math.ceil(new Date(oldDate).getDate()/7);
             const oldWeekKey=getWeekKey(pMonth,oldWeek);
+            console.log(`차감 시도: oldWeek=${oldWeek}, oldWeekKey=${oldWeekKey}, item=${item}, cat=${oldCat}`);
+            console.log(`weeklyData keys:`, Object.keys(weeklyData));
+            console.log(`해당 키 데이터:`, weeklyData[oldWeekKey]);
             const wItem=(weeklyData[oldWeekKey]||[]).find(w=>w.itemName===item&&w.category===oldCat);
+            console.log(`찾은 wItem:`, wItem);
             if(wItem){
               wItem.inQty=Math.max(0,(wItem.inQty||0)-oldQty);
               dbSaveWeekly(pMonth,oldWeek,wItem);
