@@ -1101,6 +1101,9 @@ function swMain(name){
   document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
   // 모든 소분류 탭 숨기기
   document.querySelectorAll('.sub-tabs').forEach(s=>s.style.display='none');
+  // 재고 분석섹션 항상 초기화
+  const ias=document.getElementById('inv-analysis-section');
+  if(ias) ias.style.display='none';
 
   if(name==='overview'){
     document.getElementById('tab-overview').classList.add('on');
