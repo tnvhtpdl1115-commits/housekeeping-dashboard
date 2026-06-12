@@ -1933,6 +1933,7 @@ function addPur(){
     }
     if(p){
       const wasReceived=p.status==='received';
+      console.log(`수정 대상: item=${p.item}, status=${p.status}, wasReceived=${wasReceived}, oldInvWeek=${p.inv_week}`);
       const oldInvWeek=p.inv_week;
       const oldDate=p.date;
       const oldQty=p.qty;
