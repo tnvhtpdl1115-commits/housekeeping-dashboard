@@ -1830,7 +1830,7 @@ function renderPur(){
   tbody.innerHTML=filtered.map(p=>`<tr>
     <td>${p.item}</td><td>${p.qty.toLocaleString()}</td>
     <td>${p.price%1!==0?p.price.toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:2}):p.price.toLocaleString()}원</td><td>${fmt(p.qty*p.price)}</td>
-    <td style="color:#6b6b68;font-size:11px">${p.date}</td>
+    <td style="color:#6b6b68;font-size:11px">${p.date||'-'}${p.inv_week?` <span style="background:#e8f0fe;color:#1a3a5f;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:600">${p.inv_week}주차</span>`:''}</td>
     <td><span class="badge" style="${p.status==='received'?'background:#EAF3DE;color:#3B6D11':'background:#FAEEDA;color:#854F0B'}">${p.status==='received'?'입고완료':'발주중'}</span></td>
     <td><div style="display:flex;gap:3px">
       ${p.status==='pending'?`<button class="btn-i" onclick="showConfirm('${p.item} 입고 처리하시겠습니까?\\n(재고에 자동 반영됩니다)',()=>recvPur('${month}','${p.id}'),{icon:'📬',title:'입고 확인',btnText:'입고 처리',btnColor:'#3B6D11'})" style="color:#3B6D11;border-color:#9FE1CB">입고</button>`:''}
@@ -4085,17 +4085,30 @@ async function dbLoadPurchases(){
     purData={};
     data.forEach(r=>{
       if(!purData[r.month]) purData[r.month]=[];
-      purData[r.month].push({id:r.id,dbId:r.id,item:r.item,qty:r.qty,price:r.price,date:r.date,status:r.status||'pending',category:r.category||'consumable'});
+      purData[r.month].push({id:r.id,dbId:r.id,item:r.item,qty:r.qty,price:r.price,date:r.date,status:r.status||'pending',category:r.category||'consumable',inv_week:r.inv_week||null});
     });
   }
 }
 async function dbSavePurchase(month,obj){
-  const payload={month,item:obj.item,qty:obj.qty,price:obj.price,date:obj.date,status:obj.status,category:obj.category||'consumable'};
+  const payload={month,item:obj.item,qty:obj.qty,price:obj.price,date:obj.date,status:obj.status,category:obj.category||'consumable',inv_week:obj.inv_week||null};
   if(obj.dbId){
-    await supa.from('pur_data').update(payload).eq('id',obj.dbId);
+    const {error}=await supa.from('pur_data').update(payload).eq('id',obj.dbId);
+    if(error&&error.message&&error.message.includes('inv_week')){
+      // inv_week 컬럼 없으면 제외하고 재시도
+      const {inv_week,...payloadWithout}=payload;
+      await supa.from('pur_data').update(payloadWithout).eq('id',obj.dbId);
+      showToast('⚠️ 안내','Supabase pur_data 테이블에 inv_week 컬럼을 추가해주세요','red');
+    }
   } else {
-    const {data}=await supa.from('pur_data').insert(payload).select();
-    if(data&&data[0]){obj.dbId=data[0].id;obj.id=data[0].id;}
+    const {data,error}=await supa.from('pur_data').insert(payload).select();
+    if(error&&error.message&&error.message.includes('inv_week')){
+      const {inv_week,...payloadWithout}=payload;
+      const {data:d2}=await supa.from('pur_data').insert(payloadWithout).select();
+      if(d2&&d2[0]){obj.dbId=d2[0].id;obj.id=d2[0].id;}
+      showToast('⚠️ 안내','Supabase pur_data 테이블에 inv_week 컬럼을 추가해주세요','red');
+    } else {
+      if(data&&data[0]){obj.dbId=data[0].id;obj.id=data[0].id;}
+    }
   }
 }
 async function dbDeletePurchase(id){await supa.from('pur_data').delete().eq('id',id);}
