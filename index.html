@@ -1086,7 +1086,28 @@ let delTarget=null,slView='floor',slPage=1;
 const PG=50,TL={facility:'시설 고장',clean:'청소 지시',item:'추가 물품'},TBS={facility:'background:#FCEBEB;color:#A32D2D',clean:'background:#FAEEDA;color:#854F0B',item:'background:#E6F1FB;color:#185FA5'};
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
-document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
+// 배경 클릭으로 닫히지 않음 (실수 방지)
+// 엔터키로 각 모달 저장 처리
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Enter') return;
+  // textarea 안에서는 엔터 허용
+  if(e.target.tagName==='TEXTAREA') return;
+  const opened=document.querySelector('.modal-bg.open');
+  if(!opened) return;
+  e.preventDefault();
+  const id=opened.id;
+  if(id==='iss-modal') saveIssue();
+  else if(id==='pur-modal') addPur();
+  else if(id==='cp-reg-modal') saveCpRecord();
+  else if(id==='rm-modal') saveRoom();
+  else if(id==='inv-modal') saveInvItem();
+  else if(id==='inv-item-reg-modal') saveInvItemReg();
+  else if(id==='master-modal') saveMaster();
+  else if(id==='budget-modal') saveBudget();
+  else if(id==='linen-date-modal') saveLinenDates();
+  else if(id==='cost-add-modal') addCostItem();
+  else if(id==='del-modal') confirmDel();
+});
 // ── 탭 전환 ──
 const MAIN_TABS = ['overview','rooms','issues','cp','inventory','linen','purchase','cost'];
 const MAIN_LABELS = {overview:'개요',rooms:'객실',issues:'특이사항',cp:'CP관리',inventory:'재고',linen:'린넨관리',purchase:'구매',cost:'비용'};
