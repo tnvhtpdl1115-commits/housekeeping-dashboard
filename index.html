@@ -412,6 +412,7 @@ tr:hover td{background:#fafaf8}
       </div>
       <div style="flex:1"></div>
       <button class="btn-s" onclick="openWeeklyCheckModal()"><i class="ti ti-clipboard-check"></i> 재고조사</button>
+      <button class="btn-s" onclick="setMonthClosing()" style="color:#854F0B;border-color:#C9A84C"><i class="ti ti-flag"></i> 월마감 설정</button>
       <button class="btn-p" onclick="openInvItemRegModal()"><i class="ti ti-plus"></i> 품목 등록</button>
     </div>
     <div class="metrics" id="inv-metrics"></div>
@@ -2707,6 +2708,7 @@ let weeklyItems = {
 };
 
 let currentWeek = 1;
+let monthClosingWeek = {}; // {month: week} 예: {'2026-06': 4}
 
 function getWeekOfMonth(date){
   const d=date||new Date();
@@ -2718,9 +2720,44 @@ function getCurrentWeekKey(){
   return getWeekKey(mkKey(n.getFullYear(),n.getMonth()+1),getWeekOfMonth(n));
 }
 
+function updateWeekTabs(){
+  const month=getInvMonth();
+  const closingWeek=monthClosingWeek[month]||null;
+  const tabs=document.getElementById('inv-week-tabs');
+  if(!tabs)return;
+  tabs.innerHTML=[1,2,3,4,5].map(w=>{
+    const weekKey=getWeekKey(month,w);
+    const hasData=(weeklyData[weekKey]||[]).some(d=>d.currQty!==null&&d.currQty!==undefined);
+    const isClosing=closingWeek===w;
+    const isActive=currentWeek===w;
+    return `<button onclick="selWeek(${w})" style="${isActive?'background:#1a1a18;color:#fff;border-color:#1a1a18':''};position:relative">
+      ${w}주차${hasData?' ✅':''}
+      ${isClosing?`<span style="position:absolute;top:-8px;right:-4px;background:#C9A84C;color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:4px">월마감</span>`:''}
+    </button>`;
+  }).join('');
+}
+
+function setMonthClosing(){
+  const month=getInvMonth();
+  const cur=monthClosingWeek[month]||null;
+  const val=prompt(`${month.replace('-','년 ')}월 월말 마감 주차를 설정하세요 (1~5)\n현재: ${cur?cur+'주차':'미설정'}\n해제하려면 0 입력`,cur||'');
+  if(val===null)return;
+  const w=parseInt(val);
+  if(w===0){
+    delete monthClosingWeek[month];
+  } else if(w>=1&&w<=5){
+    monthClosingWeek[month]=w;
+  } else {
+    alert('1~5 또는 0을 입력하세요.');return;
+  }
+  dbSaveSettings('month_closing_weeks',monthClosingWeek);
+  updateWeekTabs();
+  showToast('📅 월마감 설정',w===0?`${month} 월마감 해제됨`:`${month}월 ${w}주차가 월마감으로 설정됐습니다`,'grn');
+}
+
 function selWeek(w){
   currentWeek=w;
-  document.querySelectorAll('#inv-week-tabs button').forEach((b,i)=>b.classList.toggle('on',i+1===w));
+  updateWeekTabs();
   renderInv();
 }
 
@@ -2743,6 +2780,7 @@ function getInvMonth(){return document.getElementById('inv-month-sel')?.value||t
 
 function renderInv(){
   buildInvMonthSel();
+  updateWeekTabs();
   const month=getInvMonth();
   if(currentInvCategory==='linen'){
     document.getElementById('inv-weekly-section').style.display='none';
@@ -4327,6 +4365,7 @@ async function dbLoadSettings(){
   if(data){
     data.forEach(r=>{
       if(r.key==='budget'&&r.value) Object.assign(budgetData,r.value);
+      if(r.key==='month_closing_weeks'&&r.value) Object.assign(monthClosingWeek,r.value);
     });
   }
 }
