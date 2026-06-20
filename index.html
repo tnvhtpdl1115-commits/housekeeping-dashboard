@@ -1945,6 +1945,13 @@ function addPur(){
   const invWeek=parseInt(document.getElementById('pur-inv-week').value)||null;
   const eid=document.getElementById('pur-edit-id').value;
   if(!item){alert('품목명을 입력하세요.');return;}
+  // 비정상적으로 큰 금액 입력 방지 (오입력 경고)
+  const totalAmount=qty*price;
+  if(totalAmount>=100000000){
+    if(!confirm(`입력하신 총 금액이 ${totalAmount.toLocaleString()}원입니다.\n\n수량: ${qty.toLocaleString()}개\n단가: ${price.toLocaleString()}원\n\n금액이 비정상적으로 큽니다. 정말 이대로 저장하시겠습니까?`)){
+      return;
+    }
+  }
   if(!purData[month]) purData[month]=[];
   if(eid){
     // 모든 month에서 eid로 찾기 (month가 바뀔 수 있으므로)
