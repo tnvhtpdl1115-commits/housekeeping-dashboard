@@ -4209,12 +4209,12 @@ async function dbLoadCosts(){
     costData={};
     data.forEach(r=>{
       if(!costData[r.month]) costData[r.month]=[];
-      costData[r.month].push({id:r.id,dbId:r.id,label:r.label,type:r.type,subType:r.sub_type,amount:r.amount,date:r.date});
+      costData[r.month].push({id:r.id,dbId:r.id,label:r.label,type:r.type,subType:r.sub_type,amount:r.amount,date:r.date,purId:r.pur_id||null});
     });
   }
 }
 async function dbSaveCost(month,obj){
-  const payload={month,label:obj.label,type:obj.type,sub_type:obj.subType||obj.type,amount:obj.amount,date:obj.date};
+  const payload={month,label:obj.label,type:obj.type,sub_type:obj.subType||obj.type,amount:obj.amount,date:obj.date,pur_id:obj.purId||null};
   if(obj.dbId){
     await supa.from('cost_data').update(payload).eq('id',obj.dbId);
   } else {
