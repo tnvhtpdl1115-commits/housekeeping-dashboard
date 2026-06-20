@@ -1962,6 +1962,19 @@ function addPur(){
       const oldCat=p.category||'consumable';
       Object.assign(p,{item,qty,price,date,category:cat,status,inv_week:invWeek});
       dbSavePurchase(pMonth,p);
+      // 비용 업데이트 (purId로 찾아서 금액/날짜 수정)
+      const updCostMonth=date?date.substring(0,7):pMonth;
+      let foundCost=null;
+      for(const m of Object.keys(costData)){
+        foundCost=(costData[m]||[]).find(c=>c.purId==p.id||c.purId==eid);
+        if(foundCost) break;
+      }
+      if(foundCost){
+        foundCost.amount=qty*price;
+        foundCost.date=date;
+        foundCost.label=item+' 발주';
+        dbSaveCost(updCostMonth,foundCost);
+      }
       if(status==='received'){
         if(!wasReceived||(wasReceived&&oldInvWeek!==invWeek)){
           // 기존 주차 입고량 차감
@@ -1993,10 +2006,23 @@ function addPur(){
     dbSavePurchase(month,newObj);
     const catName={consumable:'소모품',equipment:'비품',maintenance:'정비용품',linen:'린넨'}[cat]||'구매';
     const costMonth=date?date.substring(0,7):month;
-    const costObj={id:costIdSeq++,label:item+' 발주',type:'구매',subType:catName,amount:qty*price,date,purId:newObj.id};
-    if(!costData[costMonth]) costData[costMonth]=[];
-    costData[costMonth].push(costObj);
-    dbSaveCost(costMonth,costObj);
+    // 중복 방지: 같은 purId 비용이 이미 있으면 업데이트, 없으면 신규
+    const allCostMonths=Object.keys(costData);
+    let existingCost=null;
+    for(const m of allCostMonths){
+      existingCost=(costData[m]||[]).find(c=>c.purId==newObj.id);
+      if(existingCost) break;
+    }
+    if(existingCost){
+      existingCost.amount=qty*price;
+      existingCost.date=date;
+      dbSaveCost(costMonth,existingCost);
+    } else {
+      const costObj={id:costIdSeq++,label:item+' 발주',type:'구매',subType:catName,amount:qty*price,date,purId:newObj.id};
+      if(!costData[costMonth]) costData[costMonth]=[];
+      costData[costMonth].push(costObj);
+      dbSaveCost(costMonth,costObj);
+    }
     if(status==='received') autoUpdateInventory(newObj,date,invWeek);
   }
   buildPurMonthSel();
@@ -4207,10 +4233,26 @@ async function dbLoadCosts(){
   const {data}=await supa.from('cost_data').select('*').order('id',{ascending:true});
   if(data){
     costData={};
+    // 구매 항목은 label+month+date 기준 중복 제거 (가장 오래된 것만 유지)
+    const seen=new Set();
+    const toDelete=[];
     data.forEach(r=>{
+      if(r.type==='구매'){
+        const key=`${r.month}_${r.label}_${r.date}_${r.amount}`;
+        if(seen.has(key)){
+          toDelete.push(r.id);
+          return;
+        }
+        seen.add(key);
+      }
       if(!costData[r.month]) costData[r.month]=[];
       costData[r.month].push({id:r.id,dbId:r.id,label:r.label,type:r.type,subType:r.sub_type,amount:r.amount,date:r.date,purId:r.pur_id||null});
     });
+    // 중복 항목 DB에서 삭제
+    if(toDelete.length>0){
+      await supa.from('cost_data').delete().in('id',toDelete);
+      console.log(`비용 중복 ${toDelete.length}건 자동 정리됨`);
+    }
   }
 }
 async function dbSaveCost(month,obj){
