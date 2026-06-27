@@ -1211,6 +1211,15 @@ let currentInvCategory = 'consumable';
 let currentPurCategory = 'consumable';
 let currentCostCategory = 'room';
 function updateClock(){document.getElementById('clock').textContent=new Date().toLocaleString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});}
+function toggleLowStockDetail(){
+  const detail=document.getElementById('lowstock-detail');
+  const chevron=document.getElementById('lowstock-chevron');
+  if(!detail)return;
+  const isOpen=detail.style.display!=='none';
+  detail.style.display=isOpen?'none':'block';
+  if(chevron) chevron.style.transform=isOpen?'rotate(0deg)':'rotate(180deg)';
+}
+
 function renderOverview(){
   const pending=issues.filter(i=>!i.done).length,urgent=issues.filter(i=>!i.done&&i.priority==='urgent').length;
   const thisM=thisMonthKey();
@@ -1263,10 +1272,24 @@ function renderOverview(){
   // 알림
   const lowItems=allInvItems.filter(i=>i.qty<i.min&&i.min>0);
   const urgI=issues.filter(i=>!i.done&&i.priority==='urgent');
+  let alertHtml='';
+  // 긴급 특이사항은 항상 펼쳐서 표시
+  alertHtml+=urgI.map(i=>`<div class="alert-item"><i class="ti ti-alert-triangle"></i>[긴급] ${i.roomNo}호 — ${i.memo}</div>`).join('');
+  // 재고 부족은 요약 한 줄 + 펼치기
+  if(lowItems.length>0){
+    const zeroCount=lowItems.filter(i=>i.qty===0).length;
+    alertHtml+=`
+      <div class="alert-item" style="cursor:pointer;justify-content:space-between" onclick="toggleLowStockDetail()">
+        <span><i class="ti ti-package"></i><strong>재고 부족 ${lowItems.length}건</strong>${zeroCount>0?` <span style="color:#A32D2D">(재고 0: ${zeroCount}건)</span>`:''}</span>
+        <i class="ti ti-chevron-down" id="lowstock-chevron" style="transition:transform 0.2s"></i>
+      </div>
+      <div id="lowstock-detail" style="display:none;padding-left:8px;margin-top:4px">
+        ${lowItems.sort((a,b)=>a.qty-b.qty).map(i=>`<div class="alert-item" style="background:transparent;border:none;padding:3px 8px;font-size:12px"><i class="ti ti-point" style="font-size:8px"></i><strong>${i.name}</strong> (${i.qty}${i.unit} / 최소 ${i.min}${i.unit})</div>`).join('')}
+      </div>`;
+  }
   document.getElementById('ov-alerts').innerHTML=(!lowItems.length&&!urgI.length)
     ?'<div style="font-size:12px;color:#6b6b68;padding:4px 0">이상 없음</div>'
-    :urgI.map(i=>`<div class="alert-item"><i class="ti ti-alert-triangle"></i>[긴급] ${i.roomNo}호 — ${i.memo}</div>`).join('')
-     +lowItems.map(i=>`<div class="alert-item"><i class="ti ti-package"></i><strong>${i.name}</strong> 재고 부족 (${i.qty}${i.unit} / 최소 ${i.min}${i.unit})</div>`).join('');
+    :alertHtml;
   // 미처리 특이사항
   const pi=issues.filter(i=>!i.done);
   document.getElementById('ov-issues').innerHTML=pi.length
