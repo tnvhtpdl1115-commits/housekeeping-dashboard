@@ -1945,7 +1945,40 @@ function addPur(){
   const invWeek=parseInt(document.getElementById('pur-inv-week').value)||null;
   const eid=document.getElementById('pur-edit-id').value;
   if(!item){alert('품목명을 입력하세요.');return;}
-  // 비정상적으로 큰 금액 입력 방지 (오입력 경고)
+
+  // C. 필수값 누락 방어
+  if(qty<=0){
+    if(!confirm(`수량이 ${qty}개입니다. 0개로 저장하시겠습니까?`)) return;
+  }
+  if(price<=0){
+    if(!confirm(`단가가 ${price}원입니다. 0원으로 저장하시겠습니까?`)) return;
+  }
+
+  // A. 이전 구매 단가 대비 급변동 방어 (같은 품목 최근 구매가와 ±50% 비교)
+  if(price>0){
+    let lastPrice=null, lastDate=null;
+    Object.keys(purData).sort().reverse().forEach(m=>{
+      if(lastPrice!==null) return;
+      const prevPurchases=(purData[m]||[]).filter(x=>x.item===item&&x.id!=eid&&x.price>0);
+      if(prevPurchases.length>0){
+        // 가장 최근 날짜의 구매 찾기
+        prevPurchases.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+        lastPrice=prevPurchases[0].price;
+        lastDate=prevPurchases[0].date;
+      }
+    });
+    if(lastPrice!==null && lastPrice>0){
+      const ratio=price/lastPrice;
+      if(ratio>=1.5 || ratio<=0.5){
+        const pctChange=Math.round((ratio-1)*100);
+        if(!confirm(`⚠️ [${item}] 단가가 이전 구매와 크게 다릅니다.\n\n이전 단가: ${lastPrice.toLocaleString()}원 (${lastDate})\n이번 단가: ${price.toLocaleString()}원\n변동: ${pctChange>0?'+':''}${pctChange}%\n\n단가가 정확한지 확인해주세요. 이대로 저장할까요?`)){
+          return;
+        }
+      }
+    }
+  }
+
+  // 비정상적으로 큰 총 금액 방어
   const totalAmount=qty*price;
   if(totalAmount>=100000000){
     if(!confirm(`입력하신 총 금액이 ${totalAmount.toLocaleString()}원입니다.\n\n수량: ${qty.toLocaleString()}개\n단가: ${price.toLocaleString()}원\n\n금액이 비정상적으로 큽니다. 정말 이대로 저장하시겠습니까?`)){
@@ -3003,6 +3036,35 @@ async function saveWeeklyCheck(){
   const items=weeklyItems[currentInvCategory]||[];
   const prevData=prevWeekKey?weeklyData[prevWeekKey]||[]:[];
   if(!weeklyData[weekKey]) weeklyData[weekKey]=[];
+
+  // B. 재고 급변동 방어 - 입력값을 먼저 검사
+  const warnings=[];
+  for(const item of items){
+    const inputId='wc-'+item.name.replace(/\s/g,'_');
+    const el=document.getElementById(inputId);
+    if(!el)continue;
+    const currQty=parseInt(el.value)||0;
+    const pd=prevData.find(w=>w.itemName===item.name);
+    const prevQty=pd?pd.currQty:0;
+    const existingW=weeklyData[weekKey].find(w=>w.itemName===item.name);
+    const inQty=existingW?(existingW.inQty||0):0;
+    // 전주 재고가 있고, 입고를 감안해도 비정상적 급변동인 경우
+    if(prevQty>0){
+      const expected=prevQty+inQty; // 입고 반영한 예상 최대치
+      // 이번주 재고가 전주+입고보다 훨씬 크거나 (입고 없이 폭증), 90% 이상 급감한 경우
+      if(currQty>expected*1.5 && currQty-expected>100){
+        warnings.push(`• ${item.name}: 전주 ${prevQty.toLocaleString()} + 입고 ${inQty.toLocaleString()} = ${expected.toLocaleString()} 인데 이번주 ${currQty.toLocaleString()} (입고 없이 폭증?)`);
+      } else if(currQty<prevQty*0.1 && prevQty-currQty>100){
+        warnings.push(`• ${item.name}: 전주 ${prevQty.toLocaleString()} → 이번주 ${currQty.toLocaleString()} (90% 이상 급감, 0 누락?)`);
+      }
+    }
+  }
+  if(warnings.length>0){
+    if(!confirm(`⚠️ 다음 품목의 재고 변동이 비정상적입니다:\n\n${warnings.join('\n')}\n\n입력값이 정확한지 확인해주세요. 이대로 저장할까요?`)){
+      return;
+    }
+  }
+
   for(const item of items){
     const inputId='wc-'+item.name.replace(/\s/g,'_');
     const el=document.getElementById(inputId);
