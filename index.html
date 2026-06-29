@@ -804,9 +804,15 @@ tr:hover td{background:#fafaf8}
   </div>
   <div class="metrics" id="pur-metrics"></div>
   <div class="card">
-    <div class="ct" id="pur-title">구매 발주 목록</div>
+    <div class="ct" id="pur-title" style="display:flex;justify-content:space-between;align-items:center">
+      <span>구매 발주 목록</span>
+      <div style="display:flex;gap:4px;background:#f0ede8;border-radius:8px;padding:3px">
+        <button id="pur-view-date" class="btn-i" onclick="setPurView('date')" style="font-size:12px;padding:4px 12px;border:none;background:#fff;border-radius:6px;font-weight:600">날짜별</button>
+        <button id="pur-view-item" class="btn-i" onclick="setPurView('item')" style="font-size:12px;padding:4px 12px;border:none;background:transparent;border-radius:6px">품목별 합계</button>
+      </div>
+    </div>
     <div style="overflow-x:auto">
-      <table style="min-width:600px"><thead><tr><th>품목</th><th>수량</th><th>단가</th><th>금액</th><th>발주일</th><th>상태</th><th></th></tr></thead>
+      <table style="min-width:600px"><thead id="pur-thead"><tr><th>품목</th><th>수량</th><th>단가</th><th>금액</th><th>발주일</th><th>상태</th><th></th></tr></thead>
       <tbody id="pur-tbody"></tbody></table>
     </div>
   </div>
@@ -1866,7 +1872,7 @@ function renderPur(){
   const filtered=allItems.filter(p=>!p.category||p.category===currentPurCategory);
   const pending=filtered.filter(p=>p.status==='pending').length;
   const catName={consumable:'소모품',equipment:'비품',linen:'린넨',maintenance:'정비용품'}[currentPurCategory]||'';
-  const titleEl=document.getElementById('pur-title');
+  const titleEl=document.querySelector('#pur-title span');
   if(titleEl) titleEl.textContent=`${month.replace('-','년 ')}월 ${catName} 발주 목록`;
 
   // 전체 구매 총비용 (모든 소분류 합산)
@@ -1892,8 +1898,42 @@ function renderPur(){
     </div>`;
 
   const tbody=document.getElementById('pur-tbody');
+  const thead=document.getElementById('pur-thead');
   if(!tbody)return;
   if(!filtered.length){tbody.innerHTML=`<tr><td colspan="8" class="empty">발주 내역이 없습니다</td></tr>`;return;}
+
+  if(purViewMode==='item'){
+    // 품목별 합계 보기
+    thead.innerHTML=`<tr><th>품목</th><th>총 수량</th><th>평균 단가</th><th>총 금액</th><th>발주 횟수</th><th>상태</th></tr>`;
+    const groups={};
+    filtered.forEach(p=>{
+      if(!groups[p.item]) groups[p.item]={item:p.item,totalQty:0,totalAmount:0,count:0,received:0};
+      groups[p.item].totalQty+=p.qty;
+      groups[p.item].totalAmount+=p.qty*p.price;
+      groups[p.item].count++;
+      if(p.status==='received') groups[p.item].received++;
+    });
+    const grouped=Object.values(groups).sort((a,b)=>b.totalAmount-a.totalAmount);
+    tbody.innerHTML=grouped.map(g=>{
+      const avgPrice=g.totalQty>0?g.totalAmount/g.totalQty:0;
+      const allReceived=g.received===g.count;
+      const statusBadge=allReceived
+        ?`<span class="badge" style="background:#EAF3DE;color:#3B6D11">전체 입고</span>`
+        :`<span class="badge" style="background:#FAEEDA;color:#854F0B">일부 발주중 (${g.received}/${g.count})</span>`;
+      return `<tr style="background:#FBF9F5">
+        <td style="font-weight:600">${g.item}</td>
+        <td style="font-weight:700;color:#1a3a5f">${g.totalQty.toLocaleString()}</td>
+        <td style="color:#6b6b68">${avgPrice%1!==0?avgPrice.toLocaleString('ko-KR',{maximumFractionDigits:1}):avgPrice.toLocaleString()}원</td>
+        <td style="font-weight:600">${fmt(g.totalAmount)}</td>
+        <td style="text-align:center">${g.count}회</td>
+        <td>${statusBadge}</td>
+      </tr>`;
+    }).join('');
+    return;
+  }
+
+  // 날짜별 보기 (기본)
+  thead.innerHTML=`<tr><th>품목</th><th>수량</th><th>단가</th><th>금액</th><th>발주일</th><th>상태</th><th></th></tr>`;
   tbody.innerHTML=filtered.map(p=>`<tr>
     <td>${p.item}</td><td>${p.qty.toLocaleString()}</td>
     <td>${p.price%1!==0?p.price.toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:2}):p.price.toLocaleString()}원</td><td>${fmt(p.qty*p.price)}</td>
@@ -1905,6 +1945,22 @@ function renderPur(){
       <button class="btn-i d" onclick="showConfirm('${p.item} 발주 내역을 삭제하시겠습니까?',()=>deletePur('${month}','${p.id}'),{icon:'🛒',title:'발주 삭제',btnText:'삭제',btnColor:'#A32D2D'})"><i class="ti ti-trash"></i></button>
     </div></td>
   </tr>`).join('');
+}
+
+let purViewMode='date';
+function setPurView(mode){
+  purViewMode=mode;
+  // 버튼 스타일 토글
+  const dateBtn=document.getElementById('pur-view-date');
+  const itemBtn=document.getElementById('pur-view-item');
+  if(mode==='date'){
+    dateBtn.style.background='#fff';dateBtn.style.fontWeight='600';
+    itemBtn.style.background='transparent';itemBtn.style.fontWeight='400';
+  } else {
+    itemBtn.style.background='#fff';itemBtn.style.fontWeight='600';
+    dateBtn.style.background='transparent';dateBtn.style.fontWeight='400';
+  }
+  renderPur();
 }
 
 function togglePurItemList(){
