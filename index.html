@@ -1221,7 +1221,8 @@ function swSub(main, sub){
     document.getElementById('tab-purchase').classList.add('on');
     currentPurCategory = sub;
     const title={consumable:'소모품',equipment:'비품',linen:'린넨'}[sub]||sub;
-    document.getElementById('pur-title').textContent=title+' 발주 목록';
+    const purTitleSpan=document.querySelector('#pur-title span');
+    if(purTitleSpan) purTitleSpan.textContent=title+' 발주 목록';
     renderPur();
   } else if(main==='cost'){
     document.getElementById('tab-cost').classList.add('on');
