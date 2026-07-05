@@ -4484,8 +4484,7 @@ async function dbLoadCosts(){
         seen.add(key);
       }
       if(!costData[r.month]) costData[r.month]=[];
-      costData[r.month].push({id:r.id,dbId:r.id,label:r.label,type:r.type,subType:r.sub_type,amount:r.amount,date:r.date,purId:r.pur_id||null});
-    });
+      costData[r.month].push({id:r.id,dbId:r.id,label:r.label,type:r.type,subType:r.sub_type,amount:r.amount,date:r.date,purId:r.pur_id||null});    });
     // 중복 항목 DB에서 삭제
     if(toDelete.length>0){
       await supa.from('cost_data').delete().in('id',toDelete);
@@ -4496,11 +4495,19 @@ async function dbLoadCosts(){
 async function dbSaveCost(month,obj){
   const payload={month,label:obj.label,type:obj.type,sub_type:obj.subType||obj.type,amount:obj.amount,date:obj.date,pur_id:obj.purId||null};
   if(obj.dbId){
-    const {error}=await supa.from('cost_data').update(payload).eq('id',obj.dbId);
-    if(error) console.error('비용 저장(update) 실패:',error.message,payload);
+    let {error}=await supa.from('cost_data').update(payload).eq('id',obj.dbId);
+    if(error&&error.message&&error.message.includes('pur_id')){
+      const {pur_id,...p2}=payload;
+      await supa.from('cost_data').update(p2).eq('id',obj.dbId);
+    } else if(error) console.error('비용 저장(update) 실패:',error.message);
   } else {
-    const {data,error}=await supa.from('cost_data').insert(payload).select();
-    if(error){
+    let {data,error}=await supa.from('cost_data').insert(payload).select();
+    if(error&&error.message&&error.message.includes('pur_id')){
+      // pur_id 컬럼 없으면 제외하고 재시도
+      const {pur_id,...p2}=payload;
+      const r2=await supa.from('cost_data').insert(p2).select();
+      if(r2.data&&r2.data[0]){obj.dbId=r2.data[0].id;obj.id=r2.data[0].id;}
+    } else if(error){
       console.error('비용 저장(insert) 실패:',error.message,payload);
     } else if(data&&data[0]){
       obj.dbId=data[0].id;obj.id=data[0].id;
