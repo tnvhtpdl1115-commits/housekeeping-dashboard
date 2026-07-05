@@ -2455,22 +2455,44 @@ function renderCostChart(){
   const months=Object.keys(costData).sort().slice(-6);
   const catLabels={room:'객실',linen:'린넨',uniform:'유니폼',purchase:'구매',etc:'기타'};
   const cats=Object.keys(catLabels);
-  const colors=['#B5D4F4','#9FE1CB','#FAC775','#F4B5D4','#B5F4D4'];
-  const datasets=cats.map((cat,i)=>({
+  const lineColors={room:'#185FA5',linen:'#1A7A5A',uniform:'#B8860B',purchase:'#A32D6A',etc:'#534AB7'};
+  const fillColors={room:'rgba(181,212,244,0.55)',linen:'rgba(159,225,203,0.55)',uniform:'rgba(250,199,117,0.55)',purchase:'rgba(244,181,212,0.55)',etc:'rgba(197,181,244,0.55)'};
+  const datasets=cats.map((cat)=>({
     label:catLabels[cat],
     data:months.map(m=>(costData[m]||[]).filter(c=>{
       if(cat==='purchase') return c.type==='구매';
       return c.type===catLabels[cat]||c.subType===catLabels[cat];
     }).reduce((a,c)=>a+c.amount,0)),
-    backgroundColor:colors[i]
+    backgroundColor:fillColors[cat],
+    borderColor:lineColors[cat],
+    borderWidth:2,
+    fill:true,
+    tension:0.4,
+    pointRadius:3,
+    pointHoverRadius:5,
+    pointBackgroundColor:'#fff',
+    pointBorderColor:lineColors[cat],
+    pointBorderWidth:2
   }));
   costChart=new Chart(ctx,{
-    type:'bar',
+    type:'line',
     data:{labels:months.map(m=>m.replace('-','년 ')+'월'),datasets},
     options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{labels:{font:{family:"'Noto Sans KR',sans-serif",size:11}}}},
-      scales:{x:{stacked:true,ticks:{font:{family:"'Noto Sans KR',sans-serif"}}},
-        y:{stacked:true,ticks:{font:{family:"'Noto Sans KR',sans-serif"},callback:v=>Math.round(v/10000)+'만'}}}}
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{labels:{font:{family:"'Noto Sans KR',sans-serif",size:11},usePointStyle:true,pointStyle:'circle',padding:14}},
+        tooltip:{
+          backgroundColor:'rgba(26,26,24,0.92)',
+          titleFont:{family:"'Noto Sans KR',sans-serif",size:12},
+          bodyFont:{family:"'Noto Sans KR',sans-serif",size:11},
+          padding:10,
+          callbacks:{label:v=>`${v.dataset.label}: ${fmt(v.raw)}`}
+        }
+      },
+      scales:{
+        x:{stacked:true,grid:{display:false},ticks:{font:{family:"'Noto Sans KR',sans-serif"}}},
+        y:{stacked:true,grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{family:"'Noto Sans KR',sans-serif"},callback:v=>Math.round(v/10000)+'만'}}
+      }}
   });
 }
 // ── 범용 확인 모달 ──
