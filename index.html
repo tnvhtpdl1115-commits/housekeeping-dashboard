@@ -33,17 +33,20 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f0ede8;min-height:100vh;c
 /* ── 메인 콘텐츠 ── */
 .main-wrap{margin-left:200px;flex:1;min-height:100vh;display:flex;flex-direction:column;max-width:calc(100vw - 200px)}
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:#fff;border-bottom:1px solid rgba(0,0,0,0.08);position:sticky;top:0;z-index:50}
-.topbar-left{font-size:16px;font-weight:700;color:#1a1a18}
+.topbar-left{font-size:19px;font-weight:800;color:#1a1a18;letter-spacing:-0.5px;padding-left:14px;position:relative;display:flex;align-items:center}
+.topbar-left::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:4px;height:20px;background:linear-gradient(180deg,#DAA520,#B8860B);border-radius:3px}
 .topbar-right{display:flex;align-items:center;gap:10px}
 .content{padding:20px 24px;overflow-y:auto;display:block}
 
 #inv-tbody tr td{padding:10px 8px;vertical-align:middle}
 #inv-tbody tr{border-bottom:1px solid rgba(0,0,0,0.06)}
 #inv-tbody tr:hover td{background:#fafaf8}
-.sub-tabs{display:inline-flex;gap:2px;margin-bottom:1.2rem;background:linear-gradient(145deg,#f0ede8,#e8e4dd);padding:4px;border-radius:12px;box-shadow:inset 0 1px 3px rgba(0,0,0,0.06),0 1px 1px rgba(255,255,255,0.5)}
-.sub-tab{padding:8px 20px;font-size:13px;font-weight:500;border:none;background:transparent;color:#8a8681;cursor:pointer;font-family:'Noto Sans KR',sans-serif;border-radius:9px;transition:all .25s cubic-bezier(0.4,0,0.2,1);position:relative;letter-spacing:-0.2px}
-.sub-tab:hover{color:#1a1a18}
-.sub-tab.active{color:#1a1a18;font-weight:700;background:linear-gradient(145deg,#ffffff,#faf9f7);box-shadow:0 2px 6px rgba(0,0,0,0.08),0 1px 2px rgba(0,0,0,0.04);transform:translateY(-0.5px)}
+.sub-tabs{display:flex;gap:4px;margin-bottom:1.4rem;border-bottom:1.5px solid rgba(0,0,0,0.07);position:relative}
+.sub-tab{padding:10px 22px;font-size:13.5px;font-weight:500;border:none;background:transparent;color:#9b968e;cursor:pointer;font-family:'Noto Sans KR',sans-serif;position:relative;letter-spacing:-0.2px;transition:color .25s ease;margin-bottom:-1.5px}
+.sub-tab::after{content:'';position:absolute;left:50%;bottom:0;width:0;height:2.5px;background:linear-gradient(90deg,#B8860B,#DAA520,#C9A84C);border-radius:2px;transition:all .3s cubic-bezier(0.4,0,0.2,1);transform:translateX(-50%)}
+.sub-tab:hover{color:#4a453e}
+.sub-tab.active{color:#1a1a18;font-weight:700}
+.sub-tab.active::after{width:100%}
 
 .sec{display:none}.sec.on{display:block}
 .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:1.2rem}
@@ -1172,7 +1175,7 @@ function swMain(name){
     document.getElementById('tab-overview').classList.add('on');
     renderOverview();
   } else if(SUB_MAP[name]){
-    document.getElementById('sub-tabs-'+name).style.display='inline-flex';
+    document.getElementById('sub-tabs-'+name).style.display='flex';
     const sub = currentSub[name] || SUB_MAP[name].default;
     swSub(name, sub);
   } else {
