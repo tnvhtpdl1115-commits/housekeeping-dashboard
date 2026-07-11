@@ -2456,7 +2456,7 @@ function renderCostChart(){
   const catLabels={room:'객실',linen:'린넨',uniform:'유니폼',purchase:'구매',etc:'기타'};
   const cats=Object.keys(catLabels);
   const lineColors={room:'#185FA5',linen:'#1A7A5A',uniform:'#B8860B',purchase:'#A32D6A',etc:'#534AB7'};
-  const fillColors={room:'rgba(181,212,244,0.55)',linen:'rgba(159,225,203,0.55)',uniform:'rgba(250,199,117,0.55)',purchase:'rgba(244,181,212,0.55)',etc:'rgba(197,181,244,0.55)'};
+  const fillColors={room:'rgba(181,212,244,0.35)',linen:'rgba(159,225,203,0.35)',uniform:'rgba(250,199,117,0.35)',purchase:'rgba(244,181,212,0.35)',etc:'rgba(197,181,244,0.35)'};
   const datasets=cats.map((cat)=>({
     label:catLabels[cat],
     data:months.map(m=>(costData[m]||[]).filter(c=>{
@@ -2490,8 +2490,8 @@ function renderCostChart(){
         }
       },
       scales:{
-        x:{stacked:true,grid:{display:false},ticks:{font:{family:"'Noto Sans KR',sans-serif"}}},
-        y:{stacked:true,grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{family:"'Noto Sans KR',sans-serif"},callback:v=>Math.round(v/10000)+'만'}}
+        x:{grid:{display:false},ticks:{font:{family:"'Noto Sans KR',sans-serif"}}},
+        y:{beginAtZero:true,grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{family:"'Noto Sans KR',sans-serif"},callback:v=>Math.round(v/10000)+'만'}}
       }}
   });
 }
