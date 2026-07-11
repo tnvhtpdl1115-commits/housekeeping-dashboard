@@ -232,6 +232,9 @@ tr:hover td{background:#fafaf8}
     <div class="nav-item" onclick="swMain('issues')" id="nav-issues">
       <i class="ti ti-alert-circle"></i><span>특이사항</span>
     </div>
+    <div class="nav-item" onclick="swMain('handover')" id="nav-handover">
+      <i class="ti ti-clipboard-text"></i><span>인수인계</span>
+    </div>
     <div class="nav-item" onclick="swMain('cp')" id="nav-cp">
       <i class="ti ti-clipboard-list"></i><span>CP관리</span>
     </div>
@@ -396,6 +399,75 @@ tr:hover td{background:#fafaf8}
     <div class="ct" id="is-title">특이사항 목록</div>
     <table><thead><tr><th>호실</th><th>구분</th><th>내용</th><th>담당</th><th>우선순위</th><th>상태</th><th></th></tr></thead>
     <tbody id="is-tbody"></tbody></table>
+  </div>
+</div>
+
+<!-- 인수인계 -->
+<div id="tab-handover" class="sec">
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+    <select id="ho-month-sel" onchange="renderHandover()" style="font-size:14px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;background:#1a3a5f;color:#ffffff;font-family:'Noto Sans KR',sans-serif;cursor:pointer;min-width:130px"></select>
+    <span id="ho-month-badge" style="font-size:28px;font-weight:800;color:#1a3a5f;letter-spacing:-1px;line-height:1"></span>
+    <div style="flex:1"></div>
+    <button class="btn-s" onclick="openWorkerModal()"><i class="ti ti-users"></i> 근무자 관리</button>
+    <button class="btn-s" onclick="openDayoffModal()"><i class="ti ti-calendar-off"></i> 휴무 입력</button>
+  </div>
+  <div class="card">
+    <div class="ct">일자별 근무 & 인수인계</div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:#f5f5f4">
+            <th style="text-align:left;padding:9px 12px;width:130px">날짜</th>
+            <th style="text-align:left;padding:9px 12px;width:90px">요일</th>
+            <th style="text-align:left;padding:9px 12px">근무자</th>
+            <th style="text-align:center;padding:9px 12px;width:100px">인수인계</th>
+            <th style="text-align:center;padding:9px 12px;width:120px">확인</th>
+          </tr>
+        </thead>
+        <tbody id="ho-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- 모달: 근무자 관리 -->
+<div class="modal-bg" id="worker-modal">
+  <div class="modal">
+    <h3>근무자 관리</h3>
+    <p style="font-size:12px;color:#6b6b68;margin:4px 0 12px">등록된 근무자는 매일 자동으로 근무 배정됩니다. 휴무만 따로 입력하세요.</p>
+    <div class="fg"><label>근무자 추가</label>
+      <div style="display:flex;gap:6px">
+        <input type="text" id="worker-name-input" placeholder="이름 입력" style="flex:1">
+        <button class="btn-p" onclick="addWorker()" style="white-space:nowrap">추가</button>
+      </div>
+    </div>
+    <div id="worker-list" style="margin-top:12px;display:flex;flex-direction:column;gap:6px"></div>
+    <div class="btn-row" style="margin-top:16px"><button class="btn-s" onclick="closeModal('worker-modal')">닫기</button></div>
+  </div>
+</div>
+
+<!-- 모달: 휴무 입력 -->
+<div class="modal-bg" id="dayoff-modal">
+  <div class="modal">
+    <h3>휴무 입력</h3>
+    <div class="fr">
+      <div class="fg"><label>날짜 *</label><input type="date" id="dayoff-date"></div>
+      <div class="fg"><label>근무자 *</label><select id="dayoff-worker"></select></div>
+    </div>
+    <div class="btn-row"><button class="btn-s" onclick="closeModal('dayoff-modal')">취소</button><button class="btn-p" onclick="addDayoff()">휴무 등록</button></div>
+    <div id="dayoff-list" style="margin-top:14px"></div>
+  </div>
+</div>
+
+<!-- 모달: 인수인계 작성/보기 -->
+<div class="modal-bg" id="handover-modal">
+  <div class="modal" style="max-width:560px">
+    <h3 id="ho-modal-title">인수인계</h3>
+    <div id="ho-modal-date" style="font-size:12px;color:#6b6b68;margin-bottom:10px"></div>
+    <div class="fg"><label>작성자</label><select id="ho-writer"></select></div>
+    <div class="fg"><label>인수인계 내용</label><textarea id="ho-content" rows="6" placeholder="다음 근무자에게 전달할 내용을 입력하세요" style="width:100%;resize:vertical"></textarea></div>
+    <div id="ho-read-info" style="font-size:12px;color:#6b6b68;margin:8px 0"></div>
+    <div class="btn-row"><button class="btn-s" onclick="closeModal('handover-modal')">취소</button><button class="btn-p" onclick="saveHandover()"><i class="ti ti-device-floppy"></i> 저장</button></div>
   </div>
 </div>
 
@@ -1140,8 +1212,8 @@ document.addEventListener('keydown',e=>{
   else if(id==='del-modal') confirmDel();
 });
 // ── 탭 전환 ──
-const MAIN_TABS = ['overview','rooms','issues','cp','inventory','linen','purchase','cost'];
-const MAIN_LABELS = {overview:'개요',rooms:'객실',issues:'특이사항',cp:'CP관리',inventory:'재고',linen:'린넨관리',purchase:'구매',cost:'비용'};
+const MAIN_TABS = ['overview','rooms','issues','handover','cp','inventory','linen','purchase','cost'];
+const MAIN_LABELS = {overview:'개요',rooms:'객실',issues:'특이사항',handover:'인수인계',cp:'CP관리',inventory:'재고',linen:'린넨관리',purchase:'구매',cost:'비용'};
 const SUB_MAP = {
   rooms:     {default:'seoul',  subs:['seoul','dorm']},
   issues:    {default:'facility', subs:['facility','clean','item']},
@@ -1181,6 +1253,7 @@ function swMain(name){
   } else {
     document.getElementById('tab-'+name).classList.add('on');
     if(name==='cp'){buildCpMonthSel();renderCP();}
+    if(name==='handover'){renderHandover();}
   }
 }
 
@@ -1252,6 +1325,222 @@ function toggleLowStockDetail(){
   if(chevron) chevron.style.transform=isOpen?'rotate(0deg)':'rotate(180deg)';
 }
 
+// ===== 인수인계 =====
+let workers = [];        // ['김철수','이영희',...]
+let dayoffs = {};        // {'2026-07-05':['김철수'], ...}
+let handovers = {};      // {'2026-07-05':{content,writer,readBy:[{name,time}],ts}}
+
+function getHoMonth(){return document.getElementById('ho-month-sel')?.value||thisMonthKey();}
+
+function buildHoMonthSel(){
+  const now=new Date();
+  const key=mkKey(now.getFullYear(),now.getMonth()+1);
+  const months=[...new Set([...Object.keys(handovers).map(k=>k.substring(0,7)),...Object.keys(dayoffs).map(k=>k.substring(0,7)),key])].sort();
+  const sel=document.getElementById('ho-month-sel');
+  if(!sel)return;
+  const cur=sel.value||key;
+  sel.innerHTML=months.map(m=>`<option value="${m}"${m===cur?' selected':''}>${m.replace('-','년 ')}월</option>`).join('');
+  sel.value=cur;
+  const badge=document.getElementById('ho-month-badge');
+  if(badge) badge.textContent=parseInt(cur.split('-')[1])+'월';
+}
+
+function getWorkersForDate(dateStr){
+  // 등록 근무자 중 해당 날짜 휴무가 아닌 사람
+  const off=dayoffs[dateStr]||[];
+  return workers.filter(w=>!off.includes(w));
+}
+
+function renderHandover(){
+  buildHoMonthSel();
+  const month=getHoMonth();
+  const [y,m]=month.split('-').map(Number);
+  const daysInMonth=new Date(y,m,0).getDate();
+  const dayNames=['일','월','화','수','목','금','토'];
+  const tbody=document.getElementById('ho-tbody');
+  if(!tbody)return;
+  if(workers.length===0){
+    tbody.innerHTML=`<tr><td colspan="5" class="empty" style="padding:30px">먼저 <strong>근무자 관리</strong>에서 근무자를 등록하세요</td></tr>`;
+    return;
+  }
+  let rows='';
+  const todayStr2=new Date().toISOString().slice(0,10);
+  for(let d=1;d<=daysInMonth;d++){
+    const dateStr=`${month}-${String(d).padStart(2,'0')}`;
+    const dow=new Date(y,m-1,d).getDay();
+    const isWeekend=dow===0||dow===6;
+    const workersToday=getWorkersForDate(dateStr);
+    const off=dayoffs[dateStr]||[];
+    const ho=handovers[dateStr];
+    const isToday=dateStr===todayStr2;
+    const dowColor=dow===0?'#A32D2D':dow===6?'#185FA5':'#6b6b68';
+    rows+=`<tr style="border-bottom:1px solid #f0ede8;${isToday?'background:#FFF9E9':isWeekend?'background:#fafafa':''}">
+      <td style="padding:8px 12px;font-weight:${isToday?'700':'500'}">${m}/${d}${isToday?' <span style="font-size:10px;color:#C9A84C">●오늘</span>':''}</td>
+      <td style="padding:8px 12px;color:${dowColor};font-weight:600">${dayNames[dow]}</td>
+      <td style="padding:8px 12px">
+        <span style="color:#1a1a18">${workersToday.join(', ')||'<span style=\"color:#ccc\">전원 휴무</span>'}</span>
+        ${off.length>0?`<span style="font-size:11px;color:#A32D2D;margin-left:6px">휴무: ${off.join(', ')}</span>`:''}
+      </td>
+      <td style="padding:8px 12px;text-align:center">
+        ${ho&&ho.content?`<button class="btn-i" style="color:#185FA5" onclick="openHandoverModal('${dateStr}')"><i class="ti ti-file-text"></i> 보기</button>`:`<button class="btn-i" onclick="openHandoverModal('${dateStr}')" style="color:#9b9b97"><i class="ti ti-plus"></i> 작성</button>`}
+      </td>
+      <td style="padding:8px 12px;text-align:center">
+        ${ho&&ho.content?renderReadStatus(dateStr,ho):'<span style="color:#ddd">-</span>'}
+      </td>
+    </tr>`;
+  }
+  tbody.innerHTML=rows;
+}
+
+function renderReadStatus(dateStr,ho){
+  const readBy=ho.readBy||[];
+  const readNames=readBy.map(r=>r.name);
+  // 아직 안 읽은 근무자(작성자 제외)
+  return `<div style="display:flex;flex-direction:column;gap:3px;align-items:center">
+    ${readBy.length>0?`<span style="font-size:11px;color:#3B6D11">✓ ${readNames.join(', ')}</span>`:'<span style="font-size:11px;color:#9b9b97">미확인</span>'}
+    <button class="btn-i" style="font-size:11px;padding:2px 10px" onclick="markRead('${dateStr}')">읽음</button>
+  </div>`;
+}
+
+function openWorkerModal(){
+  renderWorkerList();
+  openModal('worker-modal');
+}
+
+function renderWorkerList(){
+  const list=document.getElementById('worker-list');
+  if(!list)return;
+  if(workers.length===0){list.innerHTML='<div style="font-size:12px;color:#9b9b97">등록된 근무자가 없습니다</div>';return;}
+  list.innerHTML=workers.map(w=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#f5f5f4;border-radius:6px">
+    <span style="font-weight:500">${w}</span>
+    <button class="btn-i d" onclick="removeWorker('${w}')"><i class="ti ti-trash"></i></button>
+  </div>`).join('');
+}
+
+function addWorker(){
+  const input=document.getElementById('worker-name-input');
+  const name=input.value.trim();
+  if(!name)return;
+  if(workers.includes(name)){alert('이미 등록된 근무자입니다.');return;}
+  workers.push(name);
+  input.value='';
+  dbSaveSettings('ho_workers',workers);
+  renderWorkerList();
+}
+
+function removeWorker(name){
+  workers=workers.filter(w=>w!==name);
+  dbSaveSettings('ho_workers',workers);
+  renderWorkerList();
+}
+
+function openDayoffModal(){
+  document.getElementById('dayoff-date').value=new Date().toISOString().slice(0,10);
+  const sel=document.getElementById('dayoff-worker');
+  sel.innerHTML=workers.map(w=>`<option value="${w}">${w}</option>`).join('');
+  renderDayoffList();
+  openModal('dayoff-modal');
+}
+
+function addDayoff(){
+  const date=document.getElementById('dayoff-date').value;
+  const worker=document.getElementById('dayoff-worker').value;
+  if(!date||!worker){alert('날짜와 근무자를 선택하세요.');return;}
+  if(!dayoffs[date]) dayoffs[date]=[];
+  if(dayoffs[date].includes(worker)){alert('이미 휴무 등록됨');return;}
+  dayoffs[date].push(worker);
+  dbSaveSettings('ho_dayoffs',dayoffs);
+  renderDayoffList();
+  renderHandover();
+}
+
+function removeDayoff(date,worker){
+  if(dayoffs[date]) dayoffs[date]=dayoffs[date].filter(w=>w!==worker);
+  if(dayoffs[date]&&dayoffs[date].length===0) delete dayoffs[date];
+  dbSaveSettings('ho_dayoffs',dayoffs);
+  renderDayoffList();
+  renderHandover();
+}
+
+function renderDayoffList(){
+  const list=document.getElementById('dayoff-list');
+  if(!list)return;
+  const entries=Object.entries(dayoffs).filter(([d,ws])=>ws.length>0).sort();
+  if(entries.length===0){list.innerHTML='<div style="font-size:12px;color:#9b9b97">등록된 휴무가 없습니다</div>';return;}
+  list.innerHTML='<div style="font-size:12px;font-weight:600;margin-bottom:6px">등록된 휴무</div>'+entries.map(([d,ws])=>
+    ws.map(w=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 10px;background:#f5f5f4;border-radius:6px;margin-bottom:4px;font-size:12px">
+      <span>${d.substring(5).replace('-','/')} · ${w}</span>
+      <button class="btn-i d" style="font-size:11px" onclick="removeDayoff('${d}','${w}')">삭제</button>
+    </div>`).join('')
+  ).join('');
+}
+
+let currentHoDate=null;
+function openHandoverModal(dateStr){
+  currentHoDate=dateStr;
+  const ho=handovers[dateStr]||{};
+  const workersToday=getWorkersForDate(dateStr);
+  document.getElementById('ho-modal-title').textContent='인수인계';
+  const [y,m,d]=dateStr.split('-');
+  const dow=['일','월','화','수','목','금','토'][new Date(dateStr).getDay()];
+  document.getElementById('ho-modal-date').textContent=`${parseInt(m)}월 ${parseInt(d)}일 (${dow}) · 근무자: ${workersToday.join(', ')||'없음'}`;
+  const writerSel=document.getElementById('ho-writer');
+  writerSel.innerHTML=workersToday.map(w=>`<option value="${w}"${ho.writer===w?' selected':''}>${w}</option>`).join('')||'<option value="">근무자 없음</option>';
+  document.getElementById('ho-content').value=ho.content||'';
+  const readInfo=document.getElementById('ho-read-info');
+  if(ho.readBy&&ho.readBy.length>0){
+    readInfo.innerHTML='✓ 확인: '+ho.readBy.map(r=>`${r.name} (${r.time})`).join(', ');
+  } else if(ho.content){
+    readInfo.innerHTML='<span style="color:#9b9b97">아직 확인한 근무자가 없습니다</span>';
+  } else readInfo.innerHTML='';
+  openModal('handover-modal');
+}
+
+function saveHandover(){
+  if(!currentHoDate)return;
+  const content=document.getElementById('ho-content').value.trim();
+  const writer=document.getElementById('ho-writer').value;
+  if(!content){alert('인수인계 내용을 입력하세요.');return;}
+  const existing=handovers[currentHoDate]||{};
+  handovers[currentHoDate]={
+    content,writer,
+    readBy:existing.readBy||[],
+    ts:new Date().toISOString()
+  };
+  dbSaveSettings('ho_handovers',handovers);
+  closeModal('handover-modal');
+  renderHandover();
+  renderOverview();
+  showToast('📋 인수인계 저장',`${currentHoDate.substring(5).replace('-','/')} 인수인계가 등록됐습니다`,'grn');
+}
+
+function markRead(dateStr){
+  const ho=handovers[dateStr];
+  if(!ho)return;
+  // 읽은 사람 선택 (근무자 중)
+  const workersToday=getWorkersForDate(dateStr);
+  const name=prompt(`확인하는 근무자 이름을 입력하세요\n(오늘 근무자: ${workersToday.join(', ')})`,'');
+  if(!name||!name.trim())return;
+  const nm=name.trim();
+  if(!ho.readBy) ho.readBy=[];
+  if(ho.readBy.some(r=>r.name===nm)){alert('이미 확인 처리됨');return;}
+  ho.readBy.push({name:nm,time:nowT()});
+  dbSaveSettings('ho_handovers',handovers);
+  renderHandover();
+  renderOverview();
+}
+
+async function dbLoadHandover(){
+  const {data}=await supa.from('settings').select('*').in('key',['ho_workers','ho_dayoffs','ho_handovers']);
+  if(data){
+    data.forEach(r=>{
+      if(r.key==='ho_workers'&&r.value) workers=r.value;
+      if(r.key==='ho_dayoffs'&&r.value) dayoffs=r.value;
+      if(r.key==='ho_handovers'&&r.value) handovers=r.value;
+    });
+  }
+}
+
 function renderOverview(){
   const pending=issues.filter(i=>!i.done).length,urgent=issues.filter(i=>!i.done&&i.priority==='urgent').length;
   const thisM=thisMonthKey();
@@ -1307,6 +1596,14 @@ function renderOverview(){
   let alertHtml='';
   // 긴급 특이사항은 항상 펼쳐서 표시
   alertHtml+=urgI.map(i=>`<div class="alert-item"><i class="ti ti-alert-triangle"></i>[긴급] ${i.roomNo}호 — ${i.memo}</div>`).join('');
+  // 오늘 인수인계 알림
+  const todayStr3=new Date().toISOString().slice(0,10);
+  const todayHo=handovers[todayStr3];
+  if(todayHo&&todayHo.content){
+    const readCount=(todayHo.readBy||[]).length;
+    alertHtml+=`<div class="alert-item" style="cursor:pointer;background:#FFF9E9;border-color:#EAD9A0" onclick="swMain('handover')">
+      <i class="ti ti-clipboard-text" style="color:#B8860B"></i><strong>오늘 인수인계</strong>가 등록됐습니다${readCount>0?` <span style="color:#3B6D11">(${readCount}명 확인)</span>`:' <span style="color:#A32D2D">(미확인)</span>'}</div>`;
+  }
   // 재고 부족은 요약 한 줄 + 펼치기
   if(lowItems.length>0){
     const zeroCount=lowItems.filter(i=>i.qty===0).length;
@@ -1319,7 +1616,7 @@ function renderOverview(){
         ${lowItems.sort((a,b)=>a.qty-b.qty).map(i=>`<div class="alert-item" style="background:transparent;border:none;padding:3px 8px;font-size:12px"><i class="ti ti-point" style="font-size:8px"></i><strong>${i.name}</strong> (${i.qty}${i.unit} / 최소 ${i.min}${i.unit})</div>`).join('')}
       </div>`;
   }
-  document.getElementById('ov-alerts').innerHTML=(!lowItems.length&&!urgI.length)
+  document.getElementById('ov-alerts').innerHTML=(!lowItems.length&&!urgI.length&&!(handovers[todayStr3]&&handovers[todayStr3].content))
     ?'<div style="font-size:12px;color:#6b6b68;padding:4px 0">이상 없음</div>'
     :alertHtml;
   // 미처리 특이사항
@@ -4865,6 +5162,7 @@ async function initApp(){
       dbLoadLinenDiscard(),
       dbLoadLinenContam(),
       dbLoadLinenSetting(),
+      dbLoadHandover(),
     ]);
     showLoading(false);
     // 이번 달 초기화
