@@ -3946,27 +3946,47 @@ function drawUsageChangeBars(){
   if(usagePickItems.length>0){
     list=usageChangeData.filter(c=>usagePickItems.includes(c.name));
   }
-  // 증감 절댓값 큰 순으로 정렬 (증가/감소 같이)
-  list=[...list].sort((a,b)=>Math.abs(b.pct)-Math.abs(a.pct));
-  if(usagePickItems.length===0) list=list.slice(0,12);
   if(list.length===0){
     body.innerHTML='<div style="font-size:12px;color:#9b9b97;text-align:center;padding:16px">표시할 품목이 없습니다</div>';
     return;
   }
+  // 증가/감소 분리 정렬
+  const ups=list.filter(c=>c.diff>0).sort((a,b)=>b.pct-a.pct);
+  const downs=list.filter(c=>c.diff<0).sort((a,b)=>a.pct-b.pct);
+  const flats=list.filter(c=>c.diff===0);
+  // 지정 안 했으면 각 5개씩만
+  const showUps=usagePickItems.length>0?ups:ups.slice(0,5);
+  const showDowns=usagePickItems.length>0?downs:downs.slice(0,5);
   const maxPct=Math.max(...list.map(c=>Math.abs(c.pct)),1);
-  body.innerHTML=list.map(c=>{
+
+  const upColor='#D6A5A5', downColor='#A5C7B2';
+
+  function barRow(c,color){
     const barW=Math.min(100,Math.abs(c.pct)/maxPct*100);
     const isUp=c.diff>0;
-    const color=isUp?'#C47A7A':c.diff<0?'#6AAA82':'#c0bdb8';
-    return `<div style="display:flex;align-items:center;gap:10px;padding:3px 0">
-      <div style="width:100px;font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.name}</div>
-      <div style="flex:1;background:#f5f4f2;border-radius:3px;height:10px;position:relative;overflow:hidden">
+    return `<div style="display:flex;align-items:center;gap:10px;padding:2.5px 0">
+      <div style="width:100px;font-size:12px;color:#4a453e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.name}</div>
+      <div style="flex:1;background:#f2f1ef;border-radius:3px;height:8px;position:relative;overflow:hidden">
         <div style="height:100%;width:${barW}%;background:${color};border-radius:3px;transition:width .4s ease"></div>
       </div>
-      <div style="width:52px;text-align:right;font-size:12px;font-weight:700;color:${color}">${isUp?'+':''}${c.pct}%</div>
-      <div style="width:110px;text-align:right;font-size:11px;color:#9b9b97">${c.prev.toLocaleString()}→${c.cur.toLocaleString()}</div>
+      <div style="width:50px;text-align:right;font-size:12px;font-weight:600;color:${isUp?'#B5817F':'#6f9e84'}">${isUp?'+':''}${c.pct}%</div>
+      <div style="width:105px;text-align:right;font-size:11px;color:#b0aca6">${c.prev.toLocaleString()}→${c.cur.toLocaleString()}</div>
     </div>`;
-  }).join('');
+  }
+
+  let html='';
+  if(showUps.length>0){
+    html+=`<div style="font-size:11px;font-weight:700;color:#B5817F;margin:2px 0 4px;letter-spacing:0.3px">▲ 증가</div>`;
+    html+=showUps.map(c=>barRow(c,upColor)).join('');
+  }
+  if(showDowns.length>0){
+    html+=`<div style="font-size:11px;font-weight:700;color:#6f9e84;margin:12px 0 4px;letter-spacing:0.3px">▼ 감소</div>`;
+    html+=showDowns.map(c=>barRow(c,downColor)).join('');
+  }
+  if(showUps.length===0&&showDowns.length===0){
+    html='<div style="font-size:12px;color:#9b9b97;text-align:center;padding:16px">변동이 없습니다</div>';
+  }
+  body.innerHTML=html;
 }
 
 function openUsagePickModal(){
