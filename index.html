@@ -574,6 +574,17 @@ tr:hover td{background:#fafaf8}
     </div>
     <!-- 요약 메트릭 -->
     <div class="metrics" id="analysis-metrics"></div>
+    <!-- 월 대비 증감 -->
+    <div class="card" id="usage-change-card" style="margin-bottom:1rem;display:none">
+      <div class="ct" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <span><i class="ti ti-arrows-diff" style="color:#185FA5"></i> 전월 대비 소모량 증감 <span id="usage-change-months" style="font-size:11px;font-weight:400;color:#9b9b97"></span></span>
+        <div style="display:flex;gap:4px;background:#f0ede8;border-radius:8px;padding:3px">
+          <button id="uc-tab-up" class="btn-i" onclick="setUsageChangeView('up')" style="font-size:12px;padding:4px 12px;border:none;background:#fff;border-radius:6px;font-weight:600">▲ 증가</button>
+          <button id="uc-tab-down" class="btn-i" onclick="setUsageChangeView('down')" style="font-size:12px;padding:4px 12px;border:none;background:transparent;border-radius:6px">▼ 감소</button>
+        </div>
+      </div>
+      <div id="usage-change-body" style="padding:6px 4px"></div>
+    </div>
     <!-- 분석 테이블 -->
     <div class="card">
       <div class="ct">소모량 분석표
@@ -3749,6 +3760,31 @@ function renderLinenInv(){
 // ── 소모량 분석 ──
 let invMaster = {}; // { itemName: {supplier, eaPrice, note} }
 
+// 특정 월의 총 소모량 계산 (해당 월 전체 주차 합산)
+function getMonthlyUsage(itemName, category, monthKey){
+  const [y,m]=monthKey.split('-').map(Number);
+  let totalUsage=0;
+  for(let w=1;w<=5;w++){
+    const weekKey=getWeekKey(monthKey,w);
+    const prevKey=w>1?getWeekKey(monthKey,w-1):null;
+    const wd=weeklyData[weekKey]||[];
+    const item=wd.find(i=>i.itemName===itemName&&i.category===category);
+    if(!item||item.currQty===null||item.currQty===undefined) continue;
+    let prevQty;
+    if(prevKey){
+      const pd=weeklyData[prevKey]||[];
+      const prev=pd.find(i=>i.itemName===itemName&&i.category===category);
+      prevQty=prev&&prev.currQty!=null?prev.currQty:(item.prevQty||0);
+    } else {
+      prevQty=item.prevQty||0;
+    }
+    const inQty=item.inQty||0;
+    const usage=prevQty+inQty-item.currQty;
+    if(usage>=0) totalUsage+=usage;
+  }
+  return totalUsage;
+}
+
 function getWeeklyUsage(itemName, category){
   // 최근 4주 평균 사용량 계산
   const now=new Date();
@@ -3861,6 +3897,73 @@ function renderAnalysis(){
     <div class="met"><div class="met-l">단가 미설정</div><div class="met-v">${rows.filter(r=>!r.eaPrice).length}개</div></div>`;
 
   renderOrderSuggestion(rows);
+  renderUsageChange(items);
+}
+
+let usageChangeView='up';
+let usageChangeData=[];
+function setUsageChangeView(v){
+  usageChangeView=v;
+  document.getElementById('uc-tab-up').style.background=v==='up'?'#fff':'transparent';
+  document.getElementById('uc-tab-up').style.fontWeight=v==='up'?'600':'400';
+  document.getElementById('uc-tab-down').style.background=v==='down'?'#fff':'transparent';
+  document.getElementById('uc-tab-down').style.fontWeight=v==='down'?'600':'400';
+  drawUsageChangeBars();
+}
+
+function renderUsageChange(items){
+  const card=document.getElementById('usage-change-card');
+  if(!card)return;
+  // 데이터 있는 월 키 수집 (weeklyData 기준)
+  const monthsWithData=[...new Set(Object.keys(weeklyData).map(k=>k.substring(0,7)))].sort();
+  if(monthsWithData.length<2){card.style.display='none';return;}
+  const thisM=monthsWithData[monthsWithData.length-1];
+  const prevM=monthsWithData[monthsWithData.length-2];
+  // 각 품목 이번달/지난달 소모량 비교
+  const changes=[];
+  items.forEach(item=>{
+    const cur=getMonthlyUsage(item.name,item.category,thisM);
+    const prev=getMonthlyUsage(item.name,item.category,prevM);
+    if(cur===0&&prev===0) return;
+    const diff=cur-prev;
+    const pct=prev>0?Math.round((diff/prev)*100):(cur>0?100:0);
+    changes.push({name:item.name,cur,prev,diff,pct});
+  });
+  if(changes.length===0){card.style.display='none';return;}
+  card.style.display='block';
+  document.getElementById('usage-change-months').textContent=`(${prevM.replace('-','.')} → ${thisM.replace('-','.')})`;
+  usageChangeData=changes;
+  drawUsageChangeBars();
+}
+
+function drawUsageChangeBars(){
+  const body=document.getElementById('usage-change-body');
+  if(!body)return;
+  let filtered;
+  if(usageChangeView==='up'){
+    filtered=usageChangeData.filter(c=>c.diff>0).sort((a,b)=>b.pct-a.pct).slice(0,8);
+  } else {
+    filtered=usageChangeData.filter(c=>c.diff<0).sort((a,b)=>a.pct-b.pct).slice(0,8);
+  }
+  if(filtered.length===0){
+    body.innerHTML=`<div style="font-size:12px;color:#9b9b97;text-align:center;padding:16px">${usageChangeView==='up'?'증가한':'감소한'} 품목이 없습니다</div>`;
+    return;
+  }
+  const maxPct=Math.max(...filtered.map(c=>Math.abs(c.pct)),1);
+  body.innerHTML=filtered.map(c=>{
+    const barW=Math.min(100,Math.abs(c.pct)/maxPct*100);
+    const isUp=c.diff>0;
+    const color=isUp?'#C47A7A':'#6AAA82';
+    const bg=isUp?'#FBEAEA':'#EAF5EE';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid #f5f4f2">
+      <div style="width:110px;font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.name}</div>
+      <div style="flex:1;background:${bg};border-radius:5px;height:22px;position:relative;overflow:hidden">
+        <div style="height:100%;width:${barW}%;background:${color};border-radius:5px;transition:width .4s ease"></div>
+        <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:700;color:#1a1a18">${isUp?'+':''}${c.pct}%</span>
+      </div>
+      <div style="width:120px;text-align:right;font-size:11px;color:#6b6b68">${c.prev.toLocaleString()} → ${c.cur.toLocaleString()}</div>
+    </div>`;
+  }).join('');
 }
 
 function renderOrderSuggestion(rows){
