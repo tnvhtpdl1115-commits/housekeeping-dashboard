@@ -578,12 +578,22 @@ tr:hover td{background:#fafaf8}
     <div class="card" id="usage-change-card" style="margin-bottom:1rem;display:none">
       <div class="ct" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
         <span><i class="ti ti-arrows-diff" style="color:#185FA5"></i> 전월 대비 소모량 증감 <span id="usage-change-months" style="font-size:11px;font-weight:400;color:#9b9b97"></span></span>
-        <div style="display:flex;gap:4px;background:#f0ede8;border-radius:8px;padding:3px">
-          <button id="uc-tab-up" class="btn-i" onclick="setUsageChangeView('up')" style="font-size:12px;padding:4px 12px;border:none;background:#fff;border-radius:6px;font-weight:600">▲ 증가</button>
-          <button id="uc-tab-down" class="btn-i" onclick="setUsageChangeView('down')" style="font-size:12px;padding:4px 12px;border:none;background:transparent;border-radius:6px">▼ 감소</button>
-        </div>
+        <button class="btn-s" onclick="openUsagePickModal()" style="font-size:12px;padding:4px 12px"><i class="ti ti-adjustments"></i> 품목 지정</button>
       </div>
       <div id="usage-change-body" style="padding:6px 4px"></div>
+    </div>
+    <!-- 모달: 증감 품목 선택 -->
+    <div class="modal-bg" id="usage-pick-modal">
+      <div class="modal">
+        <h3>증감 표시 품목 선택</h3>
+        <p style="font-size:12px;color:#6b6b68;margin:4px 0 12px">선택한 품목만 증감 그래프에 표시됩니다. 아무것도 선택 안 하면 전체가 표시됩니다.</p>
+        <div style="display:flex;gap:6px;margin-bottom:10px">
+          <button class="btn-i" style="font-size:11px" onclick="usagePickAll(true)">전체 선택</button>
+          <button class="btn-i" style="font-size:11px" onclick="usagePickAll(false)">전체 해제</button>
+        </div>
+        <div id="usage-pick-list" style="max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:4px"></div>
+        <div class="btn-row" style="margin-top:14px"><button class="btn-s" onclick="closeModal('usage-pick-modal')">취소</button><button class="btn-p" onclick="saveUsagePick()">적용</button></div>
+      </div>
     </div>
     <!-- 분석 테이블 -->
     <div class="card">
@@ -3900,26 +3910,18 @@ function renderAnalysis(){
   renderUsageChange(items);
 }
 
-let usageChangeView='up';
 let usageChangeData=[];
-function setUsageChangeView(v){
-  usageChangeView=v;
-  document.getElementById('uc-tab-up').style.background=v==='up'?'#fff':'transparent';
-  document.getElementById('uc-tab-up').style.fontWeight=v==='up'?'600':'400';
-  document.getElementById('uc-tab-down').style.background=v==='down'?'#fff':'transparent';
-  document.getElementById('uc-tab-down').style.fontWeight=v==='down'?'600':'400';
-  drawUsageChangeBars();
-}
+let usagePickItems=[]; // 선택된 품목명 배열 (빈 배열이면 전체)
+let usageAllItems=[];  // 전체 품목 목록 캐시
 
 function renderUsageChange(items){
   const card=document.getElementById('usage-change-card');
   if(!card)return;
-  // 데이터 있는 월 키 수집 (weeklyData 기준)
+  usageAllItems=items;
   const monthsWithData=[...new Set(Object.keys(weeklyData).map(k=>k.substring(0,7)))].sort();
   if(monthsWithData.length<2){card.style.display='none';return;}
   const thisM=monthsWithData[monthsWithData.length-1];
   const prevM=monthsWithData[monthsWithData.length-2];
-  // 각 품목 이번달/지난달 소모량 비교
   const changes=[];
   items.forEach(item=>{
     const cur=getMonthlyUsage(item.name,item.category,thisM);
@@ -3939,31 +3941,54 @@ function renderUsageChange(items){
 function drawUsageChangeBars(){
   const body=document.getElementById('usage-change-body');
   if(!body)return;
-  let filtered;
-  if(usageChangeView==='up'){
-    filtered=usageChangeData.filter(c=>c.diff>0).sort((a,b)=>b.pct-a.pct).slice(0,8);
-  } else {
-    filtered=usageChangeData.filter(c=>c.diff<0).sort((a,b)=>a.pct-b.pct).slice(0,8);
+  // 지정 품목 필터 (없으면 전체)
+  let list=usageChangeData;
+  if(usagePickItems.length>0){
+    list=usageChangeData.filter(c=>usagePickItems.includes(c.name));
   }
-  if(filtered.length===0){
-    body.innerHTML=`<div style="font-size:12px;color:#9b9b97;text-align:center;padding:16px">${usageChangeView==='up'?'증가한':'감소한'} 품목이 없습니다</div>`;
+  // 증감 절댓값 큰 순으로 정렬 (증가/감소 같이)
+  list=[...list].sort((a,b)=>Math.abs(b.pct)-Math.abs(a.pct));
+  if(usagePickItems.length===0) list=list.slice(0,12);
+  if(list.length===0){
+    body.innerHTML='<div style="font-size:12px;color:#9b9b97;text-align:center;padding:16px">표시할 품목이 없습니다</div>';
     return;
   }
-  const maxPct=Math.max(...filtered.map(c=>Math.abs(c.pct)),1);
-  body.innerHTML=filtered.map(c=>{
+  const maxPct=Math.max(...list.map(c=>Math.abs(c.pct)),1);
+  body.innerHTML=list.map(c=>{
     const barW=Math.min(100,Math.abs(c.pct)/maxPct*100);
     const isUp=c.diff>0;
-    const color=isUp?'#C47A7A':'#6AAA82';
-    const bg=isUp?'#FBEAEA':'#EAF5EE';
-    return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid #f5f4f2">
-      <div style="width:110px;font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.name}</div>
-      <div style="flex:1;background:${bg};border-radius:5px;height:22px;position:relative;overflow:hidden">
-        <div style="height:100%;width:${barW}%;background:${color};border-radius:5px;transition:width .4s ease"></div>
-        <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:700;color:#1a1a18">${isUp?'+':''}${c.pct}%</span>
+    const color=isUp?'#C47A7A':c.diff<0?'#6AAA82':'#c0bdb8';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:3px 0">
+      <div style="width:100px;font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.name}</div>
+      <div style="flex:1;background:#f5f4f2;border-radius:3px;height:10px;position:relative;overflow:hidden">
+        <div style="height:100%;width:${barW}%;background:${color};border-radius:3px;transition:width .4s ease"></div>
       </div>
-      <div style="width:120px;text-align:right;font-size:11px;color:#6b6b68">${c.prev.toLocaleString()} → ${c.cur.toLocaleString()}</div>
+      <div style="width:52px;text-align:right;font-size:12px;font-weight:700;color:${color}">${isUp?'+':''}${c.pct}%</div>
+      <div style="width:110px;text-align:right;font-size:11px;color:#9b9b97">${c.prev.toLocaleString()}→${c.cur.toLocaleString()}</div>
     </div>`;
   }).join('');
+}
+
+function openUsagePickModal(){
+  const list=document.getElementById('usage-pick-list');
+  const names=usageChangeData.map(c=>c.name);
+  list.innerHTML=names.map(n=>`<label style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:#f7f6f4;border-radius:6px;cursor:pointer;font-size:13px">
+    <input type="checkbox" value="${n}" ${usagePickItems.includes(n)?'checked':''} style="width:15px;height:15px">
+    <span>${n}</span>
+  </label>`).join('');
+  openModal('usage-pick-modal');
+}
+
+function usagePickAll(sel){
+  document.querySelectorAll('#usage-pick-list input[type=checkbox]').forEach(cb=>cb.checked=sel);
+}
+
+function saveUsagePick(){
+  const checked=[...document.querySelectorAll('#usage-pick-list input[type=checkbox]:checked')].map(cb=>cb.value);
+  usagePickItems=checked;
+  dbSaveSettings('usage_pick_items',usagePickItems);
+  closeModal('usage-pick-modal');
+  drawUsageChangeBars();
 }
 
 function renderOrderSuggestion(rows){
@@ -5169,6 +5194,7 @@ async function dbLoadSettings(){
     data.forEach(r=>{
       if(r.key==='budget'&&r.value) Object.assign(budgetData,r.value);
       if(r.key==='month_closing_weeks'&&r.value) Object.assign(monthClosingWeek,r.value);
+      if(r.key==='usage_pick_items'&&r.value) usagePickItems=r.value;
     });
   }
 }
