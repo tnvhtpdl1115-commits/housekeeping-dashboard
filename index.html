@@ -319,6 +319,9 @@ tr:hover td{background:#fafaf8}
 
 <!-- 개요 -->
 <div id="tab-overview" class="sec on">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+    <button class="btn-p" onclick="openReportModal()"><i class="ti ti-file-analytics"></i> 월말 마감 리포트</button>
+  </div>
   <div class="metrics" id="ov-metrics"></div>
   <div class="card">
     <div class="ct">월 CP 비율 <span id="ov-cp-month" style="font-size:12px;font-weight:400;color:#6b6b68"></span></div>
@@ -477,6 +480,23 @@ tr:hover td{background:#fafaf8}
         <button class="btn-p" onclick="addHoComment()" style="white-space:nowrap;padding:7px 14px">등록</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- 모달: 월말 마감 리포트 -->
+<div class="modal-bg" id="report-modal">
+  <div class="modal" style="max-width:900px;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px" class="report-toolbar">
+      <div style="display:flex;gap:8px;align-items:center">
+        <h3 style="margin:0">월말 마감 리포트</h3>
+        <select id="report-month-sel" onchange="renderReportContent()" style="font-size:13px;font-weight:600;padding:5px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#fff"></select>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn-s" onclick="printReport()"><i class="ti ti-printer"></i> 인쇄/PDF</button>
+        <button class="btn-s" onclick="closeModal('report-modal')">닫기</button>
+      </div>
+    </div>
+    <div id="report-content"></div>
   </div>
 </div>
 
@@ -1628,6 +1648,139 @@ async function dbLoadHandover(){
       if(r.key==='ho_handovers'&&r.value) handovers=r.value;
     });
   }
+}
+
+// ===== 월말 마감 리포트 =====
+function openReportModal(){
+  const sel=document.getElementById('report-month-sel');
+  const now=new Date();
+  const key=mkKey(now.getFullYear(),now.getMonth()+1);
+  // 데이터 있는 월들 수집
+  const months=[...new Set([
+    ...Object.keys(costData),
+    ...Object.keys(linenStockData||{}),
+    ...Object.keys(weeklyData).map(k=>k.substring(0,7)),
+    key
+  ])].sort().reverse();
+  sel.innerHTML=months.map(m=>`<option value="${m}">${m.replace('-','년 ')}월</option>`).join('');
+  sel.value=key;
+  renderReportContent();
+  openModal('report-modal');
+}
+
+function renderReportContent(){
+  const month=document.getElementById('report-month-sel').value;
+  const [y,m]=month.split('-').map(Number);
+  const monthLabel=`${y}년 ${m}월`;
+
+  // 1. 비용 요약
+  const costs=costData[month]||[];
+  const catTotals={객실:0,린넨:0,유니폼:0,구매:0,기타:0};
+  costs.forEach(c=>{
+    const cat=c.type==='구매'?'구매':(c.type||'기타');
+    if(catTotals[cat]!==undefined) catTotals[cat]+=c.amount;
+    else catTotals['기타']+=c.amount;
+  });
+  const totalCost=Object.values(catTotals).reduce((a,b)=>a+b,0);
+
+  // 2. 린넨 요약 (당월마감/LOSS)
+  let linenRows='';
+  let linenTotalClosing=0, linenTotalLoss=0;
+  if(typeof linenStockData!=='undefined' && linenStockData[month]){
+    (linenStockData[month]||[]).forEach(row=>{
+      const fs=row.field_setting||row.base_qty||0;
+      const ft=fs+row.field_floor+row.field_storage;
+      const vt=row.vendor_in1+row.vendor_in2+row.vendor_estimate;
+      const dt=row.discard_didi+row.discard_gng;
+      const closing=ft+vt-dt;
+      const prev=row.prev_closing||0;
+      const loss=closing-prev;
+      linenTotalClosing+=closing;
+      linenTotalLoss+=loss;
+      if(closing!==0||loss!==0){
+        linenRows+=`<tr style="border-bottom:1px solid #eee"><td style="padding:4px 8px">${row.item_name}</td><td style="padding:4px 8px;text-align:right">${closing.toLocaleString()}</td><td style="padding:4px 8px;text-align:right;color:${loss<0?'#A32D2D':'#3B6D11'}">${loss>0?'+':''}${loss.toLocaleString()}</td></tr>`;
+      }
+    });
+  }
+
+  // 3. 재고 부족 품목
+  const lowStock=[];
+  ['consumable','equipment','maintenance','rental','facility'].forEach(cat=>{
+    (weeklyItems[cat]||[]).forEach(item=>{
+      let stock=null;
+      for(let w=5;w>=1;w--){
+        const wd=weeklyData[getWeekKey(month,w)]||[];
+        const it=wd.find(i=>i.itemName===item.name&&i.category===cat&&i.currQty!=null);
+        if(it){stock=it.currQty;break;}
+      }
+      if(stock!==null&&item.minQty>0&&stock<item.minQty){
+        lowStock.push({name:item.name,stock,min:item.minQty});
+      }
+    });
+  });
+
+  // 4. 특이사항/CP 통계
+  const monthIssues=issues.filter(i=>(i.date||'').startsWith(month));
+  const cpMonth=(typeof cpRecords!=='undefined'&&cpRecords[month])?cpRecords[month]:[];
+
+  const catColors={객실:'#185FA5',린넨:'#1A7A5A',유니폼:'#B8860B',구매:'#A32D6A',기타:'#534AB7'};
+
+  document.getElementById('report-content').innerHTML=`
+    <div id="report-printable" style="font-size:13px;color:#1a1a18">
+      <div style="text-align:center;padding:16px 0;border-bottom:2px solid #1a3a5f;margin-bottom:20px">
+        <div style="font-size:22px;font-weight:800;letter-spacing:-0.5px">MarinaBay Seoul 하우스키핑</div>
+        <div style="font-size:16px;color:#6b6b68;margin-top:4px">${monthLabel} 월말 마감 리포트</div>
+        <div style="font-size:11px;color:#9b9b97;margin-top:6px">출력일: ${new Date().toLocaleDateString('ko-KR')}</div>
+      </div>
+
+      <div style="margin-bottom:24px">
+        <div style="font-size:15px;font-weight:700;border-left:3px solid #C9A84C;padding-left:8px;margin-bottom:10px">1. 비용 요약</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="background:#f5f5f4"><th style="padding:6px 10px;text-align:left">분류</th><th style="padding:6px 10px;text-align:right">금액</th><th style="padding:6px 10px;text-align:right">비중</th></tr></thead>
+          <tbody>
+            ${Object.entries(catTotals).filter(([k,v])=>v>0).map(([k,v])=>`<tr style="border-bottom:1px solid #eee"><td style="padding:5px 10px"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${catColors[k]};margin-right:6px"></span>${k}</td><td style="padding:5px 10px;text-align:right;font-weight:600">${fmt(v)}</td><td style="padding:5px 10px;text-align:right;color:#6b6b68">${totalCost>0?Math.round(v/totalCost*100):0}%</td></tr>`).join('')}
+            <tr style="border-top:2px solid #1a3a5f;background:#f9f8f6;font-weight:700"><td style="padding:7px 10px">합계</td><td style="padding:7px 10px;text-align:right">${fmt(totalCost)}</td><td style="padding:7px 10px;text-align:right">100%</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      ${linenRows?`<div style="margin-bottom:24px">
+        <div style="font-size:15px;font-weight:700;border-left:3px solid #C9A84C;padding-left:8px;margin-bottom:10px">2. 린넨 재고 & LOSS</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:#f5f5f4"><th style="padding:6px 8px;text-align:left">품목</th><th style="padding:6px 8px;text-align:right">당월마감</th><th style="padding:6px 8px;text-align:right">전월대비 LOSS</th></tr></thead>
+          <tbody>${linenRows}
+            <tr style="border-top:2px solid #1a3a5f;background:#f9f8f6;font-weight:700"><td style="padding:6px 8px">합계</td><td style="padding:6px 8px;text-align:right">${linenTotalClosing.toLocaleString()}</td><td style="padding:6px 8px;text-align:right;color:${linenTotalLoss<0?'#A32D2D':'#3B6D11'}">${linenTotalLoss>0?'+':''}${linenTotalLoss.toLocaleString()}</td></tr>
+          </tbody>
+        </table>
+      </div>`:''}
+
+      <div style="margin-bottom:24px">
+        <div style="font-size:15px;font-weight:700;border-left:3px solid #C9A84C;padding-left:8px;margin-bottom:10px">3. 재고 부족 품목 (${lowStock.length}건)</div>
+        ${lowStock.length>0?`<table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:#f5f5f4"><th style="padding:6px 8px;text-align:left">품목</th><th style="padding:6px 8px;text-align:right">현재고</th><th style="padding:6px 8px;text-align:right">최소기준</th></tr></thead>
+          <tbody>${lowStock.map(i=>`<tr style="border-bottom:1px solid #eee"><td style="padding:5px 8px">${i.name}</td><td style="padding:5px 8px;text-align:right;color:#A32D2D;font-weight:600">${i.stock.toLocaleString()}</td><td style="padding:5px 8px;text-align:right;color:#6b6b68">${i.min.toLocaleString()}</td></tr>`).join('')}</tbody>
+        </table>`:'<div style="font-size:12px;color:#6b6b68;padding:8px">재고 부족 품목 없음</div>'}
+      </div>
+
+      <div style="margin-bottom:10px">
+        <div style="font-size:15px;font-weight:700;border-left:3px solid #C9A84C;padding-left:8px;margin-bottom:10px">4. 운영 통계</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+          <div style="background:#f7f6f4;border-radius:8px;padding:12px;text-align:center"><div style="font-size:11px;color:#6b6b68">특이사항 접수</div><div style="font-size:22px;font-weight:700;margin-top:4px">${monthIssues.length}건</div></div>
+          <div style="background:#f7f6f4;border-radius:8px;padding:12px;text-align:center"><div style="font-size:11px;color:#6b6b68">CP 등록</div><div style="font-size:22px;font-weight:700;margin-top:4px">${cpMonth.length}건</div></div>
+          <div style="background:#f7f6f4;border-radius:8px;padding:12px;text-align:center"><div style="font-size:11px;color:#6b6b68">재고 부족</div><div style="font-size:22px;font-weight:700;margin-top:4px;color:${lowStock.length>0?'#A32D2D':'#1a1a18'}">${lowStock.length}건</div></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function printReport(){
+  const content=document.getElementById('report-printable').innerHTML;
+  const win=window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>월말 마감 리포트</title>
+    <style>body{font-family:'Malgun Gothic','Noto Sans KR',sans-serif;padding:30px;max-width:800px;margin:0 auto}table{page-break-inside:avoid}</style>
+    </head><body>${content}</body></html>`);
+  win.document.close();
+  setTimeout(()=>{win.print();},300);
 }
 
 function renderOverview(){
