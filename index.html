@@ -1723,21 +1723,61 @@ function renderReportContent(){
     });
   }
 
-  // 3. 재고 부족 품목
-  const lowStock=[];
-  ['consumable','equipment','maintenance','rental','facility'].forEach(cat=>{
-    (weeklyItems[cat]||[]).forEach(item=>{
-      let stock=null;
-      for(let w=5;w>=1;w--){
-        const wd=weeklyData[getWeekKey(month,w)]||[];
-        const it=wd.find(i=>i.itemName===item.name&&i.category===cat&&i.currQty!=null);
-        if(it){stock=it.currQty;break;}
-      }
-      if(stock!==null&&item.minQty>0&&stock<item.minQty){
-        lowStock.push({name:item.name,stock,min:item.minQty});
-      }
-    });
+  // 3. 재고 특이사항 (안 사던 품목 구매 / 린넨 구매 / 비용 과다)
+  const notableItems=[];
+  const curPurchases=purData[month]||[];
+  // 직전 3개월 키
+  const prev3Months=[];
+  for(let i=1;i<=3;i++){
+    const d=new Date(y,m-1-i,1);
+    prev3Months.push(mkKey(d.getFullYear(),d.getMonth()+1));
+  }
+  // 품목별 이번달 집계
+  const itemAgg={};
+  curPurchases.forEach(p=>{
+    if(!itemAgg[p.item]) itemAgg[p.item]={item:p.item,category:p.category,qty:0,amount:0};
+    itemAgg[p.item].qty+=p.qty;
+    itemAgg[p.item].amount+=p.qty*p.price;
   });
+  // 전월 품목별 집계 (비용 급증 비교용)
+  const prevMonthKey=mkKey(new Date(y,m-2,1).getFullYear(),new Date(y,m-2,1).getMonth()+1);
+  const prevAgg={};
+  (purData[prevMonthKey]||[]).forEach(p=>{
+    if(!prevAgg[p.item]) prevAgg[p.item]=0;
+    prevAgg[p.item]+=p.qty*p.price;
+  });
+  Object.values(itemAgg).forEach(it=>{
+    const reasons=[];
+    // (a) 린넨류 구매는 무조건
+    if(it.category==='linen'){
+      reasons.push('린넨류 구매');
+    }
+    // (b) 직전 3개월 무구매였는데 이번 달 구매
+    if(it.category!=='linen'){
+      const boughtBefore=prev3Months.some(mk=>(purData[mk]||[]).some(p=>p.item===it.item));
+      if(!boughtBefore){
+        reasons.push('3개월간 미구매 품목');
+      }
+    }
+    // (c) 전월 대비 50% 이상 비용 급증
+    const prevAmt=prevAgg[it.item]||0;
+    if(prevAmt>0 && it.amount>=prevAmt*1.5){
+      const pct=Math.round((it.amount/prevAmt-1)*100);
+      reasons.push(`전월 대비 +${pct}%`);
+    }
+    if(reasons.length>0){
+      notableItems.push({...it,reasons});
+    }
+  });
+  // 이번 달 지출 상위 5개도 (아직 안 잡힌 것 중)
+  const topSpend=Object.values(itemAgg).sort((a,b)=>b.amount-a.amount).slice(0,5);
+  topSpend.forEach(it=>{
+    if(!notableItems.some(n=>n.item===it.item)){
+      notableItems.push({...it,reasons:['이번 달 지출 상위']});
+    }
+  });
+  // 금액 큰 순 정렬
+  notableItems.sort((a,b)=>b.amount-a.amount);
 
   // 4. 특이사항/CP 통계
   const monthIssues=issues.filter(i=>(i.date||'').startsWith(month));
@@ -1791,11 +1831,24 @@ function renderReportContent(){
       </div>
 
       <div style="margin-bottom:24px;page-break-inside:avoid">
-        <div style="font-size:15px;font-weight:700;border-left:3px solid #C9A84C;padding-left:8px;margin-bottom:10px">3. 재고 부족 품목 (${lowStock.length}건)</div>
-        ${lowStock.length>0?`<table style="width:100%;border-collapse:collapse;font-size:12px">
-          <thead><tr style="background:#f5f5f4"><th style="padding:6px 8px;text-align:left">품목</th><th style="padding:6px 8px;text-align:right">현재고</th><th style="padding:6px 8px;text-align:right">최소기준</th></tr></thead>
-          <tbody>${lowStock.map(i=>`<tr style="border-bottom:1px solid #eee"><td style="padding:5px 8px">${i.name}</td><td style="padding:5px 8px;text-align:right;color:#A32D2D;font-weight:600">${i.stock.toLocaleString()}</td><td style="padding:5px 8px;text-align:right;color:#6b6b68">${i.min.toLocaleString()}</td></tr>`).join('')}</tbody>
-        </table>`:'<div style="font-size:12px;color:#6b6b68;padding:10px;background:#f9f8f6;border-radius:8px;text-align:center">재고 부족 품목 없음</div>'}
+        <div style="font-size:15px;font-weight:700;border-left:3px solid #C9A84C;padding-left:8px;margin-bottom:10px">3. 재고 특이사항 (${notableItems.length}건) <span style="font-size:11px;font-weight:400;color:#9b9b97">· 평소 안 사던 품목·린넨 구매·비용 급증</span></div>
+        ${notableItems.length>0?`<table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:#f5f5f4"><th style="padding:6px 8px;text-align:left">품목</th><th style="padding:6px 8px;text-align:left">분류</th><th style="padding:6px 8px;text-align:right">수량</th><th style="padding:6px 8px;text-align:right">금액</th><th style="padding:6px 8px;text-align:left">특이사항</th></tr></thead>
+          <tbody>${notableItems.map(i=>{
+            const catName={consumable:'소모품',equipment:'비품',linen:'린넨',maintenance:'정비용품',rental:'대여품',facility:'시설용품'}[i.category]||i.category||'-';
+            return `<tr style="border-bottom:1px solid #eee">
+              <td style="padding:5px 8px;font-weight:500">${i.item}</td>
+              <td style="padding:5px 8px;color:#6b6b68">${catName}</td>
+              <td style="padding:5px 8px;text-align:right">${i.qty.toLocaleString()}</td>
+              <td style="padding:5px 8px;text-align:right;font-weight:600">${fmt(i.amount)}</td>
+              <td style="padding:5px 8px">${i.reasons.map(r=>{
+                const c=r.includes('린넨')?'#1A7A5A':r.includes('미구매')?'#A32D6A':r.includes('전월')?'#A32D2D':'#854F0B';
+                const bg=r.includes('린넨')?'#E5F3EC':r.includes('미구매')?'#FBE9F1':r.includes('전월')?'#FBEAEA':'#FAF2E0';
+                return `<span style="display:inline-block;font-size:10px;background:${bg};color:${c};border-radius:4px;padding:1px 6px;margin:1px 2px 1px 0">${r}</span>`;
+              }).join('')}</td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table>`:'<div style="font-size:12px;color:#6b6b68;padding:10px;background:#f9f8f6;border-radius:8px;text-align:center">특이사항 없음</div>'}
       </div>
 
       <div style="margin-bottom:10px;page-break-inside:avoid">
@@ -1803,7 +1856,7 @@ function renderReportContent(){
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
           <div style="background:#f7f6f4;border-radius:8px;padding:12px;text-align:center"><div style="font-size:11px;color:#6b6b68">특이사항 접수</div><div style="font-size:22px;font-weight:700;margin-top:4px">${monthIssues.length}건</div></div>
           <div style="background:#f7f6f4;border-radius:8px;padding:12px;text-align:center"><div style="font-size:11px;color:#6b6b68">CP 등록</div><div style="font-size:22px;font-weight:700;margin-top:4px">${cpMonth.length}건</div></div>
-          <div style="background:#f7f6f4;border-radius:8px;padding:12px;text-align:center"><div style="font-size:11px;color:#6b6b68">재고 부족</div><div style="font-size:22px;font-weight:700;margin-top:4px;color:${lowStock.length>0?'#A32D2D':'#1a1a18'}">${lowStock.length}건</div></div>
+          <div style="background:#f7f6f4;border-radius:8px;padding:12px;text-align:center"><div style="font-size:11px;color:#6b6b68">재고 특이사항</div><div style="font-size:22px;font-weight:700;margin-top:4px;color:${notableItems.length>0?'#854F0B':'#1a1a18'}">${notableItems.length}건</div></div>
         </div>
       </div>
     </div>`;
