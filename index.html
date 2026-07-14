@@ -1779,9 +1779,20 @@ function renderReportContent(){
   // 금액 큰 순 정렬
   notableItems.sort((a,b)=>b.amount-a.amount);
 
-  // 4. 특이사항/CP 통계
-  const monthIssues=issues.filter(i=>(i.date||'').startsWith(month));
+  // 4. CP 운영 요약
   const cpMonth=(typeof cpRecords!=='undefined'&&cpRecords[month])?cpRecords[month]:[];
+  const cpTotal=cpMonth.length;
+  const cpResolved=cpMonth.filter(c=>c.status==='resolved'||c.status==='closed'||c.status==='done').length;
+  const cpOpen=cpTotal-cpResolved;
+  // 담당자별 CP 건수
+  const cpByAssignee={};
+  cpMonth.forEach(c=>{
+    const a=c.assignee||'미지정';
+    cpByAssignee[a]=(cpByAssignee[a]||0)+1;
+  });
+  const cpAssigneeSorted=Object.entries(cpByAssignee).sort((a,b)=>b[1]-a[1]);
+  // 페널티 발생 건
+  const cpPenalty=cpMonth.filter(c=>c.penalty&&c.penalty.trim()!=='');
 
   const catColors={객실:'#185FA5',린넨:'#1A7A5A',유니폼:'#B8860B',구매:'#A32D6A',기타:'#534AB7'};
 
@@ -1852,12 +1863,27 @@ function renderReportContent(){
       </div>
 
       <div style="margin-bottom:10px;page-break-inside:avoid">
-        <div style="font-size:15px;font-weight:700;border-left:3px solid #C9A84C;padding-left:8px;margin-bottom:10px">4. 운영 통계</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-          <div style="background:#f7f6f4;border-radius:8px;padding:12px;text-align:center"><div style="font-size:11px;color:#6b6b68">특이사항 접수</div><div style="font-size:22px;font-weight:700;margin-top:4px">${monthIssues.length}건</div></div>
-          <div style="background:#f7f6f4;border-radius:8px;padding:12px;text-align:center"><div style="font-size:11px;color:#6b6b68">CP 등록</div><div style="font-size:22px;font-weight:700;margin-top:4px">${cpMonth.length}건</div></div>
-          <div style="background:#f7f6f4;border-radius:8px;padding:12px;text-align:center"><div style="font-size:11px;color:#6b6b68">재고 특이사항</div><div style="font-size:22px;font-weight:700;margin-top:4px;color:${notableItems.length>0?'#854F0B':'#1a1a18'}">${notableItems.length}건</div></div>
+        <div style="font-size:15px;font-weight:700;border-left:3px solid #C9A84C;padding-left:8px;margin-bottom:10px">4. CP 운영 요약</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+          <div style="background:#f7f6f4;border-radius:8px;padding:12px;text-align:center"><div style="font-size:11px;color:#6b6b68">총 CP 등록</div><div style="font-size:22px;font-weight:700;margin-top:4px">${cpTotal}건</div></div>
+          <div style="background:#f7f6f4;border-radius:8px;padding:12px;text-align:center"><div style="font-size:11px;color:#6b6b68">조치 완료</div><div style="font-size:22px;font-weight:700;margin-top:4px;color:#3B6D11">${cpResolved}건</div></div>
+          <div style="background:#f7f6f4;border-radius:8px;padding:12px;text-align:center"><div style="font-size:11px;color:#6b6b68">미조치</div><div style="font-size:22px;font-weight:700;margin-top:4px;color:${cpOpen>0?'#A32D2D':'#1a1a18'}">${cpOpen}건</div></div>
         </div>
+        ${cpTotal>0?`
+        <div style="font-size:12px;font-weight:600;color:#4a453e;margin-bottom:6px">담당자별 CP 현황</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:14px">
+          <thead><tr style="background:#f5f5f4"><th style="padding:6px 8px;text-align:left">담당자</th><th style="padding:6px 8px;text-align:right">CP 건수</th><th style="padding:6px 8px;text-align:left" width="50%">비중</th></tr></thead>
+          <tbody>${cpAssigneeSorted.map(([name,cnt])=>{
+            const pct=Math.round(cnt/cpTotal*100);
+            return `<tr style="border-bottom:1px solid #eee"><td style="padding:5px 8px">${name}</td><td style="padding:5px 8px;text-align:right;font-weight:600">${cnt}건</td><td style="padding:5px 8px"><div style="background:#f0ede8;border-radius:3px;height:8px;position:relative;overflow:hidden"><div style="height:100%;width:${pct}%;background:#A32D6A;border-radius:3px"></div></div></td></tr>`;
+          }).join('')}</tbody>
+        </table>` :'<div style="font-size:12px;color:#6b6b68;padding:10px;background:#f9f8f6;border-radius:8px;text-align:center">등록된 CP가 없습니다</div>'}
+        ${cpPenalty.length>0?`
+        <div style="font-size:12px;font-weight:600;color:#A32D2D;margin-bottom:6px">⚠ 페널티 발생 (${cpPenalty.length}건)</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:#FBEAEA"><th style="padding:6px 8px;text-align:left">호실</th><th style="padding:6px 8px;text-align:left">담당</th><th style="padding:6px 8px;text-align:left">내용</th><th style="padding:6px 8px;text-align:left">페널티</th></tr></thead>
+          <tbody>${cpPenalty.map(c=>`<tr style="border-bottom:1px solid #eee"><td style="padding:5px 8px">${c.roomNo||'-'}</td><td style="padding:5px 8px">${c.assignee||'-'}</td><td style="padding:5px 8px;color:#6b6b68">${(c.content||'').substring(0,30)}</td><td style="padding:5px 8px;color:#A32D2D">${c.penalty}</td></tr>`).join('')}</tbody>
+        </table>`:''}
       </div>
     </div>`;
 }
