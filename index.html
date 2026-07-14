@@ -1794,6 +1794,24 @@ function renderReportContent(){
   // 페널티 발생 건
   const cpPenalty=cpMonth.filter(c=>c.penalty&&c.penalty.trim()!=='');
 
+  // 5. 소모량 분석 요약
+  let usageTotal=0;
+  const usageItems=[];
+  ['consumable','equipment','maintenance','rental','facility'].forEach(cat=>{
+    (weeklyItems[cat]||[]).forEach(item=>{
+      const usage=getMonthlyUsage(item.name,cat,month);
+      if(usage<=0) return;
+      const master=(typeof invMaster!=='undefined'&&invMaster[item.name])?invMaster[item.name]:null;
+      const eaPrice=master?(master.eaPrice||0):0;
+      const cost=usage*eaPrice;
+      usageTotal+=cost;
+      usageItems.push({name:item.name,usage,eaPrice,cost});
+    });
+  });
+  const usageTopCost=usageItems.filter(u=>u.cost>0).sort((a,b)=>b.cost-a.cost).slice(0,10);
+  const roomCnt=(typeof seoulRooms!=='undefined'&&seoulRooms.length>0)?seoulRooms.length:471;
+  const perRoomCost=roomCnt>0?Math.round(usageTotal/roomCnt):0;
+
   const catColors={객실:'#185FA5',린넨:'#1A7A5A',유니폼:'#B8860B',구매:'#A32D6A',기타:'#534AB7'};
 
   document.getElementById('report-content').innerHTML=`
@@ -1884,6 +1902,26 @@ function renderReportContent(){
           <thead><tr style="background:#FBEAEA"><th style="padding:6px 8px;text-align:left">호실</th><th style="padding:6px 8px;text-align:left">담당</th><th style="padding:6px 8px;text-align:left">내용</th><th style="padding:6px 8px;text-align:left">페널티</th></tr></thead>
           <tbody>${cpPenalty.map(c=>`<tr style="border-bottom:1px solid #eee"><td style="padding:5px 8px">${c.roomNo||'-'}</td><td style="padding:5px 8px">${c.assignee||'-'}</td><td style="padding:5px 8px;color:#6b6b68">${(c.content||'').substring(0,30)}</td><td style="padding:5px 8px;color:#A32D2D">${c.penalty}</td></tr>`).join('')}</tbody>
         </table>`:''}
+      </div>
+
+      <div style="margin-bottom:10px;page-break-inside:avoid">
+        <div style="font-size:15px;font-weight:700;border-left:3px solid #C9A84C;padding-left:8px;margin-bottom:10px">5. 소모량 분석 요약</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+          <div style="background:#f7f6f4;border-radius:8px;padding:12px;text-align:center"><div style="font-size:11px;color:#6b6b68">이번 달 총 소모비용</div><div style="font-size:22px;font-weight:700;margin-top:4px;color:#A32D6A">${fmt(usageTotal)}</div></div>
+          <div style="background:#f7f6f4;border-radius:8px;padding:12px;text-align:center"><div style="font-size:11px;color:#6b6b68">1실당 소모비용 <span style="color:#9b9b97">(${roomCnt}실)</span></div><div style="font-size:22px;font-weight:700;margin-top:4px">${fmt(perRoomCost)}</div></div>
+        </div>
+        ${usageTopCost.length>0?`
+        <div style="font-size:12px;font-weight:600;color:#4a453e;margin-bottom:6px">소모 비용 상위 품목</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:#f5f5f4"><th style="padding:6px 8px;text-align:left">품목</th><th style="padding:6px 8px;text-align:right">소모량</th><th style="padding:6px 8px;text-align:right">단가</th><th style="padding:6px 8px;text-align:right">소모비용</th><th style="padding:6px 8px;text-align:right">비중</th></tr></thead>
+          <tbody>${usageTopCost.map(u=>`<tr style="border-bottom:1px solid #eee">
+            <td style="padding:5px 8px;font-weight:500">${u.name}</td>
+            <td style="padding:5px 8px;text-align:right">${u.usage.toLocaleString()}</td>
+            <td style="padding:5px 8px;text-align:right;color:#6b6b68">${u.eaPrice%1!==0?u.eaPrice.toFixed(1):u.eaPrice.toLocaleString()}원</td>
+            <td style="padding:5px 8px;text-align:right;font-weight:600">${fmt(u.cost)}</td>
+            <td style="padding:5px 8px;text-align:right;color:#6b6b68">${usageTotal>0?Math.round(u.cost/usageTotal*100):0}%</td>
+          </tr>`).join('')}</tbody>
+        </table>`:'<div style="font-size:12px;color:#9b9b97;padding:10px;background:#f9f8f6;border-radius:8px;text-align:center">소모량 데이터가 없습니다 (단가 미설정 또는 재고조사 미완료)</div>'}
       </div>
     </div>`;
 }
