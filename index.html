@@ -1683,11 +1683,15 @@ function renderReportContent(){
   });
   const totalCost=Object.values(catTotals).reduce((a,b)=>a+b,0);
 
-  // 2. 린넨 요약 (당월마감/LOSS)
+  // 2. 린넨 요약 (지정 품목: 커버/시트/베개커버/페이스/베스/풋/가운)
+  const reportLinenItems=['커버S','커버D','커버K','시트S','시트D','시트K','베개커버','페이스타올','베스타올','풋매트','가운'];
   let linenRows='';
-  let linenTotalClosing=0, linenTotalLoss=0;
+  let linenTotalClosing=0, linenTotalLoss=0, linenTotalDiscardCost=0;
   if(typeof linenStockData!=='undefined' && linenStockData[month]){
-    (linenStockData[month]||[]).forEach(row=>{
+    const discardRows=(typeof linenDiscardData!=='undefined'&&linenDiscardData[month])?linenDiscardData[month]:[];
+    reportLinenItems.forEach(itemName=>{
+      const row=(linenStockData[month]||[]).find(r=>r.item_name===itemName);
+      if(!row) return;
       const fs=row.field_setting||row.base_qty||0;
       const ft=fs+row.field_floor+row.field_storage;
       const vt=row.vendor_in1+row.vendor_in2+row.vendor_estimate;
@@ -1695,11 +1699,27 @@ function renderReportContent(){
       const closing=ft+vt-dt;
       const prev=row.prev_closing||0;
       const loss=closing-prev;
+      const base=row.base_qty||0;
+      // LOSS율 = LOSS / 기본세팅량, 회전율 = 당월마감 / 기본세팅량
+      const lossRate=base>0?((loss/base)*100).toFixed(1):'-';
+      const turnover=base>0?(closing/base).toFixed(2):'-';
+      // 폐기: 디디+GNG 수량, 폐기금액
+      const discardRow=discardRows.find(d=>d.item_name===itemName);
+      const discardQty=dt;
+      const discardPrice=discardRow?Math.round((discardRow.unit_price||0)*((discardRow.discard_rate||30)/100)):0;
+      const discardCost=discardPrice*discardQty;
       linenTotalClosing+=closing;
       linenTotalLoss+=loss;
-      if(closing!==0||loss!==0){
-        linenRows+=`<tr style="border-bottom:1px solid #eee"><td style="padding:4px 8px">${row.item_name}</td><td style="padding:4px 8px;text-align:right">${closing.toLocaleString()}</td><td style="padding:4px 8px;text-align:right;color:${loss<0?'#A32D2D':'#3B6D11'}">${loss>0?'+':''}${loss.toLocaleString()}</td></tr>`;
-      }
+      linenTotalDiscardCost+=discardCost;
+      linenRows+=`<tr style="border-bottom:1px solid #eee">
+        <td style="padding:4px 8px">${itemName}</td>
+        <td style="padding:4px 8px;text-align:right">${closing.toLocaleString()}</td>
+        <td style="padding:4px 8px;text-align:right;color:${loss<0?'#A32D2D':loss>0?'#3B6D11':'#6b6b68'}">${loss>0?'+':''}${loss.toLocaleString()}</td>
+        <td style="padding:4px 8px;text-align:right;color:${lossRate!=='-'&&parseFloat(lossRate)<0?'#A32D2D':'#6b6b68'}">${lossRate==='-'?'-':lossRate+'%'}</td>
+        <td style="padding:4px 8px;text-align:right">${turnover}</td>
+        <td style="padding:4px 8px;text-align:right;color:${discardQty>0?'#A32D2D':'#ccc'}">${discardQty>0?discardQty.toLocaleString():'-'}</td>
+        <td style="padding:4px 8px;text-align:right;color:#6b6b68">${discardCost>0?fmt(discardCost):'-'}</td>
+      </tr>`;
     });
   }
 
@@ -1745,11 +1765,27 @@ function renderReportContent(){
       </div>
 
       <div style="margin-bottom:24px;page-break-inside:avoid">
-        <div style="font-size:15px;font-weight:700;border-left:3px solid #C9A84C;padding-left:8px;margin-bottom:10px">2. 린넨 재고 & LOSS</div>
+        <div style="font-size:15px;font-weight:700;border-left:3px solid #C9A84C;padding-left:8px;margin-bottom:10px">2. 린넨 재고 & LOSS <span style="font-size:11px;font-weight:400;color:#9b9b97">· LOSS율=손실/기본세팅량, 회전율=당월마감/기본세팅량</span></div>
         ${linenRows?`<table style="width:100%;border-collapse:collapse;font-size:12px">
-          <thead><tr style="background:#f5f5f4"><th style="padding:6px 8px;text-align:left">품목</th><th style="padding:6px 8px;text-align:right">당월마감</th><th style="padding:6px 8px;text-align:right">전월대비 LOSS</th></tr></thead>
+          <thead><tr style="background:#f5f5f4">
+            <th style="padding:6px 8px;text-align:left">품목</th>
+            <th style="padding:6px 8px;text-align:right">당월마감</th>
+            <th style="padding:6px 8px;text-align:right">LOSS</th>
+            <th style="padding:6px 8px;text-align:right">LOSS율</th>
+            <th style="padding:6px 8px;text-align:right">회전율</th>
+            <th style="padding:6px 8px;text-align:right">폐기수량</th>
+            <th style="padding:6px 8px;text-align:right">폐기금액</th>
+          </tr></thead>
           <tbody>${linenRows}
-            <tr style="border-top:2px solid #1a3a5f;background:#f9f8f6;font-weight:700"><td style="padding:6px 8px">합계</td><td style="padding:6px 8px;text-align:right">${linenTotalClosing.toLocaleString()}</td><td style="padding:6px 8px;text-align:right;color:${linenTotalLoss<0?'#A32D2D':'#3B6D11'}">${linenTotalLoss>0?'+':''}${linenTotalLoss.toLocaleString()}</td></tr>
+            <tr style="border-top:2px solid #1a3a5f;background:#f9f8f6;font-weight:700">
+              <td style="padding:6px 8px">합계</td>
+              <td style="padding:6px 8px;text-align:right">${linenTotalClosing.toLocaleString()}</td>
+              <td style="padding:6px 8px;text-align:right;color:${linenTotalLoss<0?'#A32D2D':'#3B6D11'}">${linenTotalLoss>0?'+':''}${linenTotalLoss.toLocaleString()}</td>
+              <td style="padding:6px 8px"></td>
+              <td style="padding:6px 8px"></td>
+              <td style="padding:6px 8px"></td>
+              <td style="padding:6px 8px;text-align:right;color:#A32D2D">${linenTotalDiscardCost>0?fmt(linenTotalDiscardCost):'-'}</td>
+            </tr>
           </tbody>
         </table>`:'<div style="font-size:12px;color:#9b9b97;padding:10px;background:#f9f8f6;border-radius:8px;text-align:center">등록된 린넨 재고 데이터가 없습니다</div>'}
       </div>
