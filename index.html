@@ -5761,6 +5761,24 @@ async function saveCpBatch(){
   showToast('📋 CP 등록',`${toSave.length}건이 등록됐습니다`,'grn');
 }
 
+function editCpRecord(id){
+  const month=getSelectedCpMonth();
+  const r=(cpRecords[month]||[]).find(x=>x.id===id);
+  if(!r){alert('CP 기록을 찾을 수 없습니다.');return;}
+  document.getElementById('cp-reg-title').textContent='CP 수정';
+  document.getElementById('cp-reg-eid').value=r.id;
+  document.getElementById('cp-reg-room').value=r.roomNo||'';
+  document.getElementById('cp-reg-assignee').value=r.assignee||'';
+  document.getElementById('cp-reg-content').value=r.content||'';
+  document.getElementById('cp-reg-resolve').value=r.resolve||'';
+  document.getElementById('cp-reg-penalty').value=r.penalty||'';
+  document.getElementById('cp-reg-status').value=r.status||'open';
+  document.getElementById('cp-reg-date').value=r.date||todayStr;
+  // 사진 상태 초기화 (기존 사진은 저장 시 유지됨)
+  resetPhotoState('cp');
+  openModal('cp-reg-modal');
+}
+
 saveCpRecord = async function(){
   const eid=document.getElementById('cp-reg-eid').value;
   const roomNo=document.getElementById('cp-reg-room').value.trim();
@@ -5779,7 +5797,12 @@ saveCpRecord = async function(){
   if(!cpRecords[month])cpRecords[month]=[];
   if(eid){
     const r=cpRecords[month].find(x=>x.id===parseInt(eid));
-    if(r){Object.assign(r,obj);await dbSaveCp(month,r);}
+    if(r){
+      // 새 사진을 안 올렸으면 기존 사진 유지
+      if(!photos.length&&r.photos) obj.photos=r.photos;
+      Object.assign(r,obj);
+      await dbSaveCp(month,r);
+    }
   } else {
     if(!window._cpRecordSeq) window._cpRecordSeq=100;
     const newObj={id:window._cpRecordSeq++,...obj};
