@@ -1813,8 +1813,9 @@ function renderReportContent(){
   // 4. CP 운영 요약
   const cpMonth=(typeof cpRecords!=='undefined'&&cpRecords[month])?cpRecords[month]:[];
   const cpTotal=cpMonth.length;
-  const cpResolved=cpMonth.filter(c=>c.status==='resolved'||c.status==='closed'||c.status==='done').length;
-  const cpOpen=cpTotal-cpResolved;
+  // 미조치 = 미해결(open)만, 페널티 부과는 조치 완료로 간주
+  const cpOpen=cpMonth.filter(c=>c.status==='open').length;
+  const cpResolved=cpTotal-cpOpen;
   // 담당자별 CP 건수
   const cpByAssignee={};
   cpMonth.forEach(c=>{
@@ -2381,7 +2382,8 @@ function getSelectedCpMonth(){
 function cpRatio(month){
   const recs=cpRecords[month]||[];
   if(!recs.length)return 0;
-  const bad=recs.filter(r=>r.status!=='resolved').length;
+  // 미처리 = '미해결(open)'만. 페널티 부과는 조치 완료로 간주
+  const bad=recs.filter(r=>r.status==='open').length;
   return Math.round(bad/recs.length*1000)/10;
 }
 
