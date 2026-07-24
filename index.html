@@ -1270,10 +1270,63 @@ function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 // 배경 클릭으로 닫히지 않음 (실수 방지)
 // 엔터키로 각 모달 저장 처리
+// ===== 표 셀 키보드 네비게이션 (엑셀식) =====
+// class="gnav" 가 붙은 input들을 방향키/엔터로 이동
+document.addEventListener('keydown',e=>{
+  const el=e.target;
+  if(!el.classList||!el.classList.contains('gnav')) return;
+  if(!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter'].includes(e.key)) return;
+
+  const cell=el.closest('td');
+  const row=el.closest('tr');
+  if(!cell||!row) return;
+  const table=row.closest('table');
+  if(!table) return;
+
+  const allRows=[...table.querySelectorAll('tr')].filter(r=>r.querySelector('.gnav'));
+  const rowIdx=allRows.indexOf(row);
+  // 현재 행의 gnav 셀들
+  const rowInputs=[...row.querySelectorAll('.gnav')];
+  const colIdx=rowInputs.indexOf(el);
+
+  function focusCell(r,c){
+    if(r<0||r>=allRows.length) return false;
+    const inputs=[...allRows[r].querySelectorAll('.gnav')];
+    if(inputs.length===0) return false;
+    const target=inputs[Math.min(c,inputs.length-1)];
+    if(target){el.blur();target.focus();if(target.select)target.select();return true;}
+    return false;
+  }
+
+  if(e.key==='ArrowRight'){
+    if(el.type==='text'||el.type==='number'){
+      if(el.selectionStart!==null&&el.selectionStart<el.value.length) return; // 편집 중
+    }
+    e.preventDefault();
+    if(colIdx<rowInputs.length-1){el.blur();rowInputs[colIdx+1].focus();rowInputs[colIdx+1].select&&rowInputs[colIdx+1].select();}
+    else focusCell(rowIdx+1,0);
+  } else if(e.key==='ArrowLeft'){
+    if(el.selectionStart!==null&&el.selectionStart>0) return; // 편집 중
+    e.preventDefault();
+    if(colIdx>0){el.blur();rowInputs[colIdx-1].focus();rowInputs[colIdx-1].select&&rowInputs[colIdx-1].select();}
+    else focusCell(rowIdx-1,999);
+  } else if(e.key==='ArrowUp'){
+    e.preventDefault(); focusCell(rowIdx-1,colIdx);
+  } else if(e.key==='ArrowDown'||e.key==='Enter'){
+    e.preventDefault();
+    if(!focusCell(rowIdx+1,colIdx)){
+      // 마지막 행이면 다음 칸으로
+      if(colIdx<rowInputs.length-1){el.blur();rowInputs[colIdx+1].focus();rowInputs[colIdx+1].select&&rowInputs[colIdx+1].select();}
+    }
+  }
+});
+
 document.addEventListener('keydown',e=>{
   if(e.key!=='Enter') return;
   // textarea 안에서는 엔터 허용
   if(e.target.tagName==='TEXTAREA') return;
+  // 그리드 네비게이션 셀은 위에서 처리
+  if(e.target.classList&&e.target.classList.contains('gnav')) return;
   const opened=document.querySelector('.modal-bg.open');
   if(!opened) return;
   // CP 배치 모달은 자체 엔터 처리(행 추가) 사용
@@ -3866,7 +3919,8 @@ function openWeeklyCheckModal(){
       <div style="flex:1;font-size:13px;font-weight:500">${item.name}</div>
       <div style="font-size:11px;color:#6b6b68">전주: ${prevQty}${item.unit}</div>
       <div style="display:flex;align-items:center;gap:4px">
-        <input type="number" id="wc-${item.name.replace(/\s/g,'_')}" value="${currQty}" min="0"
+        <input type="number" class="wc-input" id="wc-${item.name.replace(/\s/g,'_')}" value="${currQty}" min="0"
+          onkeydown="if(event.key==='Enter'||event.key==='ArrowDown'){event.preventDefault();const a=[...document.querySelectorAll('.wc-input')];const i=a.indexOf(this);if(a[i+1]){a[i+1].focus();a[i+1].select();}}else if(event.key==='ArrowUp'){event.preventDefault();const a=[...document.querySelectorAll('.wc-input')];const i=a.indexOf(this);if(a[i-1]){a[i-1].focus();a[i-1].select();}}"
           style="width:80px;font-size:13px;padding:5px 8px;border-radius:6px;border:1px solid rgba(0,0,0,0.18);text-align:right">
         <span style="font-size:12px;color:#6b6b68">${item.unit}</span>
       </div>
@@ -4611,14 +4665,14 @@ function renderLinenDiscard(){
     return `<tr id="${safeId}" style="background:${rowBg};border-bottom:1px solid rgba(0,0,0,0.07)" onmouseover="this.style.background='#eef4ff'" onmouseout="this.style.background='${rowBg}'">
       <td style="padding:7px 12px;font-weight:600;color:#1a1a18">${name}</td>
       <td style="padding:5px 6px;background:#f5f5f4">
-        <input type="number" tabindex="${tabIdx++}" style="${iN}" value="${row.unit_price||''}" placeholder="0" onchange="updateLinenDiscard('${month}','${name}','unit_price',this.value)">
+        <input class="gnav" type="number" tabindex="${tabIdx++}" style="${iN}" value="${row.unit_price||''}" placeholder="0" onchange="updateLinenDiscard('${month}','${name}','unit_price',this.value)">
       </td>
       <td class="ldcalc-dp" style="padding:7px 10px;text-align:right;background:#fff8e1;color:#854F0B;font-weight:600">${discardPrice.toLocaleString()}</td>
       <td style="padding:5px 6px">
-        <input type="number" tabindex="${tabIdx++}" style="${iN};text-align:center" value="${row.qty||''}" placeholder="0" onchange="updateLinenDiscard('${month}','${name}','qty',this.value)">
+        <input class="gnav" type="number" tabindex="${tabIdx++}" style="${iN};text-align:center" value="${row.qty||''}" placeholder="0" onchange="updateLinenDiscard('${month}','${name}','qty',this.value)">
       </td>
       <td style="padding:5px 6px;background:#f0f8ff">
-        <input type="number" tabindex="${tabIdx++}" style="${iN};text-align:center" value="${row.qty_adj||''}" placeholder="0" onchange="updateLinenDiscard('${month}','${name}','qty_adj',this.value)">
+        <input class="gnav" type="number" tabindex="${tabIdx++}" style="${iN};text-align:center" value="${row.qty_adj||''}" placeholder="0" onchange="updateLinenDiscard('${month}','${name}','qty_adj',this.value)">
       </td>
       <td class="ldcalc-tot" style="padding:7px 10px;text-align:right;font-weight:700;color:#1a1a18">${total?total.toLocaleString():0}</td>
       <td class="ldcalc-totadj" style="padding:7px 10px;text-align:right;font-weight:700;color:#0f1f3d">${totalAdj?totalAdj.toLocaleString():0}</td>
@@ -4850,10 +4904,10 @@ function renderLinenContam(){
     return `<tr id="${safeId}" style="background:${rowBg};border-bottom:1px solid rgba(0,0,0,0.07)" onmouseover="this.style.background='#eef4ff'" onmouseout="this.style.background='${rowBg}'">
       <td style="padding:7px 12px;font-weight:600;color:#1a1a18">${name}</td>
       <td style="padding:5px 6px;background:#f5f5f4">
-        <input type="number" tabindex="${tabIdx++}" style="${iN}" value="${row.cost||''}" placeholder="0" onchange="updateLinenContam('${month}','${name}','cost',this.value)">
+        <input class="gnav" type="number" tabindex="${tabIdx++}" style="${iN}" value="${row.cost||''}" placeholder="0" onchange="updateLinenContam('${month}','${name}','cost',this.value)">
       </td>
       <td style="padding:5px 6px;border-left:2px solid #d6eaf8">
-        <input type="number" tabindex="${tabIdx++}" style="${iN};text-align:center" value="${row.qty||''}" placeholder="0" onchange="updateLinenContam('${month}','${name}','qty',this.value)">
+        <input class="gnav" type="number" tabindex="${tabIdx++}" style="${iN};text-align:center" value="${row.qty||''}" placeholder="0" onchange="updateLinenContam('${month}','${name}','qty',this.value)">
       </td>
       <td class="lccon-tot" style="padding:7px 10px;text-align:right;font-weight:700;color:#1a1a18">${total?total.toLocaleString():0}</td>
     </tr>`;
@@ -5133,20 +5187,20 @@ function renderLinenStock(){
       <td style="padding:7px 10px;font-weight:700;font-size:13px;color:#1a1a18;border-right:1px solid rgba(0,0,0,0.06);white-space:nowrap">${name}</td>
       <td style="padding:7px 8px;text-align:right;background:#f0f4ff;font-weight:700;font-size:14px;color:#0f1f3d;border-right:1px solid rgba(0,0,0,0.08)">${row.base_qty||'-'}</td>
       <td style="padding:7px 8px;text-align:right;background:#f5f5f4;font-size:13px;color:#6b6b68;border-right:1px solid rgba(0,0,0,0.1)">${prev||'-'}</td>
-      <td style="padding:4px 4px;background:#eef6ff;border-right:1px solid rgba(0,0,0,0.06)"><input type="number" tabindex="${ti()}" style="${iN}" value="${row.field_setting||row.base_qty||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','field_setting',this.value)"></td>
-      <td style="padding:4px 4px;background:#eef6ff;border-right:1px solid rgba(0,0,0,0.06)"><input type="number" tabindex="${ti()}" style="${iN}" value="${row.field_floor||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','field_floor',this.value)"></td>
-      <td style="padding:4px 4px;background:#eef6ff;border-right:1px solid rgba(0,0,0,0.1)"><input type="number" tabindex="${ti()}" style="${iN}" value="${row.field_storage||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','field_storage',this.value)"></td>
-      <td style="padding:4px 4px;background:#eefff4;border-right:1px solid rgba(0,0,0,0.06)"><input type="number" tabindex="${ti()}" style="${iN}" value="${row.vendor_in1||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','vendor_in1',this.value)"></td>
-      <td style="padding:4px 4px;background:#eefff4;border-right:1px solid rgba(0,0,0,0.06)"><input type="number" tabindex="${ti()}" style="${iN}" value="${row.vendor_in2||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','vendor_in2',this.value)"></td>
-      <td style="padding:4px 4px;background:#eefff4;border-right:1px solid rgba(0,0,0,0.1)"><input type="number" tabindex="${ti()}" style="${iN}" value="${row.vendor_estimate||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','vendor_estimate',this.value)"></td>
-      <td style="padding:4px 4px;background:#fff5f5;border-right:1px solid rgba(0,0,0,0.06)"><input type="number" tabindex="${ti()}" style="${iN}" value="${row.discard_didi||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','discard_didi',this.value)"></td>
-      <td style="padding:4px 4px;background:#fff5f5;border-right:1px solid rgba(0,0,0,0.06)"><input type="number" tabindex="${ti()}" style="${iN}" value="${row.discard_gng||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','discard_gng',this.value)"></td>
+      <td style="padding:4px 4px;background:#eef6ff;border-right:1px solid rgba(0,0,0,0.06)"><input class="gnav" type="number" tabindex="${ti()}" style="${iN}" value="${row.field_setting||row.base_qty||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','field_setting',this.value)"></td>
+      <td style="padding:4px 4px;background:#eef6ff;border-right:1px solid rgba(0,0,0,0.06)"><input class="gnav" type="number" tabindex="${ti()}" style="${iN}" value="${row.field_floor||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','field_floor',this.value)"></td>
+      <td style="padding:4px 4px;background:#eef6ff;border-right:1px solid rgba(0,0,0,0.1)"><input class="gnav" type="number" tabindex="${ti()}" style="${iN}" value="${row.field_storage||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','field_storage',this.value)"></td>
+      <td style="padding:4px 4px;background:#eefff4;border-right:1px solid rgba(0,0,0,0.06)"><input class="gnav" type="number" tabindex="${ti()}" style="${iN}" value="${row.vendor_in1||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','vendor_in1',this.value)"></td>
+      <td style="padding:4px 4px;background:#eefff4;border-right:1px solid rgba(0,0,0,0.06)"><input class="gnav" type="number" tabindex="${ti()}" style="${iN}" value="${row.vendor_in2||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','vendor_in2',this.value)"></td>
+      <td style="padding:4px 4px;background:#eefff4;border-right:1px solid rgba(0,0,0,0.1)"><input class="gnav" type="number" tabindex="${ti()}" style="${iN}" value="${row.vendor_estimate||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','vendor_estimate',this.value)"></td>
+      <td style="padding:4px 4px;background:#fff5f5;border-right:1px solid rgba(0,0,0,0.06)"><input class="gnav" type="number" tabindex="${ti()}" style="${iN}" value="${row.discard_didi||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','discard_didi',this.value)"></td>
+      <td style="padding:4px 4px;background:#fff5f5;border-right:1px solid rgba(0,0,0,0.06)"><input class="gnav" type="number" tabindex="${ti()}" style="${iN}" value="${row.discard_gng||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','discard_gng',this.value)"></td>
       <td class="lcalc" style="padding:7px 8px;text-align:right;font-weight:700;font-size:14px;color:#A32D2D;background:#fff0f0;border-right:1px solid rgba(0,0,0,0.1)">${dt||'-'}</td>
       <td class="lcalc" style="padding:7px 10px;text-align:right;font-weight:800;font-size:15px;color:#fff;background:#8B0000;border-left:2px solid #cc0000;border-right:1px solid rgba(0,0,0,0.15)">${closing.toLocaleString()}</td>
       <td class="lcalc" style="padding:7px 8px;text-align:right;font-weight:700;font-size:13px;color:${lc};border-right:1px solid rgba(0,0,0,0.06)">${loss>0?'+':''}${loss.toLocaleString()}</td>
       <td class="lcalc" style="padding:7px 8px;text-align:right;font-size:12px;color:${lc};border-right:1px solid rgba(0,0,0,0.06)">${lossRate}</td>
       <td class="lcalc" style="padding:7px 8px;text-align:right;font-size:13px;color:#1a1a18;border-right:1px solid rgba(0,0,0,0.06)">${turnover}</td>
-      <td style="padding:4px 4px"><input type="text" tabindex="${ti()}" style="${iT}" value="${row.note||''}" placeholder="비고" onchange="updateLinenRow('${month}','${name}','note',this.value)"></td>
+      <td style="padding:4px 4px"><input class="gnav" type="text" tabindex="${ti()}" style="${iT}" value="${row.note||''}" placeholder="비고" onchange="updateLinenRow('${month}','${name}','note',this.value)"></td>
     </tr>`;
   }).join('');
   const totLc=totLoss<0?'color:#A32D2D':totLoss>0?'color:#3B6D11':'';
@@ -5451,7 +5505,7 @@ function renderLinenSetting(){
         const sep=(fi===2||fi===6||fi===10)?'border-right:2px solid #c0cce0;':'';
         const val=row[f]||0;
         return `<td style="padding:3px 4px;text-align:center;border-bottom:1px solid #ebebea;${sep}">
-          ${val>0?`<input type="number" min="0" value="${val}" style="${iStyle}" onchange="updateLinenSettingCell(${i},'${f}',this.value)">`:`<input type="number" min="0" value="0" style="${iStyle};color:#c0bdb8" onchange="updateLinenSettingCell(${i},'${f}',this.value)">`}
+          ${val>0?`<input class="gnav" type="number" min="0" value="${val}" style="${iStyle}" onchange="updateLinenSettingCell(${i},'${f}',this.value)">`:`<input class="gnav" type="number" min="0" value="0" style="${iStyle};color:#c0bdb8" onchange="updateLinenSettingCell(${i},'${f}',this.value)">`}
         </td>`;
       }).join('')}
       <td style="padding:5px 8px;text-align:right;border-bottom:1px solid #ebebea;font-weight:700" id="ls-cost-${i}">${cost.toLocaleString()}</td>
