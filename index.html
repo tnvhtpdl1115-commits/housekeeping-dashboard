@@ -5138,7 +5138,8 @@ function applyLinenBaseQty(month){
   const rows = linenStockData[month];
   if(!rows) return;
   rows.forEach(row=>{
-    if(baseMap[row.item_name] !== undefined){
+    // 사용자가 직접 입력한 값이 있으면 유지, 없을 때만(0/undefined) 세팅현황 기본값 적용
+    if((!row.base_qty || row.base_qty===0) && baseMap[row.item_name] !== undefined){
       row.base_qty = baseMap[row.item_name];
     }
   });
@@ -5185,7 +5186,7 @@ function renderLinenStock(){
     const ti=()=>tabIdx++;
     return `<tr id="${safeId}" style="background:${rowBg};border-bottom:1px solid rgba(0,0,0,0.08)" onmouseover="this.style.background='#eef4ff'" onmouseout="this.style.background='${rowBg}'">
       <td style="padding:7px 10px;font-weight:700;font-size:13px;color:#1a1a18;border-right:1px solid rgba(0,0,0,0.06);white-space:nowrap">${name}</td>
-      <td style="padding:7px 8px;text-align:right;background:#f0f4ff;font-weight:700;font-size:14px;color:#0f1f3d;border-right:1px solid rgba(0,0,0,0.08)">${row.base_qty||'-'}</td>
+      <td style="padding:4px 6px;text-align:right;background:#f0f4ff;border-right:1px solid rgba(0,0,0,0.08)"><input class="gnav" type="number" tabindex="${ti()}" style="width:100%;font-size:14px;font-weight:700;color:#0f1f3d;text-align:right;padding:5px 6px;border-radius:6px;border:1px solid rgba(15,31,61,0.15);background:#fff" value="${row.base_qty||''}" placeholder="-" onchange="updateLinenBaseQty('${month}','${name}',this.value)"></td>
       <td style="padding:7px 8px;text-align:right;background:#f5f5f4;font-size:13px;color:#6b6b68;border-right:1px solid rgba(0,0,0,0.1)">${prev||'-'}</td>
       <td style="padding:4px 4px;background:#eef6ff;border-right:1px solid rgba(0,0,0,0.06)"><input class="gnav" type="number" tabindex="${ti()}" style="${iN}" value="${row.field_setting||row.base_qty||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','field_setting',this.value)"></td>
       <td style="padding:4px 4px;background:#eef6ff;border-right:1px solid rgba(0,0,0,0.06)"><input class="gnav" type="number" tabindex="${ti()}" style="${iN}" value="${row.field_floor||''}" placeholder="-" onchange="updateLinenRow('${month}','${name}','field_floor',this.value)"></td>
@@ -5229,6 +5230,23 @@ function renderLinenStock(){
     <div class="met"><div class="met-l">전달 대비 LOSS</div><div class="met-v ${totLoss<0?'red':totLoss>0?'grn':''}">${totLoss>0?'+':''}${totLoss.toLocaleString()}</div></div>
     <div class="met"><div class="met-l">총 폐기</div><div class="met-v amb">${(totDD+totGNG).toLocaleString()}</div></div>
     <div class="met"><div class="met-l">평균 회전율</div><div class="met-v">${totBase>0?(totClose/totBase).toFixed(1):'-'}</div></div>`;
+}
+
+function updateLinenBaseQty(month,name,value){
+  const row=getLinenRow(month,name);
+  const v=parseFloat(value)||0;
+  row.base_qty=v;
+  // 현장재고 기본세팅량(4번째 열)도 동일하게 반영
+  row.field_setting=v;
+  dbSaveLinenStock(month,row);
+  // 4번째 열 input 값도 화면에서 업데이트
+  const safeId='linen-row-'+name.replace(/[\s()]/g,'_');
+  const rowEl=document.getElementById(safeId);
+  if(rowEl){
+    const fsInput=rowEl.querySelector('td:nth-child(4) input');
+    if(fsInput) fsInput.value=v||'';
+  }
+  updateLinenCalcCells(month,name);
 }
 
 function updateLinenRow(month,name,field,value){
