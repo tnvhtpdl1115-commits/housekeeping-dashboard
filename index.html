@@ -1192,7 +1192,7 @@ tr:hover td{background:#fafaf8}
           <th style="padding:6px 6px;text-align:left">품목</th>
           <th style="padding:6px 6px;text-align:left;width:95px">분류</th>
           <th style="padding:6px 6px;text-align:right;width:75px">수량</th>
-          <th style="padding:6px 6px;text-align:right;width:90px">단가</th>
+          <th style="padding:6px 6px;text-align:right;width:100px">총액</th>
           <th style="padding:6px 6px;text-align:left;width:90px">상태</th>
           <th style="padding:6px 6px;text-align:left;width:95px">주차</th>
           <th style="padding:6px 6px;width:32px"></th>
@@ -1253,9 +1253,10 @@ tr:hover td{background:#fafaf8}
     </div>
   </div>
   <div class="fr">
-    <div class="fg"><label>수량</label><input type="number" id="pur-qty" value="100" min="1"></div>
-    <div class="fg"><label>단가 (원)</label><input type="number" id="pur-price" value="0" min="0" step="0.01"></div>
+    <div class="fg"><label>수량</label><input type="number" id="pur-qty" value="100" min="1" oninput="updatePurUnitPrice()"></div>
+    <div class="fg"><label>총액 (원)</label><input type="number" id="pur-amount" value="0" min="0" oninput="updatePurUnitPrice()"></div>
   </div>
+  <div style="font-size:12px;color:#6b6b68;margin:-4px 0 10px 2px">개당 단가: <strong id="pur-unit-price-display" style="color:#185FA5">0원</strong> <span style="color:#9b9b97">(자동 계산)</span></div>
   <div class="fg"><label>상태</label>
     <select id="pur-status" style="font-size:13px;padding:7px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1a1a18;font-family:'Noto Sans KR',sans-serif">
       <option value="pending">발주중</option>
@@ -1859,14 +1860,14 @@ function renderReportContent(){
   curPurchases.forEach(p=>{
     if(!itemAgg[p.item]) itemAgg[p.item]={item:p.item,category:p.category,qty:0,amount:0};
     itemAgg[p.item].qty+=p.qty;
-    itemAgg[p.item].amount+=p.qty*p.price;
+    itemAgg[p.item].amount+=purAmount(p);
   });
   // 전월 품목별 집계 (비용 급증 비교용)
   const prevMonthKey=mkKey(new Date(y,m-2,1).getFullYear(),new Date(y,m-2,1).getMonth()+1);
   const prevAgg={};
   (purData[prevMonthKey]||[]).forEach(p=>{
     if(!prevAgg[p.item]) prevAgg[p.item]=0;
-    prevAgg[p.item]+=p.qty*p.price;
+    prevAgg[p.item]+=purAmount(p);
   });
   Object.values(itemAgg).forEach(it=>{
     const reasons=[];
@@ -2701,8 +2702,8 @@ function renderPur(){
   if(titleEl) titleEl.textContent=`${month.replace('-','년 ')}월 ${catName} 발주 목록`;
 
   // 전체 구매 총비용 (모든 소분류 합산)
-  const totalAll=(purData[month]||[]).reduce((a,p)=>a+p.qty*p.price,0);
-  const totalCat=filtered.reduce((a,p)=>a+p.qty*p.price,0);
+  const totalAll=(purData[month]||[]).reduce((a,p)=>a+purAmount(p),0);
+  const totalCat=filtered.reduce((a,p)=>a+purAmount(p),0);
 
   const el=document.getElementById('pur-metrics');
   if(el) el.innerHTML=`
@@ -2734,7 +2735,7 @@ function renderPur(){
     filtered.forEach(p=>{
       if(!groups[p.item]) groups[p.item]={item:p.item,totalQty:0,totalAmount:0,count:0,received:0};
       groups[p.item].totalQty+=p.qty;
-      groups[p.item].totalAmount+=p.qty*p.price;
+      groups[p.item].totalAmount+=purAmount(p);
       groups[p.item].count++;
       if(p.status==='received') groups[p.item].received++;
     });
@@ -2761,7 +2762,7 @@ function renderPur(){
   thead.innerHTML=`<tr><th>품목</th><th>수량</th><th>단가</th><th>금액</th><th>발주일</th><th>상태</th><th></th></tr>`;
   tbody.innerHTML=filtered.map(p=>`<tr>
     <td>${p.item}</td><td>${p.qty.toLocaleString()}</td>
-    <td>${p.price%1!==0?p.price.toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:2}):p.price.toLocaleString()}원</td><td>${fmt(p.qty*p.price)}</td>
+    <td>${p.price%1!==0?p.price.toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:2}):p.price.toLocaleString()}원</td><td>${fmt(purAmount(p))}</td>
     <td style="color:#6b6b68;font-size:11px">${p.date||'-'}${p.inv_week?` <span style="background:#e8f0fe;color:#1a3a5f;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:600">${p.inv_week}주차</span>`:''}</td>
     <td><span class="badge" style="${p.status==='received'?'background:#EAF3DE;color:#3B6D11':'background:#FAEEDA;color:#854F0B'}">${p.status==='received'?'입고완료':'발주중'}</span></td>
     <td><div style="display:flex;gap:3px">
@@ -2836,11 +2837,12 @@ function openPurModal(){
   document.getElementById('pur-date').value=todayStr;
   document.getElementById('pur-item').value='';
   document.getElementById('pur-qty').value=100;
-  document.getElementById('pur-price').value=0;
+  document.getElementById('pur-amount').value=0;
   document.getElementById('pur-cat').value=currentPurCategory||'consumable';
   document.getElementById('pur-status').value='pending';
   document.getElementById('pur-inv-week').value='';
   document.getElementById('pur-item-list').style.display='none';
+  updatePurUnitPrice();
   openModal('pur-modal');
 }
 
@@ -2853,10 +2855,11 @@ function editPur(month, id){
   document.getElementById('pur-date').value=p.date||todayStr;
   document.getElementById('pur-item').value=p.item;
   document.getElementById('pur-qty').value=p.qty;
-  document.getElementById('pur-price').value=p.price;
+  document.getElementById('pur-amount').value=purAmount(p);
   document.getElementById('pur-cat').value=p.category||'consumable';
   document.getElementById('pur-status').value=p.status||'pending';
   document.getElementById('pur-inv-week').value=p.inv_week||'';
+  updatePurUnitPrice();
   openModal('pur-modal');
 }
 
@@ -2917,7 +2920,7 @@ function addPurBatchRow(){
       <option value="linen"${lastCat==='linen'?' selected':''}>린넨</option>
     </select></td>
     <td style="padding:4px 5px"><input type="number" class="pb-qty pb-cell" placeholder="0" min="0" style="${iStyle};text-align:right" onkeydown="purBatchKey(event,this)"></td>
-    <td style="padding:4px 5px"><input type="number" class="pb-price pb-cell" placeholder="0" min="0" step="0.01" style="${iStyle};text-align:right" onkeydown="purBatchKey(event,this)"></td>
+    <td style="padding:4px 5px"><input type="number" class="pb-amount pb-cell" placeholder="총액" min="0" style="${iStyle};text-align:right" onkeydown="purBatchKey(event,this)"></td>
     <td style="padding:4px 5px"><select class="pb-status pb-cell" style="${iStyle}" onkeydown="purBatchKey(event,this)">
       <option value="pending"${lastStatus==='pending'?' selected':''}>발주중</option>
       <option value="received"${lastStatus==='received'?' selected':''}>입고완료</option>
@@ -3000,28 +3003,30 @@ async function savePurBatch(){
     const item=tr.querySelector('.pb-item').value.trim();
     const cat=tr.querySelector('.pb-cat').value;
     const qty=parseInt(tr.querySelector('.pb-qty').value)||0;
-    const price=parseFloat(tr.querySelector('.pb-price').value)||0;
+    const amount=parseFloat(tr.querySelector('.pb-amount').value)||0;
+    const price=qty>0?amount/qty:0;
     const status=tr.querySelector('.pb-status').value;
     const invWeek=parseInt(tr.querySelector('.pb-week').value)||null;
     // 완전히 빈 행 무시
-    if(!item&&qty===0&&price===0) return;
+    if(!item&&qty===0&&amount===0) return;
     if(!item||!/^\d{4}-\d{2}-\d{2}$/.test(date)){
       hasError=true; tr.style.background='#FBEAEA'; return;
     }
     tr.style.background='';
-    toSave.push({item,cat,qty,price,date,status,invWeek});
+    toSave.push({item,cat,qty,price,amount,date,status,invWeek});
   });
   if(hasError){alert('빨간 행의 발주일·품목을 확인하세요. (발주일은 8/1 형식 가능)');return;}
   if(toSave.length===0){alert('입력된 내용이 없습니다.');return;}
 
   for(const o of toSave){
     const month=o.date.substring(0,7);
-    const newObj={id:purIdSeq++,item:o.item,qty:o.qty,price:o.price,date:o.date,status:o.status,category:o.cat,inv_week:o.invWeek};
+    const oAmount=o.amount;
+    const newObj={id:purIdSeq++,item:o.item,qty:o.qty,price:o.price,amount:oAmount,date:o.date,status:o.status,category:o.cat,inv_week:o.invWeek};
     if(!purData[month]) purData[month]=[];
     purData[month].push(newObj);
     await dbSavePurchase(month,newObj);
     // 비용 자동 생성
-    const costObj={id:costIdSeq++,label:o.item+' 발주',type:'구매',subType:catName[o.cat]||'구매',amount:o.qty*o.price,date:o.date,purId:newObj.id};
+    const costObj={id:costIdSeq++,label:o.item+' 발주',type:'구매',subType:catName[o.cat]||'구매',amount:oAmount,date:o.date,purId:newObj.id};
     if(!costData[month]) costData[month]=[];
     costData[month].push(costObj);
     await dbSaveCost(month,costObj);
@@ -3034,10 +3039,25 @@ async function savePurBatch(){
   showToast('🛒 발주 등록',`${toSave.length}건이 등록됐습니다`,'grn');
 }
 
+// 구매 건의 실제 총액 (amount 있으면 우선, 없으면 qty*price 폴백)
+function purAmount(p){
+  if(p.amount!=null && !isNaN(p.amount)) return p.amount;
+  return (p.qty||0)*(p.price||0);
+}
+
+function updatePurUnitPrice(){
+  const qty=parseInt(document.getElementById('pur-qty').value)||0;
+  const amount=parseFloat(document.getElementById('pur-amount').value)||0;
+  const unit=qty>0?amount/qty:0;
+  const disp=document.getElementById('pur-unit-price-display');
+  if(disp) disp.textContent=(unit%1!==0?unit.toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:2}):unit.toLocaleString())+'원';
+}
+
 function addPur(){
   const item=document.getElementById('pur-item').value.trim();
   const qty=parseInt(document.getElementById('pur-qty').value)||0;
-  const price=parseFloat(document.getElementById('pur-price').value)||0;
+  const amount=parseFloat(document.getElementById('pur-amount').value)||0;
+  const price=qty>0?amount/qty:0;  // 단가는 역산 (표시/참고용)
   const cat=document.getElementById('pur-cat').value;
   const month=document.getElementById('pur-modal-month').value||getPurMonth();
   const date=document.getElementById('pur-date').value||todayStr;
@@ -3050,8 +3070,8 @@ function addPur(){
   if(qty<=0){
     if(!confirm(`수량이 ${qty}개입니다. 0개로 저장하시겠습니까?`)) return;
   }
-  if(price<=0){
-    if(!confirm(`단가가 ${price}원입니다. 0원으로 저장하시겠습니까?`)) return;
+  if(amount<=0){
+    if(!confirm(`총액이 ${amount}원입니다. 0원으로 저장하시겠습니까?`)) return;
   }
 
   // A. 이전 구매 단가 대비 급변동 방어 (같은 품목 최근 구매가와 ±50% 비교)
@@ -3071,7 +3091,7 @@ function addPur(){
       const ratio=price/lastPrice;
       if(ratio>=1.5 || ratio<=0.5){
         const pctChange=Math.round((ratio-1)*100);
-        if(!confirm(`⚠️ [${item}] 단가가 이전 구매와 크게 다릅니다.\n\n이전 단가: ${lastPrice.toLocaleString()}원 (${lastDate})\n이번 단가: ${price.toLocaleString()}원\n변동: ${pctChange>0?'+':''}${pctChange}%\n\n단가가 정확한지 확인해주세요. 이대로 저장할까요?`)){
+        if(!confirm(`⚠️ [${item}] 단가가 이전 구매와 크게 다릅니다.\n\n이전 단가: ${lastPrice.toLocaleString()}원 (${lastDate})\n이번 단가: 약 ${price.toLocaleString('ko-KR',{maximumFractionDigits:1})}원\n변동: ${pctChange>0?'+':''}${pctChange}%\n\n금액이 정확한지 확인해주세요. 이대로 저장할까요?`)){
           return;
         }
       }
@@ -3079,9 +3099,8 @@ function addPur(){
   }
 
   // 비정상적으로 큰 총 금액 방어
-  const totalAmount=qty*price;
-  if(totalAmount>=100000000){
-    if(!confirm(`입력하신 총 금액이 ${totalAmount.toLocaleString()}원입니다.\n\n수량: ${qty.toLocaleString()}개\n단가: ${price.toLocaleString()}원\n\n금액이 비정상적으로 큽니다. 정말 이대로 저장하시겠습니까?`)){
+  if(amount>=100000000){
+    if(!confirm(`입력하신 총 금액이 ${amount.toLocaleString()}원입니다.\n\n수량: ${qty.toLocaleString()}개\n\n금액이 비정상적으로 큽니다. 정말 이대로 저장하시겠습니까?`)){
       return;
     }
   }
@@ -3100,7 +3119,7 @@ function addPur(){
       const oldDate=p.date;
       const oldQty=p.qty;
       const oldCat=p.category||'consumable';
-      Object.assign(p,{item,qty,price,date,category:cat,status,inv_week:invWeek});
+      Object.assign(p,{item,qty,price,amount,date,category:cat,status,inv_week:invWeek});
       dbSavePurchase(pMonth,p);
       // 비용 업데이트 (purId로 찾아서 금액/날짜 수정)
       const updCostMonth=date?date.substring(0,7):pMonth;
@@ -3110,7 +3129,7 @@ function addPur(){
         if(foundCost) break;
       }
       if(foundCost){
-        foundCost.amount=qty*price;
+        foundCost.amount=amount;
         foundCost.date=date;
         foundCost.label=item+' 발주';
         dbSaveCost(updCostMonth,foundCost);
@@ -3141,7 +3160,7 @@ function addPur(){
     }
   } else {
     // 신규 등록
-    const newObj={id:purIdSeq++,item,qty,price,date,status,category:cat,inv_week:invWeek};
+    const newObj={id:purIdSeq++,item,qty,price,amount,date,status,category:cat,inv_week:invWeek};
     purData[month].push(newObj);
     dbSavePurchase(month,newObj);
     const catName={consumable:'소모품',equipment:'비품',maintenance:'정비용품',linen:'린넨'}[cat]||'구매';
@@ -3154,11 +3173,11 @@ function addPur(){
       if(existingCost) break;
     }
     if(existingCost){
-      existingCost.amount=qty*price;
+      existingCost.amount=amount;
       existingCost.date=date;
       dbSaveCost(costMonth,existingCost);
     } else {
-      const costObj={id:costIdSeq++,label:item+' 발주',type:'구매',subType:catName,amount:qty*price,date,purId:newObj.id};
+      const costObj={id:costIdSeq++,label:item+' 발주',type:'구매',subType:catName,amount,date,purId:newObj.id};
       if(!costData[costMonth]) costData[costMonth]=[];
       costData[costMonth].push(costObj);
       dbSaveCost(costMonth,costObj);
@@ -4678,9 +4697,10 @@ function quickOrder(name,category,qty,price){
   openPurModal();
   document.getElementById('pur-item').value=name;
   document.getElementById('pur-qty').value=qty;
-  document.getElementById('pur-price').value=price;
+  document.getElementById('pur-amount').value=Math.round(qty*price);
   document.getElementById('pur-cat').value=category;
   document.getElementById('pur-item-list').style.display='none';
+  updatePurUnitPrice();
 }
 
 function openMasterModal(name, category){
@@ -5612,7 +5632,7 @@ async function dbLoadPurchases(){
     purData={};
     data.forEach(r=>{
       if(!purData[r.month]) purData[r.month]=[];
-      purData[r.month].push({id:r.id,dbId:r.id,item:r.item,qty:r.qty,price:r.price,date:r.date,status:r.status||'pending',category:r.category||'consumable',inv_week:r.inv_week||null});
+      purData[r.month].push({id:r.id,dbId:r.id,item:r.item,qty:r.qty,price:r.price,amount:r.amount!=null?r.amount:null,date:r.date,status:r.status||'pending',category:r.category||'consumable',inv_week:r.inv_week||null});
     });
   }
 }
@@ -5627,7 +5647,7 @@ async function syncPurchaseCosts(){
     if(!costData[month]) costData[month]=[];
     // 1) 구매 데이터별로 대응하는 비용 확보/갱신
     for(const p of purchases){
-      const amount=p.qty*p.price;
+      const amount=purAmount(p);
       let cost=costData[month].find(c=>c.type==='구매'&&c.purId==p.id);
       if(cost){
         // 금액/날짜/분류 갱신
@@ -5653,22 +5673,22 @@ async function syncPurchaseCosts(){
   }
 }
 async function dbSavePurchase(month,obj){
-  const payload={month,item:obj.item,qty:obj.qty,price:obj.price,date:obj.date,status:obj.status,category:obj.category||'consumable',inv_week:obj.inv_week||null};
+  const payload={month,item:obj.item,qty:obj.qty,price:obj.price,amount:obj.amount!=null?obj.amount:(obj.qty*obj.price),date:obj.date,status:obj.status,category:obj.category||'consumable',inv_week:obj.inv_week||null};
   if(obj.dbId){
     const {error}=await supa.from('pur_data').update(payload).eq('id',obj.dbId);
-    if(error&&error.message&&error.message.includes('inv_week')){
-      // inv_week 컬럼 없으면 제외하고 재시도
-      const {inv_week,...payloadWithout}=payload;
+    if(error&&error.message&&(error.message.includes('inv_week')||error.message.includes('amount'))){
+      // 컬럼 없으면 제외하고 재시도
+      const {inv_week,amount,...payloadWithout}=payload;
       await supa.from('pur_data').update(payloadWithout).eq('id',obj.dbId);
-      showToast('⚠️ 안내','Supabase pur_data 테이블에 inv_week 컬럼을 추가해주세요','red');
+      showToast('⚠️ 안내','Supabase pur_data 테이블에 amount 컬럼을 추가하면 금액이 정확히 저장됩니다','red');
     }
   } else {
     const {data,error}=await supa.from('pur_data').insert(payload).select();
-    if(error&&error.message&&error.message.includes('inv_week')){
-      const {inv_week,...payloadWithout}=payload;
+    if(error&&error.message&&(error.message.includes('inv_week')||error.message.includes('amount'))){
+      const {inv_week,amount,...payloadWithout}=payload;
       const {data:d2}=await supa.from('pur_data').insert(payloadWithout).select();
       if(d2&&d2[0]){obj.dbId=d2[0].id;obj.id=d2[0].id;}
-      showToast('⚠️ 안내','Supabase pur_data 테이블에 inv_week 컬럼을 추가해주세요','red');
+      showToast('⚠️ 안내','Supabase pur_data에 amount 컬럼을 추가하면 금액이 정확히 저장됩니다','red');
     } else {
       if(data&&data[0]){obj.dbId=data[0].id;obj.id=data[0].id;}
     }
