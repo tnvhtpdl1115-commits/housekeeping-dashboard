@@ -5404,6 +5404,42 @@ async function dbLoadPurchases(){
     });
   }
 }
+
+// 구매 데이터를 기준으로 비용 탭의 '구매' 항목을 재동기화
+// 구매 탭이 원천(source of truth). 로드 후 자동 실행됨.
+async function syncPurchaseCosts(){
+  const catName={consumable:'소모품',equipment:'비품',linen:'린넨',maintenance:'정비용품',rental:'대여품',facility:'시설용품'};
+  // 모든 월의 구매 데이터를 순회
+  for(const month of Object.keys(purData)){
+    const purchases=purData[month]||[];
+    if(!costData[month]) costData[month]=[];
+    // 1) 구매 데이터별로 대응하는 비용 확보/갱신
+    for(const p of purchases){
+      const amount=p.qty*p.price;
+      let cost=costData[month].find(c=>c.type==='구매'&&c.purId==p.id);
+      if(cost){
+        // 금액/날짜/분류 갱신
+        if(cost.amount!==amount||cost.date!==p.date){
+          cost.amount=amount; cost.date=p.date;
+          cost.subType=catName[p.category]||'구매';
+          await dbSaveCost(month,cost);
+        }
+      } else {
+        // 비용 신규 생성
+        cost={id:costIdSeq++,label:p.item+' 발주',type:'구매',subType:catName[p.category]||'구매',amount,date:p.date,purId:p.id};
+        costData[month].push(cost);
+        await dbSaveCost(month,cost);
+      }
+    }
+    // 2) 구매에 없는 고아 '구매' 비용 제거 (purId가 없거나, 매칭되는 구매가 사라진 것)
+    const validPurIds=new Set(purchases.map(p=>p.id));
+    const orphans=costData[month].filter(c=>c.type==='구매'&&(!c.purId||!validPurIds.has(c.purId)));
+    for(const o of orphans){
+      costData[month]=costData[month].filter(c=>c!==o);
+      if(o.dbId) await dbDeleteCost(o.dbId);
+    }
+  }
+}
 async function dbSavePurchase(month,obj){
   const payload={month,item:obj.item,qty:obj.qty,price:obj.price,date:obj.date,status:obj.status,category:obj.category||'consumable',inv_week:obj.inv_week||null};
   if(obj.dbId){
@@ -6002,6 +6038,8 @@ async function initApp(){
       dbLoadLinenSetting(),
       dbLoadHandover(),
     ]);
+    // 구매 데이터 기준으로 비용 재동기화 (구매 탭이 원천)
+    await syncPurchaseCosts();
     showLoading(false);
     // 이번 달 초기화
     const tm=thisMonthKey();
