@@ -2861,6 +2861,27 @@ function editPur(month, id){
 }
 
 // ===== 발주 배치 등록 =====
+let cpBatchRowSeq2=0;
+function getPurItemsByCat(cat){
+  let items=[];
+  if(cat==='linen'){
+    Object.values(invData).flat().filter(i=>i.category==='linen').forEach(i=>{
+      if(!items.includes(i.name)) items.push(i.name);
+    });
+  } else {
+    items=(weeklyItems[cat]||[]).map(i=>i.name);
+  }
+  return items;
+}
+
+function fillPurItemDatalist(selEl){
+  const tr=selEl.closest('tr');
+  const cat=selEl.value;
+  const dl=tr.querySelector('datalist');
+  const items=getPurItemsByCat(cat);
+  if(dl) dl.innerHTML=items.map(n=>`<option value="${n}">`).join('');
+}
+
 function openPurBatchModal(){
   document.getElementById('pur-batch-month').value=getPurMonth();
   document.getElementById('pur-batch-tbody').innerHTML='';
@@ -2886,8 +2907,8 @@ function addPurBatchRow(){
   tr.style.borderBottom='1px solid #f0ede8';
   tr.innerHTML=`
     <td style="padding:4px 5px"><input type="text" class="pb-date pb-cell" value="${lastDate}" placeholder="8/1" style="${iStyle}" onblur="formatCpDate(this)" onkeydown="purBatchKey(event,this)"></td>
-    <td style="padding:4px 5px"><input type="text" class="pb-item pb-cell" placeholder="품목명" style="${iStyle}" onkeydown="purBatchKey(event,this)"></td>
-    <td style="padding:4px 5px"><select class="pb-cat pb-cell" style="${iStyle}" onkeydown="purBatchKey(event,this)">
+    <td style="padding:4px 5px"><input type="text" class="pb-item pb-cell" list="pb-items-${cpBatchRowSeq2}" placeholder="품목명 (선택/입력)" style="${iStyle}" onkeydown="purBatchKey(event,this)"><datalist id="pb-items-${cpBatchRowSeq2}"></datalist></td>
+    <td style="padding:4px 5px"><select class="pb-cat pb-cell" style="${iStyle}" onchange="fillPurItemDatalist(this)" onkeydown="purBatchKey(event,this)">
       <option value="consumable"${lastCat==='consumable'?' selected':''}>소모품</option>
       <option value="equipment"${lastCat==='equipment'?' selected':''}>비품</option>
       <option value="maintenance"${lastCat==='maintenance'?' selected':''}>정비용품</option>
@@ -2908,6 +2929,10 @@ function addPurBatchRow(){
     </select></td>
     <td style="padding:4px 5px;text-align:center"><button class="btn-i d" style="padding:2px 6px" onclick="this.closest('tr').remove()"><i class="ti ti-x"></i></button></td>`;
   tbody.appendChild(tr);
+  cpBatchRowSeq2++;
+  // 방금 추가한 행의 datalist를 현재 분류 기준으로 채움
+  const catSel=tr.querySelector('.pb-cat');
+  if(catSel) fillPurItemDatalist(catSel);
 }
 
 function purBatchKey(e,el){
