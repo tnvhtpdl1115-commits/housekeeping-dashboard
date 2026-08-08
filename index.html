@@ -4355,7 +4355,22 @@ function setInvQty(itemName, category, value){
     weeklyData[weekKey].push(newObj);
     dbSaveWeekly(month,weekKey,newObj);
   }
-  renderInv();
+  // 전체 리렌더는 포커스를 깨므로 하지 않음. 메트릭만 조용히 갱신.
+  updateInvMetricsOnly();
+}
+
+// 표 전체를 다시 그리지 않고 상단 메트릭(재고부족 등)만 갱신
+function updateInvMetricsOnly(){
+  if(!currentSnapDate) return;
+  const items=weeklyItems[currentInvCategory]||[];
+  const weekData=weeklyData[currentSnapDate]||[];
+  const low=items.filter(item=>{
+    const wd=weekData.find(w=>w.itemName===item.name&&w.currQty!==null&&w.currQty!==undefined);
+    const minQty=item.minQty||0;
+    return wd&&minQty>0&&wd.currQty<minQty;
+  }).length;
+  const lowEl=document.querySelector('#inv-metrics .metric-low-val');
+  if(lowEl) lowEl.textContent=low+'';
 }
 
 function weeklyQtyChange(month, itemName, delta, category){
