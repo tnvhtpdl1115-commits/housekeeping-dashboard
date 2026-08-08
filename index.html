@@ -512,6 +512,7 @@ tr:hover td{background:#fafaf8}
       <div style="flex:1"></div>
       <button class="btn-s" onclick="openWeeklyCheckModal()"><i class="ti ti-clipboard-check"></i> 재고조사</button>
       <button class="btn-s" onclick="setMonthClosing()" style="color:#854F0B;border-color:#C9A84C"><i class="ti ti-flag"></i> 월마감 설정</button>
+      <button class="btn-s" onclick="migrateWeekToDate()" style="color:#7A4FB8;border-color:#C9A8E8" title="기존 주차 데이터를 날짜로 1회 변환"><i class="ti ti-refresh"></i> 주차→날짜 변환</button>
       <button class="btn-p" onclick="openInvItemRegModal()"><i class="ti ti-plus"></i> 품목 등록</button>
     </div>
     <div class="metrics" id="inv-metrics"></div>
@@ -4891,6 +4892,47 @@ function exportAnalysis(){
   const a=document.createElement('a');a.href=url;a.download=`소모량분석_${thisMonthKey()}.csv`;a.click();
   URL.revokeObjectURL(url);
 }
+// ===== 기존 주차 데이터 → 날짜 변환 (1회성 마이그레이션) =====
+async function migrateWeekToDate(){
+  // 주차 키(YYYY-MM-W#) 목록 수집
+  const weekKeys=Object.keys(weeklyData).filter(k=>/^\d{4}-\d{2}-W\d$/.test(k));
+  if(weekKeys.length===0){
+    alert('변환할 주차 데이터가 없습니다. (이미 변환됐거나 데이터 없음)');
+    return;
+  }
+  const weekToDay={1:'01',2:'08',3:'15',4:'22',5:'29'};
+  let converted=0, skipped=0;
+  const summary=[];
+  for(const wk of weekKeys){
+    const m=wk.match(/^(\d{4}-\d{2})-W(\d)$/);
+    if(!m) continue;
+    const month=m[1], week=parseInt(m[2]);
+    const day=weekToDay[week];
+    if(!day) continue;
+    const dateKey=`${month}-${day}`;
+    // 이미 해당 날짜 데이터가 있으면 건너뜀
+    if(weeklyData[dateKey]&&weeklyData[dateKey].length>0){
+      skipped++;
+      continue;
+    }
+    const rows=weeklyData[wk];
+    // 새 날짜 키로 복사
+    weeklyData[dateKey]=rows.map(r=>({...r}));
+    // DB 업데이트: 각 행의 week 컬럼을 날짜로
+    for(const r of rows){
+      await dbSaveWeekly(month,dateKey,r);
+    }
+    // 기존 주차 키 제거 (메모리)
+    delete weeklyData[wk];
+    converted++;
+    summary.push(`${wk} → ${dateKey}`);
+  }
+  alert(`변환 완료!\n\n변환: ${converted}건\n건너뜀(이미 존재): ${skipped}건\n\n${summary.slice(0,10).join('\n')}${summary.length>10?'\n...':''}\n\n※ 기존 주차 DB 행은 그대로 남아있습니다. 확인 후 문제없으면 Supabase에서 정리하세요.`);
+  buildInvMonthSel();
+  updateSnapTabs();
+  renderInv();
+}
+
 async function dbSaveWeekly(month,week,obj){
   // week에 날짜(YYYY-MM-DD)가 올 수 있음. month는 날짜의 앞부분으로 정규화
   const wStr=String(week);
