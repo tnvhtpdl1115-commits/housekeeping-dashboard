@@ -507,13 +507,8 @@ tr:hover td{background:#fafaf8}
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
       <select id="inv-month-sel" onchange="renderInv();updateMonthBadge('inv-month-sel','inv-month-badge')" style="font-size:14px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;background:#1a3a5f;color:#ffffff;font-family:'Noto Sans KR',sans-serif;cursor:pointer;min-width:110px"></select><span id="inv-month-badge" style="font-size:28px;font-weight:800;color:#1a3a5f;letter-spacing:-1px;line-height:1"></span>
       <button class="btn-s" onclick="invNewMonth()"><i class="ti ti-calendar-plus"></i> 새 달 시작</button>
-      <div class="tab-sub" id="inv-week-tabs">
-        <button class="on" onclick="selWeek(1)">1주차</button>
-        <button onclick="selWeek(2)">2주차</button>
-        <button onclick="selWeek(3)">3주차</button>
-        <button onclick="selWeek(4)">4주차</button>
-        <button onclick="selWeek(5)">5주차</button>
-      </div>
+      <div class="tab-sub" id="inv-snap-tabs" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"></div>
+      <button class="btn-s" onclick="addSnapDate()" style="color:#185FA5;border-color:#9dc3f0"><i class="ti ti-plus"></i> 새 조사</button>
       <div style="flex:1"></div>
       <button class="btn-s" onclick="openWeeklyCheckModal()"><i class="ti ti-clipboard-check"></i> 재고조사</button>
       <button class="btn-s" onclick="setMonthClosing()" style="color:#854F0B;border-color:#C9A84C"><i class="ti ti-flag"></i> 월마감 설정</button>
@@ -3937,6 +3932,31 @@ let weeklyItems = {
 
 let currentWeek = 1;
 let monthClosingWeek = {}; // {month: week} 예: {'2026-06': 4}
+let currentSnapDate = null; // 현재 선택된 조사 날짜 'YYYY-MM-DD'
+
+// 특정 월의 조사 날짜 목록을 weeklyData 키에서 추출 (날짜 키만, 오름차순)
+function getSnapDates(month){
+  return Object.keys(weeklyData)
+    .filter(k=>k.startsWith(month+'-')&&/^\d{4}-\d{2}-\d{2}$/.test(k))
+    .sort();
+}
+
+// 특정 날짜의 직전 조사 날짜 키 반환 (같은 달 우선, 없으면 이전 달 마지막)
+function getPrevSnapKey(month,dateKey){
+  // 전체 날짜 스냅샷을 시간순으로
+  const allDates=Object.keys(weeklyData)
+    .filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k))
+    .sort();
+  const idx=allDates.indexOf(dateKey);
+  if(idx>0) return allDates[idx-1];
+  return null;
+}
+
+// 날짜 표시용 (7/12 형태)
+function fmtSnapLabel(dateKey){
+  const parts=dateKey.split('-');
+  return `${parseInt(parts[1])}/${parseInt(parts[2])}`;
+}
 
 function getWeekOfMonth(date){
   const d=date||new Date();
@@ -3948,21 +3968,88 @@ function getCurrentWeekKey(){
   return getWeekKey(mkKey(n.getFullYear(),n.getMonth()+1),getWeekOfMonth(n));
 }
 
-function updateWeekTabs(){
+function updateSnapTabs(){
   const month=getInvMonth();
-  const closingWeek=monthClosingWeek[month]||null;
-  const tabs=document.getElementById('inv-week-tabs');
+  const tabs=document.getElementById('inv-snap-tabs');
   if(!tabs)return;
-  tabs.innerHTML=[1,2,3,4,5].map(w=>{
-    const weekKey=getWeekKey(month,w);
-    const hasData=(weeklyData[weekKey]||[]).some(d=>d.currQty!==null&&d.currQty!==undefined);
-    const isClosing=closingWeek===w;
-    const isActive=currentWeek===w;
-    return `<button onclick="selWeek(${w})" style="${isActive?'background:#1a1a18;color:#fff;border-color:#1a1a18':''};position:relative">
-      ${w}주차${hasData?' ✅':''}
-      ${isClosing?`<span style="position:absolute;top:-8px;right:-4px;background:#C9A84C;color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:4px">월마감</span>`:''}
+  const dates=getSnapDates(month);
+  // 현재 선택된 날짜가 이 달에 없으면 마지막 날짜로
+  if(!currentSnapDate||!currentSnapDate.startsWith(month)){
+    currentSnapDate=dates.length>0?dates[dates.length-1]:null;
+  }
+  if(dates.length===0){
+    tabs.innerHTML='<span style="font-size:12px;color:#9b9b97;padding:4px 8px">조사 기록이 없습니다. "새 조사"로 추가하세요.</span>';
+    return;
+  }
+  tabs.innerHTML=dates.map(dk=>{
+    const isActive=currentSnapDate===dk;
+    const hasData=(weeklyData[dk]||[]).some(d=>d.currQty!==null&&d.currQty!==undefined);
+    return `<button onclick="selSnap('${dk}')" style="${isActive?'background:#1a1a18;color:#fff;border-color:#1a1a18':''};position:relative;padding:5px 12px">
+      ${fmtSnapLabel(dk)}${hasData?' ✅':''}
+      <span onclick="event.stopPropagation();deleteSnap('${dk}')" style="margin-left:5px;color:${isActive?'#ffb3b3':'#ccc'};font-weight:700" title="삭제">×</span>
     </button>`;
   }).join('');
+}
+
+function selSnap(dateKey){
+  currentSnapDate=dateKey;
+  updateSnapTabs();
+  renderInv();
+}
+
+function addSnapDate(){
+  const month=getInvMonth();
+  const today=new Date().toISOString().slice(0,10);
+  const defaultDate=today.startsWith(month)?today:`${month}-01`;
+  const input=prompt(`조사 날짜를 입력하세요 (예: ${fmtSnapLabel(defaultDate)} 또는 ${defaultDate})`,fmtSnapLabel(defaultDate));
+  if(!input)return;
+  // 날짜 파싱 (7/12, 7-12, 2026-07-12 등)
+  let dateKey=parseSnapDate(input.trim(),month);
+  if(!dateKey){alert('날짜 형식을 확인하세요. 예: 7/12');return;}
+  if(!dateKey.startsWith(month)){
+    if(!confirm(`입력한 날짜(${dateKey})가 현재 선택된 달(${month})과 다릅니다.\n그래도 추가할까요?`)) return;
+  }
+  if(weeklyData[dateKey]&&weeklyData[dateKey].length>0){
+    alert('이미 해당 날짜의 조사 기록이 있습니다.');
+    currentSnapDate=dateKey;
+    updateSnapTabs();renderInv();
+    return;
+  }
+  // 빈 스냅샷 생성 (렌더 시 이전 재고 자동 승계)
+  if(!weeklyData[dateKey]) weeklyData[dateKey]=[];
+  currentSnapDate=dateKey;
+  updateSnapTabs();
+  renderInv();
+  showToast('📋 조사 추가',`${fmtSnapLabel(dateKey)} 조사가 추가됐습니다`,'grn');
+}
+
+// 날짜 문자열 파싱 → YYYY-MM-DD
+function parseSnapDate(v,month){
+  const [defY,defM]=month.split('-');
+  if(/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+  let m=v.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
+  if(m) return `${m[1]}-${String(+m[2]).padStart(2,'0')}-${String(+m[3]).padStart(2,'0')}`;
+  m=v.match(/^(\d{1,2})[-/.](\d{1,2})$/);
+  if(m) return `${defY}-${String(+m[1]).padStart(2,'0')}-${String(+m[2]).padStart(2,'0')}`;
+  m=v.match(/^(\d{1,2})$/); // 일자만
+  if(m) return `${defY}-${defM}-${String(+m[1]).padStart(2,'0')}`;
+  return null;
+}
+
+function deleteSnap(dateKey){
+  if(!confirm(`${fmtSnapLabel(dateKey)} 조사 기록을 삭제할까요?\n(해당 날짜의 모든 품목 재고 데이터가 삭제됩니다)`)) return;
+  // DB 삭제
+  const rows=weeklyData[dateKey]||[];
+  rows.forEach(r=>{if(r.dbId) dbDeleteWeeklyRow(r.dbId);});
+  delete weeklyData[dateKey];
+  currentSnapDate=null;
+  updateSnapTabs();
+  renderInv();
+}
+
+function updateWeekTabs(){
+  // 날짜 방식으로 대체됨 - 스냅샷 탭 갱신
+  updateSnapTabs();
 }
 
 function setMonthClosing(){
@@ -4018,35 +4105,36 @@ function renderInv(){
   }
   document.getElementById('inv-weekly-section').style.display='block';
   document.getElementById('inv-monthly-section').style.display='none';
-  const weekKey=getWeekKey(month,currentWeek);
-  // 1주차면 지난달 마지막 주차 참조
-  let prevWeekKey=null;
-  if(currentWeek>1){
-    prevWeekKey=getWeekKey(month,currentWeek-1);
-  } else {
-    const [y,m]=month.split('-').map(Number);
-    const prevMonthDate=new Date(y,m-2,1);
-    const prevMonth=mkKey(prevMonthDate.getFullYear(),prevMonthDate.getMonth()+1);
-    for(let w=5;w>=1;w--){
-      const k=getWeekKey(prevMonth,w);
-      if((weeklyData[k]||[]).some(d=>d.currQty!==null&&d.currQty!==undefined)){prevWeekKey=k;break;}
-    }
+
+  // 조사 날짜가 없으면 안내만
+  const snapDates=getSnapDates(month);
+  if(snapDates.length===0||!currentSnapDate){
+    const titleEl0=document.getElementById('inv-title');
+    if(titleEl0) titleEl0.textContent=`${month.replace('-','년 ')}월 재고 (조사 없음)`;
+    document.getElementById('inv-tbody').innerHTML='<tr><td colspan="8" class="empty" style="padding:30px">"새 조사" 버튼으로 조사 날짜를 추가하세요</td></tr>';
+    document.getElementById('inv-metrics').innerHTML='';
+    return;
   }
+
+  const weekKey=currentSnapDate; // 날짜 키
+  // 직전 조사 스냅샷 (시간순 바로 앞)
+  let prevWeekKey=getPrevSnapKey(month,currentSnapDate);
   const items=weeklyItems[currentInvCategory]||[];
   const weekData=weeklyData[weekKey]||[];
   // 실제 조사된 데이터만 prevData로 사용 (currQty가 null이면 제외)
   const prevData=prevWeekKey?(weeklyData[prevWeekKey]||[]).filter(w=>w.currQty!==null&&w.currQty!==undefined):[];
   const catName={consumable:'소모품',equipment:'비품',maintenance:'정비용품',rental:'대여품',facility:'시설용품'}[currentInvCategory]||'';
   const titleEl=document.getElementById('inv-title');
-  if(titleEl) titleEl.textContent=`${month.replace('-','년 ')}월 ${currentWeek}주차 ${catName} 재고`;
+  const prevLabel=prevWeekKey?fmtSnapLabel(prevWeekKey):'없음';
+  if(titleEl) titleEl.textContent=`${fmtSnapLabel(currentSnapDate)} 조사 · ${catName} 재고 (직전: ${prevLabel})`;
 
-  // 구매 입고량 계산 - DB의 inQty와 중복 안 되게 purData 기반으로만 계산
-  const weekStart=new Date(month.split('-')[0],month.split('-')[1]-1,(currentWeek-1)*7+1);
-  const weekEnd=new Date(month.split('-')[0],month.split('-')[1]-1,currentWeek*7);
-  const purItems=(purData[month]||[]).filter(p=>{
+  // 구매 입고량 계산 - 직전 조사일 다음날 ~ 이번 조사일 사이 입고
+  const curDate=new Date(currentSnapDate);
+  const prevDate=prevWeekKey?new Date(prevWeekKey):new Date(month+'-01');
+  const purItems=Object.values(purData).flat().filter(p=>{
     if(p.status!=='received') return false;
     const pd=new Date(p.date);
-    return pd>=weekStart&&pd<=weekEnd&&(p.category===currentInvCategory);
+    return pd>prevDate&&pd<=curDate&&(p.category===currentInvCategory);
   });
 
   // 메트릭
@@ -4123,22 +4211,13 @@ function renderInv(){
 
 function openWeeklyCheckModal(){
   const month=getInvMonth();
-  const weekKey=getWeekKey(month,currentWeek);
-  let prevWeekKey=null;
-  if(currentWeek>1){
-    prevWeekKey=getWeekKey(month,currentWeek-1);
-  } else {
-    const [y,m]=month.split('-').map(Number);
-    const prevMonth=mkKey(new Date(y,m-2,1).getFullYear(),new Date(y,m-2,1).getMonth()+1);
-    for(let w=5;w>=1;w--){
-      const k=getWeekKey(prevMonth,w);
-      if((weeklyData[k]||[]).some(d=>d.currQty!==null&&d.currQty!==undefined)){prevWeekKey=k;break;}
-    }
-  }
+  if(!currentSnapDate){alert('먼저 "새 조사" 버튼으로 조사 날짜를 추가하세요.');return;}
+  const weekKey=currentSnapDate;
+  let prevWeekKey=getPrevSnapKey(month,currentSnapDate);
   const items=weeklyItems[currentInvCategory]||[];
   const weekData=weeklyData[weekKey]||[];
   const prevData=prevWeekKey?weeklyData[prevWeekKey]||[]:[];
-  document.getElementById('weekly-check-title').textContent=`${month.replace('-','년 ')}월 ${currentWeek}주차 재고조사`;
+  document.getElementById('weekly-check-title').textContent=`${fmtSnapLabel(currentSnapDate)} 조사 · 재고입력`;
   const container=document.getElementById('weekly-check-items');
   if(!items.length){container.innerHTML='<div class="empty">등록된 품목이 없습니다</div>';openModal('weekly-check-modal');return;}
   container.innerHTML=items.map(item=>{
@@ -4148,7 +4227,7 @@ function openWeeklyCheckModal(){
     const currQty=wd?wd.currQty:prevQty;
     return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(0,0,0,0.06)">
       <div style="flex:1;font-size:13px;font-weight:500">${item.name}</div>
-      <div style="font-size:11px;color:#6b6b68">전주: ${prevQty}${item.unit}</div>
+      <div style="font-size:11px;color:#6b6b68">직전: ${prevQty}${item.unit}</div>
       <div style="display:flex;align-items:center;gap:4px">
         <input type="number" class="wc-input" id="wc-${item.name.replace(/\s/g,'_')}" value="${currQty}" min="0"
           onkeydown="if(event.key==='Enter'||event.key==='ArrowDown'){event.preventDefault();const a=[...document.querySelectorAll('.wc-input')];const i=a.indexOf(this);if(a[i+1]){a[i+1].focus();a[i+1].select();}}else if(event.key==='ArrowUp'){event.preventDefault();const a=[...document.querySelectorAll('.wc-input')];const i=a.indexOf(this);if(a[i-1]){a[i-1].focus();a[i-1].select();}}"
@@ -4162,19 +4241,9 @@ function openWeeklyCheckModal(){
 
 async function saveWeeklyCheck(){
   const month=getInvMonth();
-  const weekKey=getWeekKey(month,currentWeek);
-  // 1주차면 지난달 마지막 주차 참조
-  let prevWeekKey=null;
-  if(currentWeek>1){
-    prevWeekKey=getWeekKey(month,currentWeek-1);
-  } else {
-    const [y,m]=month.split('-').map(Number);
-    const prevMonth=mkKey(new Date(y,m-2,1).getFullYear(),new Date(y,m-2,1).getMonth()+1);
-    for(let w=5;w>=1;w--){
-      const k=getWeekKey(prevMonth,w);
-      if((weeklyData[k]||[]).some(d=>d.currQty!==null&&d.currQty!==undefined)){prevWeekKey=k;break;}
-    }
-  }
+  if(!currentSnapDate){alert('조사 날짜가 선택되지 않았습니다.');return;}
+  const weekKey=currentSnapDate;
+  let prevWeekKey=getPrevSnapKey(month,currentSnapDate);
   const items=weeklyItems[currentInvCategory]||[];
   const prevData=prevWeekKey?weeklyData[prevWeekKey]||[]:[];
   if(!weeklyData[weekKey]) weeklyData[weekKey]=[];
@@ -4190,14 +4259,13 @@ async function saveWeeklyCheck(){
     const prevQty=pd?pd.currQty:0;
     const existingW=weeklyData[weekKey].find(w=>w.itemName===item.name);
     const inQty=existingW?(existingW.inQty||0):0;
-    // 전주 재고가 있고, 입고를 감안해도 비정상적 급변동인 경우
+    // 직전 재고가 있고, 입고를 감안해도 비정상적 급변동인 경우
     if(prevQty>0){
       const expected=prevQty+inQty; // 입고 반영한 예상 최대치
-      // 이번주 재고가 전주+입고보다 훨씬 크거나 (입고 없이 폭증), 90% 이상 급감한 경우
       if(currQty>expected*1.5 && currQty-expected>100){
-        warnings.push(`• ${item.name}: 전주 ${prevQty.toLocaleString()} + 입고 ${inQty.toLocaleString()} = ${expected.toLocaleString()} 인데 이번주 ${currQty.toLocaleString()} (입고 없이 폭증?)`);
+        warnings.push(`• ${item.name}: 직전 ${prevQty.toLocaleString()} + 입고 ${inQty.toLocaleString()} = ${expected.toLocaleString()} 인데 이번 ${currQty.toLocaleString()} (입고 없이 폭증?)`);
       } else if(currQty<prevQty*0.1 && prevQty-currQty>100){
-        warnings.push(`• ${item.name}: 전주 ${prevQty.toLocaleString()} → 이번주 ${currQty.toLocaleString()} (90% 이상 급감, 0 누락?)`);
+        warnings.push(`• ${item.name}: 직전 ${prevQty.toLocaleString()} → 이번 ${currQty.toLocaleString()} (90% 이상 급감, 0 누락?)`);
       }
     }
   }
@@ -4215,15 +4283,15 @@ async function saveWeeklyCheck(){
     const pd=prevData.find(w=>w.itemName===item.name);
     const prevQty=pd?pd.currQty:0;
     const existing=weeklyData[weekKey].find(w=>w.itemName===item.name);
-    const obj={itemName:item.name,unit:item.unit,prevQty,inQty:0,currQty,minQty:item.minQty||0,category:currentInvCategory};
+    const obj={itemName:item.name,unit:item.unit,prevQty,inQty:existing?(existing.inQty||0):0,currQty,minQty:item.minQty||0,category:currentInvCategory};
     if(existing){Object.assign(existing,obj);}
     else{weeklyData[weekKey].push(obj);}
-    // DB 저장
-    await dbSaveWeekly(month,currentWeek,obj);
+    // DB 저장 (날짜 키)
+    await dbSaveWeekly(month,weekKey,obj);
   }
   closeModal('weekly-check-modal');
   renderInv();
-  showToast('✅ 재고조사 저장됨',`${month.replace('-','년 ')}월 ${currentWeek}주차 재고가 저장됐습니다`,'grn');
+  showToast('✅ 재고조사 저장됨',`${fmtSnapLabel(currentSnapDate)} 조사가 저장됐습니다`,'grn');
 }
 
 function openInvItemRegModal(){
@@ -4775,13 +4843,23 @@ function exportAnalysis(){
   URL.revokeObjectURL(url);
 }
 async function dbSaveWeekly(month,week,obj){
-  const payload={month,week,item_name:obj.itemName,category:obj.category,prev_qty:obj.prevQty,in_qty:obj.inQty,curr_qty:obj.currQty,unit:obj.unit,min_qty:obj.minQty||0};
-  const {data:existing}=await supa.from('inv_weekly').select('id').eq('month',month).eq('week',week).eq('item_name',obj.itemName).eq('category',obj.category);
+  // week에 날짜(YYYY-MM-DD)가 올 수 있음. month는 날짜의 앞부분으로 정규화
+  const wStr=String(week);
+  const isDate=/^\d{4}-\d{2}-\d{2}$/.test(wStr);
+  const useMonth=isDate?wStr.substring(0,7):month;
+  const payload={month:useMonth,week:wStr,item_name:obj.itemName,category:obj.category,prev_qty:obj.prevQty,in_qty:obj.inQty,curr_qty:obj.currQty,unit:obj.unit,min_qty:obj.minQty||0};
+  const {data:existing}=await supa.from('inv_weekly').select('id').eq('month',useMonth).eq('week',wStr).eq('item_name',obj.itemName).eq('category',obj.category);
   if(existing&&existing.length>0){
     await supa.from('inv_weekly').update(payload).eq('id',existing[0].id);
+    obj.dbId=existing[0].id;
   } else {
-    await supa.from('inv_weekly').insert(payload);
+    const {data:ins}=await supa.from('inv_weekly').insert(payload).select();
+    if(ins&&ins[0]) obj.dbId=ins[0].id;
   }
+}
+
+async function dbDeleteWeeklyRow(id){
+  await supa.from('inv_weekly').delete().eq('id',id);
 }
 
 async function dbSaveWeeklyItem(category,item){
@@ -4800,7 +4878,14 @@ async function dbLoadWeekly(){
   if(wData){
     weeklyData={};
     wData.forEach(r=>{
-      const key=getWeekKey(r.month,r.week);
+      // week 값이 날짜(YYYY-MM-DD)면 그대로 키로, 숫자면 기존 W# 키로
+      let key;
+      const wStr=String(r.week);
+      if(/^\d{4}-\d{2}-\d{2}$/.test(wStr)){
+        key=wStr;
+      } else {
+        key=getWeekKey(r.month,r.week);
+      }
       if(!weeklyData[key]) weeklyData[key]=[];
       weeklyData[key].push({
         itemName:r.item_name,
@@ -4809,7 +4894,8 @@ async function dbLoadWeekly(){
         inQty:r.in_qty||0,
         currQty:r.curr_qty, // null 그대로 유지 (미조사)
         minQty:r.min_qty||0,
-        category:r.category
+        category:r.category,
+        dbId:r.id
       });
     });
   }
@@ -6279,8 +6365,10 @@ async function initApp(){
     if(!purData[tm]) purData[tm]=[];
     if(!costData[tm]) costData[tm]=[];
     if(!cpRecords[tm]) cpRecords[tm]=[];
-    // 현재 주차 자동 설정
+    // 현재 조사 날짜 자동 설정 (이번 달 마지막 조사일, 없으면 null)
     currentWeek=getWeekOfMonth(new Date());
+    const _tmDates=getSnapDates(tm);
+    currentSnapDate=_tmDates.length>0?_tmDates[_tmDates.length-1]:null;
     swMain('overview');
     // 각 탭 월 선택기를 현재 달로 강제 초기화
     buildCpMonthSel(true);
