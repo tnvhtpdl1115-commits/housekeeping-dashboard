@@ -4184,7 +4184,8 @@ function renderInv(){
           :`<div style="font-size:12px;color:#d8d5d0;line-height:1">-</div>`}
       </td>
       <td style="text-align:right;padding-right:12px">
-        <input type="number" class="inv-qty-input gnav" value="${surveyed?currQty:''}" placeholder="${prevQty||0}"
+        <input type="number" class="inv-qty-input" value="${surveyed?currQty:''}" placeholder="${prevQty||0}"
+          onkeydown="if(event.key==='Enter'){this.blur();}"
           onchange="setInvQty('${item.name}','${currentInvCategory}',this.value)"
           style="width:120px;font-size:17px;font-weight:700;color:${surveyed?'#0f1f3d':'#c0bdb8'};text-align:right;border:1px solid rgba(0,0,0,0.12);border-radius:8px;padding:6px 10px;background:#fff">
       </td>
@@ -4356,8 +4357,17 @@ function setInvQty(itemName, category, value){
     weeklyData[weekKey].push(newObj);
     dbSaveWeekly(month,weekKey,newObj);
   }
-  // 전체 리렌더는 포커스를 깨므로 하지 않음. 메트릭만 조용히 갱신.
-  updateInvMetricsOnly();
+  // 입력한 input의 위치 기억 → 리렌더 후 같은 칸으로 포커스 복원 (자동 이동 X)
+  const inputs=[...document.querySelectorAll('.inv-qty-input')];
+  const curInput=document.activeElement;
+  const curIdx=inputs.indexOf(curInput);
+  renderInv();
+  requestAnimationFrame(()=>{
+    if(curIdx<0) return;
+    const newInputs=[...document.querySelectorAll('.inv-qty-input')];
+    const target=newInputs[curIdx];
+    if(target){target.focus();}
+  });
 }
 
 // 표 전체를 다시 그리지 않고 상단 메트릭(재고부족 등)만 갱신
