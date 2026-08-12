@@ -4092,7 +4092,7 @@ function setMonthClosing(){
     const isCur=cur===d;
     const hasData=(weeklyData[d]||[]).some(x=>x.currQty!==null&&x.currQty!==undefined);
     return `<button onclick="pickMonthClosing('${d}')" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:8px;border:1px solid ${isCur?'#C9A84C':'rgba(0,0,0,0.15)'};background:${isCur?'#FAF3E0':'#fff'};cursor:pointer;font-size:14px;font-family:'Noto Sans KR',sans-serif">
-      <span style="font-weight:600">${fmtSnapLabel(d)} 조사${hasData?'':' <span style=\"color:#c0bdb8;font-size:11px\">(미입력)</span>':''}</span>
+      <span style="font-weight:600">${fmtSnapLabel(d)} 조사${hasData?'':' <span style=\"color:#c0bdb8;font-size:11px\">(미입력)</span>'}</span>
       ${isCur?'<span style="color:#854F0B;font-size:12px;font-weight:700">✓ 현재 마감일</span>':''}
     </button>`;
   }).join('');
