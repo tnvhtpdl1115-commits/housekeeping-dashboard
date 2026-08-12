@@ -433,6 +433,19 @@ tr:hover td{background:#fafaf8}
   </div>
 </div>
 
+<!-- 모달: 월마감 날짜 선택 -->
+<div class="modal-bg" id="closing-modal">
+  <div class="modal" style="max-width:420px">
+    <h3>월말 마감일 설정</h3>
+    <p style="font-size:12px;color:#6b6b68;margin:4px 0 12px" id="closing-modal-desc">마감 기준일로 지정할 조사 날짜를 선택하세요.</p>
+    <div id="closing-date-list" style="display:flex;flex-direction:column;gap:6px"></div>
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn-s" onclick="clearMonthClosing()" style="color:#A32D2D">마감 해제</button>
+      <button class="btn-s" onclick="closeModal('closing-modal')">닫기</button>
+    </div>
+  </div>
+</div>
+
 <!-- 모달: 근무자 관리 -->
 <div class="modal-bg" id="worker-modal">
   <div class="modal">
@@ -4067,27 +4080,41 @@ function updateWeekTabs(){
 
 function setMonthClosing(){
   const month=getInvMonth();
-  const cur=monthClosingWeek[month]||null;
   const dates=getSnapDates(month);
   if(dates.length===0){
     alert('이 달에 조사 기록이 없습니다. 먼저 재고 조사를 등록하세요.');
     return;
   }
-  const listStr=dates.map((d,i)=>`${i+1}. ${fmtSnapLabel(d)}${cur===d?' (현재 마감일)':''}`).join('\n');
-  const val=prompt(`${month.replace('-','년 ')}월 월말 마감일을 선택하세요.\n\n${listStr}\n\n번호를 입력하세요 (해제하려면 0)`,'');
-  if(val===null)return;
-  const n=parseInt(val);
-  if(n===0){
-    delete monthClosingWeek[month];
-    showToast('📅 월마감 해제',`${month.replace('-','년 ')}월 월마감이 해제됐습니다`,'grn');
-  } else if(n>=1&&n<=dates.length){
-    monthClosingWeek[month]=dates[n-1];
-    showToast('📅 월마감 설정',`${fmtSnapLabel(dates[n-1])} 조사가 월마감으로 설정됐습니다`,'grn');
-  } else {
-    alert('목록의 번호 또는 0을 입력하세요.');return;
-  }
+  const cur=monthClosingWeek[month]||null;
+  document.getElementById('closing-modal-desc').textContent=`${month.replace('-','년 ')}월 마감 기준일로 지정할 조사 날짜를 선택하세요.`;
+  const list=document.getElementById('closing-date-list');
+  list.innerHTML=dates.map(d=>{
+    const isCur=cur===d;
+    const hasData=(weeklyData[d]||[]).some(x=>x.currQty!==null&&x.currQty!==undefined);
+    return `<button onclick="pickMonthClosing('${d}')" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:8px;border:1px solid ${isCur?'#C9A84C':'rgba(0,0,0,0.15)'};background:${isCur?'#FAF3E0':'#fff'};cursor:pointer;font-size:14px;font-family:'Noto Sans KR',sans-serif">
+      <span style="font-weight:600">${fmtSnapLabel(d)} 조사${hasData?'':' <span style=\"color:#c0bdb8;font-size:11px\">(미입력)</span>':''}</span>
+      ${isCur?'<span style="color:#854F0B;font-size:12px;font-weight:700">✓ 현재 마감일</span>':''}
+    </button>`;
+  }).join('');
+  openModal('closing-modal');
+}
+
+function pickMonthClosing(dateKey){
+  const month=getInvMonth();
+  monthClosingWeek[month]=dateKey;
   dbSaveSettings('month_closing_weeks',monthClosingWeek);
   updateSnapTabs();
+  closeModal('closing-modal');
+  showToast('📅 월마감 설정',`${fmtSnapLabel(dateKey)} 조사가 월마감으로 설정됐습니다`,'grn');
+}
+
+function clearMonthClosing(){
+  const month=getInvMonth();
+  delete monthClosingWeek[month];
+  dbSaveSettings('month_closing_weeks',monthClosingWeek);
+  updateSnapTabs();
+  closeModal('closing-modal');
+  showToast('📅 월마감 해제',`${month.replace('-','년 ')}월 월마감이 해제됐습니다`,'grn');
 }
 
 function selWeek(w){
