@@ -626,7 +626,7 @@ tr:hover td{background:#fafaf8}
     <!-- 분석 테이블 -->
     <div class="card">
       <div class="ct">소모량 분석표
-        <span style="font-size:11px;font-weight:400;color:#6b6b68">객실 <span id="analysis-room-count">471</span>개 기준</span>
+        <span style="font-size:11px;font-weight:400;color:#6b6b68">객실 <span id="analysis-room-count">471</span>개 기준 · <span id="analysis-data-note" style="color:#854F0B"></span></span>
       </div>
       <div style="overflow-x:auto">
         <table id="analysis-table" style="width:100%;min-width:1000px;table-layout:fixed;border-collapse:collapse">
@@ -4689,10 +4689,38 @@ function getWeeklyUsage(itemName, category){
   return intervalCount>0?Math.round(totalUsage/intervalCount):0;
 }
 
+// 실측 데이터가 있는 월 목록 (날짜 스냅샷 기준)
+function getMonthsWithData(){
+  return [...new Set(
+    Object.keys(weeklyData)
+      .filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k))
+      .map(k=>k.substring(0,7))
+  )].sort();
+}
+
+// 품목의 실측 기반 월평균 소모량 (데이터 있는 월들의 평균)
+function getAvgMonthlyUsage(itemName,category){
+  const months=getMonthsWithData();
+  if(months.length===0) return {avg:0,monthCount:0,thisMonth:0};
+  let sum=0, cnt=0;
+  months.forEach(m=>{
+    const u=getMonthlyUsage(itemName,category,m);
+    if(u>0){sum+=u;cnt++;}
+  });
+  const thisM=mkKey(new Date().getFullYear(),new Date().getMonth()+1);
+  const thisMonthUsage=getMonthlyUsage(itemName,category,thisM);
+  return {avg:cnt>0?Math.round(sum/cnt):0, monthCount:cnt, thisMonth:thisMonthUsage};
+}
+
 function renderAnalysis(){
   const cat=document.getElementById('analysis-cat')?.value||'all';
   const roomCount=seoulRooms.length||471;
   document.getElementById('analysis-room-count').textContent=roomCount;
+  const _noteEl=document.getElementById('analysis-data-note');
+  if(_noteEl){
+    const mc=getMonthsWithData().length;
+    _noteEl.textContent=mc>0?`월간=실측 월평균, 연간=월평균×12 (실측 ${mc}개월 기준 추정)`:'데이터 없음';
+  }
   // 분석할 품목 목록
   let items=[];
   if(cat==='all'||cat==='consumable') items=[...items,...(weeklyItems.consumable||[]).map(i=>({...i,category:'consumable'}))];
@@ -4708,19 +4736,22 @@ function renderAnalysis(){
     return;
   }
 
+  const monthsData=getMonthsWithData();
+  const dataMonthCount=monthsData.length;
   let totalYearCost=0;
   const rows=items.map(item=>{
     const master=invMaster[item.name]||{supplier:'',eaPrice:0,note:''};
-    const weekUsage=getWeeklyUsage(item.name,item.category);
+    const weekUsage=getWeeklyUsage(item.name,item.category);       // 주간: 최근 구간 평균 (유지)
     const dayUsage=weekUsage/7;
-    const monthUsage=Math.round(weekUsage*4.3);
-    const yearUsage=monthUsage*12;
+    const mAgg=getAvgMonthlyUsage(item.name,item.category);        // 실측 월 데이터
+    const monthUsage=mAgg.avg;                                     // 월간: 실측 월평균
+    const yearUsage=mAgg.avg*12;                                   // 연간: 월평균 × 12 (실측 기반 추정)
     const perRoom=roomCount>0?(weekUsage/roomCount).toFixed(2):0;
     const eaPrice=master.eaPrice||0;
     const monthCost=monthUsage*eaPrice;
     const yearCost=yearUsage*eaPrice;
     totalYearCost+=yearCost;
-    return {item,master,weekUsage,dayUsage,monthUsage,yearUsage,perRoom,eaPrice,monthCost,yearCost};
+    return {item,master,weekUsage,dayUsage,monthUsage,yearUsage,perRoom,eaPrice,monthCost,yearCost,dataMonthCount:mAgg.monthCount};
   });
 
   // 비율 계산 후 테이블 렌더
