@@ -4184,9 +4184,8 @@ function renderInv(){
           :`<div style="font-size:12px;color:#d8d5d0;line-height:1">-</div>`}
       </td>
       <td style="text-align:right;padding-right:12px">
-        <input type="number" class="inv-qty-input" value="${surveyed?currQty:''}" placeholder="${prevQty||0}"
-          onkeydown="if(event.key==='Enter'){this.blur();}"
-          onchange="setInvQty('${item.name}','${currentInvCategory}',this.value)"
+        <input type="number" class="inv-qty-input gnav" value="${surveyed?currQty:''}" placeholder="${prevQty||0}"
+          onchange="setInvQtyQuiet('${item.name}','${currentInvCategory}',this.value)"
           style="width:120px;font-size:17px;font-weight:700;color:${surveyed?'#0f1f3d':'#c0bdb8'};text-align:right;border:1px solid rgba(0,0,0,0.12);border-radius:8px;padding:6px 10px;background:#fff">
       </td>
       <td style="text-align:right;padding-right:12px">
@@ -4327,6 +4326,37 @@ function saveInvItemReg(){
 }
 
 function setInvQty(itemName, category, value){
+  setInvQtyQuiet(itemName,category,value);
+  renderInv();
+}
+
+// 값만 저장하고 리렌더 안 함 (포커스/백스페이스/방향키 유지)
+function setInvQtyQuiet(itemName, category, value){
+  if(!currentSnapDate){return;}
+  const weekKey=currentSnapDate;
+  const month=getInvMonth();
+  const currQty=parseInt(value);
+  if(isNaN(currQty)){return;}
+  if(!weeklyData[weekKey]) weeklyData[weekKey]=[];
+  const prevKey=getPrevSnapKey(month,currentSnapDate);
+  const prevData=prevKey?(weeklyData[prevKey]||[]):[];
+  const pd=prevData.find(w=>w.itemName===itemName&&w.category===category);
+  const prevQty=pd&&pd.currQty!=null?pd.currQty:0;
+  const item=weeklyData[weekKey].find(w=>w.itemName===itemName&&w.category===category);
+  if(item){
+    item.currQty=Math.max(0,currQty);
+    item.prevQty=prevQty;
+    dbSaveWeekly(month,weekKey,item);
+  } else {
+    const masterItem=(weeklyItems[category]||[]).find(i=>i.name===itemName);
+    const newObj={itemName,unit:masterItem?masterItem.unit:'개',prevQty,inQty:0,currQty:Math.max(0,currQty),minQty:masterItem?masterItem.minQty:0,category};
+    weeklyData[weekKey].push(newObj);
+    dbSaveWeekly(month,weekKey,newObj);
+  }
+  updateInvMetricsOnly();
+}
+
+function setInvQtyOLD(itemName, category, value){
   if(!currentSnapDate){alert('먼저 조사 날짜를 선택/추가하세요.');return;}
   const weekKey=currentSnapDate;
   const month=getInvMonth();
