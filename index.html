@@ -4016,12 +4016,22 @@ function addSnapDate(){
     updateSnapTabs();renderInv();
     return;
   }
-  // 빈 스냅샷 생성 (렌더 시 이전 재고 자동 승계)
-  if(!weeklyData[dateKey]) weeklyData[dateKey]=[];
+  // 새 스냅샷 생성 + 모든 품목에 직전 실측 재고 승계
+  weeklyData[dateKey]=[];
+  ['consumable','equipment','maintenance','rental','facility'].forEach(cat=>{
+    (weeklyItems[cat]||[]).forEach(it=>{
+      const lastQty=getLastSurveyedQty(it.name,cat,dateKey);
+      if(lastQty!==null){
+        const obj={itemName:it.name,unit:it.unit,prevQty:lastQty,inQty:0,currQty:lastQty,minQty:it.minQty||0,category:cat};
+        weeklyData[dateKey].push(obj);
+        dbSaveWeekly(dateKey.substring(0,7),dateKey,obj);
+      }
+    });
+  });
   currentSnapDate=dateKey;
   updateSnapTabs();
   renderInv();
-  showToast('📋 조사 추가',`${fmtSnapLabel(dateKey)} 조사가 추가됐습니다`,'grn');
+  showToast('📋 조사 추가',`${fmtSnapLabel(dateKey)} 조사 추가 (직전 재고 승계됨)`,'grn');
 }
 
 // 날짜 문자열 파싱 → YYYY-MM-DD
