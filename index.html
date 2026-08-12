@@ -4519,14 +4519,17 @@ let invMaster = {}; // { itemName: {supplier, eaPrice, note} }
 
 // 특정 월의 총 소모량 계산 (해당 월 전체 주차 합산)
 function getMonthlyUsage(itemName, category, monthKey){
-  const [y,m]=monthKey.split('-').map(Number);
+  // 해당 월의 날짜 스냅샷들을 순회하며 각 구간 소모량 합산
+  const snapDates=Object.keys(weeklyData)
+    .filter(k=>k.startsWith(monthKey+'-')&&/^\d{4}-\d{2}-\d{2}$/.test(k))
+    .sort();
   let totalUsage=0;
-  for(let w=1;w<=5;w++){
-    const weekKey=getWeekKey(monthKey,w);
-    const prevKey=w>1?getWeekKey(monthKey,w-1):null;
-    const wd=weeklyData[weekKey]||[];
+  for(const dateKey of snapDates){
+    const wd=weeklyData[dateKey]||[];
     const item=wd.find(i=>i.itemName===itemName&&i.category===category);
     if(!item||item.currQty===null||item.currQty===undefined) continue;
+    // 직전 스냅샷 (전체 기간에서 바로 앞)
+    const prevKey=getPrevSnapKey(monthKey,dateKey);
     let prevQty;
     if(prevKey){
       const pd=weeklyData[prevKey]||[];
@@ -4543,31 +4546,33 @@ function getMonthlyUsage(itemName, category, monthKey){
 }
 
 function getWeeklyUsage(itemName, category){
-  // 최근 4주 평균 사용량 계산
-  const now=new Date();
-  const month=mkKey(now.getFullYear(),now.getMonth()+1);
-  let totalUsage=0, weekCount=0;
-  for(let w=1;w<=5;w++){
-    const weekKey=getWeekKey(month,w);
-    const prevKey=w>1?getWeekKey(month,w-1):null;
-    const wd=weeklyData[weekKey]||[];
-    const pd=prevKey?weeklyData[prevKey]||[]:[];
-    const item=wd.find(i=>i.itemName===itemName&&i.category===category);
-    if(!item||item.currQty===0) continue;
-    const prev=pd.find(i=>i.itemName===itemName);
-    const prevQty=prev?prev.currQty:item.prevQty||0;
-    // 구매 입고량
-    const purItems=(purData[month]||[]).filter(p=>{
-      const weekStart=new Date(now.getFullYear(),now.getMonth(),(w-1)*7+1);
-      const weekEnd=new Date(now.getFullYear(),now.getMonth(),w*7);
+  // 최근 조사 구간들의 평균 사용량 (스냅샷 간 소모량 평균)
+  const allDates=Object.keys(weeklyData)
+    .filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k))
+    .sort();
+  let totalUsage=0, intervalCount=0;
+  // 최근 5개 스냅샷 구간만 사용
+  const recent=allDates.slice(-6);
+  for(let i=1;i<recent.length;i++){
+    const dateKey=recent[i], prevKey=recent[i-1];
+    const wd=weeklyData[dateKey]||[];
+    const pd=weeklyData[prevKey]||[];
+    const item=wd.find(x=>x.itemName===itemName&&x.category===category);
+    if(!item||item.currQty===null||item.currQty===undefined) continue;
+    const prev=pd.find(x=>x.itemName===itemName&&x.category===category);
+    const prevQty=prev&&prev.currQty!=null?prev.currQty:(item.prevQty||0);
+    // 구간 내 입고량 (직전 조사일 다음날 ~ 이번 조사일)
+    const curDate=new Date(dateKey), prevDate=new Date(prevKey);
+    const purItems=Object.values(purData).flat().filter(p=>{
+      if(p.item!==itemName||p.status!=='received') return false;
       const pd2=new Date(p.date);
-      return p.item===itemName&&p.status==='received'&&pd2>=weekStart&&pd2<=weekEnd;
+      return pd2>prevDate&&pd2<=curDate;
     });
     const inQty=purItems.reduce((a,p)=>a+p.qty,0);
     const usage=prevQty+inQty-item.currQty;
-    if(usage>=0){totalUsage+=usage;weekCount++;}
+    if(usage>=0){totalUsage+=usage;intervalCount++;}
   }
-  return weekCount>0?Math.round(totalUsage/weekCount):0;
+  return intervalCount>0?Math.round(totalUsage/intervalCount):0;
 }
 
 function renderAnalysis(){
