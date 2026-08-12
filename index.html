@@ -512,7 +512,6 @@ tr:hover td{background:#fafaf8}
       <div style="flex:1"></div>
       <button class="btn-s" onclick="openWeeklyCheckModal()"><i class="ti ti-clipboard-check"></i> 재고조사</button>
       <button class="btn-s" onclick="setMonthClosing()" style="color:#854F0B;border-color:#C9A84C"><i class="ti ti-flag"></i> 월마감 설정</button>
-      <button class="btn-s" onclick="migrateWeekToDate()" style="color:#7A4FB8;border-color:#C9A8E8" title="기존 주차 데이터를 날짜로 1회 변환"><i class="ti ti-refresh"></i> 주차→날짜 변환</button>
       <button class="btn-p" onclick="openInvItemRegModal()"><i class="ti ti-plus"></i> 품목 등록</button>
     </div>
     <div class="metrics" id="inv-metrics"></div>
@@ -3982,11 +3981,14 @@ function updateSnapTabs(){
     tabs.innerHTML='<span style="font-size:12px;color:#9b9b97;padding:4px 8px">조사 기록이 없습니다. "새 조사"로 추가하세요.</span>';
     return;
   }
+  const closingDate=monthClosingWeek[month]||null;
   tabs.innerHTML=dates.map(dk=>{
     const isActive=currentSnapDate===dk;
     const hasData=(weeklyData[dk]||[]).some(d=>d.currQty!==null&&d.currQty!==undefined);
+    const isClosing=closingDate===dk;
     return `<button onclick="selSnap('${dk}')" style="${isActive?'background:#1a1a18;color:#fff;border-color:#1a1a18':''};position:relative;padding:5px 12px">
       ${fmtSnapLabel(dk)}${hasData?' ✅':''}
+      ${isClosing?`<span style="position:absolute;top:-8px;right:-4px;background:#C9A84C;color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:4px">월마감</span>`:''}
       <span onclick="event.stopPropagation();deleteSnap('${dk}')" style="margin-left:5px;color:${isActive?'#ffb3b3':'#ccc'};font-weight:700" title="삭제">×</span>
     </button>`;
   }).join('');
@@ -4066,19 +4068,26 @@ function updateWeekTabs(){
 function setMonthClosing(){
   const month=getInvMonth();
   const cur=monthClosingWeek[month]||null;
-  const val=prompt(`${month.replace('-','년 ')}월 월말 마감 주차를 설정하세요 (1~5)\n현재: ${cur?cur+'주차':'미설정'}\n해제하려면 0 입력`,cur||'');
+  const dates=getSnapDates(month);
+  if(dates.length===0){
+    alert('이 달에 조사 기록이 없습니다. 먼저 재고 조사를 등록하세요.');
+    return;
+  }
+  const listStr=dates.map((d,i)=>`${i+1}. ${fmtSnapLabel(d)}${cur===d?' (현재 마감일)':''}`).join('\n');
+  const val=prompt(`${month.replace('-','년 ')}월 월말 마감일을 선택하세요.\n\n${listStr}\n\n번호를 입력하세요 (해제하려면 0)`,'');
   if(val===null)return;
-  const w=parseInt(val);
-  if(w===0){
+  const n=parseInt(val);
+  if(n===0){
     delete monthClosingWeek[month];
-  } else if(w>=1&&w<=5){
-    monthClosingWeek[month]=w;
+    showToast('📅 월마감 해제',`${month.replace('-','년 ')}월 월마감이 해제됐습니다`,'grn');
+  } else if(n>=1&&n<=dates.length){
+    monthClosingWeek[month]=dates[n-1];
+    showToast('📅 월마감 설정',`${fmtSnapLabel(dates[n-1])} 조사가 월마감으로 설정됐습니다`,'grn');
   } else {
-    alert('1~5 또는 0을 입력하세요.');return;
+    alert('목록의 번호 또는 0을 입력하세요.');return;
   }
   dbSaveSettings('month_closing_weeks',monthClosingWeek);
-  updateWeekTabs();
-  showToast('📅 월마감 설정',w===0?`${month} 월마감 해제됨`:`${month}월 ${w}주차가 월마감으로 설정됐습니다`,'grn');
+  updateSnapTabs();
 }
 
 function selWeek(w){
