@@ -4558,6 +4558,20 @@ function renderLinenInv(){
 let invMaster = {}; // { itemName: {supplier, eaPrice, note} }
 
 // 특정 월의 총 소모량 계산 (해당 월 전체 주차 합산)
+// 특정 날짜 이전의 마지막 실측 재고를 찾음 (조사 안 한 스냅샷은 건너뛰고 계속 거슬러 올라감)
+function getLastSurveyedQty(itemName,category,beforeDateKey){
+  const allDates=Object.keys(weeklyData)
+    .filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)&&k<beforeDateKey)
+    .sort()
+    .reverse(); // 최신순
+  for(const dk of allDates){
+    const wd=weeklyData[dk]||[];
+    const it=wd.find(x=>x.itemName===itemName&&x.category===category);
+    if(it&&it.currQty!=null) return it.currQty;
+  }
+  return null;
+}
+
 function getMonthlyUsage(itemName, category, monthKey){
   // 해당 월의 날짜 스냅샷들을 순회하며 각 구간 소모량 합산
   const snapDates=Object.keys(weeklyData)
@@ -4568,21 +4582,35 @@ function getMonthlyUsage(itemName, category, monthKey){
     const wd=weeklyData[dateKey]||[];
     const item=wd.find(i=>i.itemName===itemName&&i.category===category);
     if(!item||item.currQty===null||item.currQty===undefined) continue;
-    // 직전 스냅샷 (전체 기간에서 바로 앞)
-    const prevKey=getPrevSnapKey(monthKey,dateKey);
-    let prevQty;
-    if(prevKey){
-      const pd=weeklyData[prevKey]||[];
-      const prev=pd.find(i=>i.itemName===itemName&&i.category===category);
-      prevQty=prev&&prev.currQty!=null?prev.currQty:(item.prevQty||0);
-    } else {
-      prevQty=item.prevQty||0;
-    }
-    const inQty=item.inQty||0;
+    // 직전 실측값 찾기 (조사 안 한 스냅샷은 건너뛰고 마지막 실측값 사용)
+    let prevQty=getLastSurveyedQty(itemName,category,dateKey);
+    if(prevQty===null) prevQty=item.prevQty||0;
+    // 입고 구간 기준일: 마지막 실측일 (없으면 월초)
+    const prevSurveyKey=getLastSurveyedDateKey(itemName,category,dateKey);
+    const curDate=new Date(dateKey);
+    const prevDate=prevSurveyKey?new Date(prevSurveyKey):new Date(monthKey+'-01');
+    const inQty=Object.values(purData).flat().filter(p=>{
+      if(p.item!==itemName||p.status!=='received') return false;
+      const pd2=new Date(p.date);
+      return pd2>prevDate&&pd2<=curDate;
+    }).reduce((a,p)=>a+p.qty,0);
     const usage=prevQty+inQty-item.currQty;
     if(usage>=0) totalUsage+=usage;
   }
   return totalUsage;
+}
+
+// 특정 날짜 이전, 마지막으로 실측된 스냅샷의 날짜키 반환
+function getLastSurveyedDateKey(itemName,category,beforeDateKey){
+  const allDates=Object.keys(weeklyData)
+    .filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)&&k<beforeDateKey)
+    .sort().reverse();
+  for(const dk of allDates){
+    const wd=weeklyData[dk]||[];
+    const it=wd.find(x=>x.itemName===itemName&&x.category===category);
+    if(it&&it.currQty!=null) return dk;
+  }
+  return null;
 }
 
 function getWeeklyUsage(itemName, category){
