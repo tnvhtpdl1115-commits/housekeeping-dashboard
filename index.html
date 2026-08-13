@@ -3122,11 +3122,6 @@ function addPur(){
     }
     if(p){
       const wasReceived=p.status==='received';
-      console.log(`수정 대상: item=${p.item}, status=${p.status}, wasReceived=${wasReceived}, oldInvWeek=${p.inv_week}`);
-      const oldInvWeek=p.inv_week;
-      const oldDate=p.date;
-      const oldQty=p.qty;
-      const oldCat=p.category||'consumable';
       Object.assign(p,{item,qty,price,amount,date,category:cat,status,inv_week:invWeek});
       dbSavePurchase(pMonth,p);
       // 비용 업데이트 (purId로 찾아서 금액/날짜 수정)
@@ -3142,27 +3137,9 @@ function addPur(){
         foundCost.label=item+' 발주';
         dbSaveCost(updCostMonth,foundCost);
       }
-      if(status==='received'){
-        if(!wasReceived||(wasReceived&&oldInvWeek!==invWeek)){
-          // 기존 주차 입고량 차감
-          if(wasReceived){
-            const oldWeek=oldInvWeek||Math.ceil(new Date(oldDate).getDate()/7);
-            const oldWeekKey=getWeekKey(pMonth,oldWeek);
-            console.log(`차감 시도: oldWeek=${oldWeek}, oldWeekKey=${oldWeekKey}, item=${item}, cat=${oldCat}`);
-            console.log(`weeklyData keys:`, Object.keys(weeklyData));
-            console.log(`해당 키 데이터:`, weeklyData[oldWeekKey]);
-            const wItem=(weeklyData[oldWeekKey]||[]).find(w=>w.itemName===item&&w.category===oldCat);
-            console.log(`찾은 wItem:`, wItem);
-            if(wItem){
-              wItem.inQty=Math.max(0,(wItem.inQty||0)-oldQty);
-              dbSaveWeekly(pMonth,oldWeek,wItem);
-              console.log(`기존 ${oldWeek}주차 입고 차감: ${item} -${oldQty}`);
-            }
-          }
-          console.log(`새 주차 반영: ${item} → ${invWeek}주차`);
-          autoUpdateInventory(p,date,invWeek);
-        }
-      }
+      // 입고량은 purData의 날짜로 자동 귀속되므로 수량·날짜 수정 시 별도 차감/재반영 불필요.
+      // 미입고 → 입고완료로 바뀔 때만 품목 마스터 등록/토스트 처리.
+      if(status==='received'&&!wasReceived) autoUpdateInventory(p,date);
     } else {
       console.warn('수정 대상 발주를 찾지 못했습니다. eid='+eid);
     }
@@ -3197,12 +3174,14 @@ function addPur(){
   renderPur();renderOverview();closeModal('pur-modal');
 }
 
+// 입고 반영 (날짜 스냅샷 방식)
+// 소모품/비품/정비용품의 입고량은 renderInv/getWeeklyUsage/getMonthlyUsage가
+// purData의 '날짜'로 구간 귀속해 계산한다. 따라서 여기서 weeklyData.inQty에
+// 따로 기록하면 이중계산이 되므로 기록하지 않고, 품목 마스터 등록만 처리한다.
+// (3번째 인자 invWeek는 구 주차 방식 잔재 — 호출부 호환용으로만 남겨둠)
 async function autoUpdateInventory(p, dateStr, invWeek){
   const d=new Date(dateStr);
   const month=mkKey(d.getFullYear(),d.getMonth()+1);
-  const week=invWeek||Math.ceil(d.getDate()/7);
-  console.log(`autoUpdateInventory: item=${p.item}, invWeek=${invWeek}, dateStr=${dateStr}, week=${week}`);
-  const weekKey=getWeekKey(month,week);
   const cat=p.category||'consumable';
   if(cat==='linen'){
     // 린넨은 월별 재고에 직접 반영
@@ -3220,50 +3199,29 @@ async function autoUpdateInventory(p, dateStr, invWeek){
     }
   } else {
     // 소모품/비품/정비용품: 입고 기록만 남기고 실사 수량은 건드리지 않음
+    // 품목 마스터에 없는 품목이면 자동 등록 (재고표에 보이도록)
     if(!weeklyItems[cat]) weeklyItems[cat]=[];
     const masterItem=weeklyItems[cat].find(i=>i.name===p.item);
     if(!masterItem){
       const newMaster={name:p.item,unit:'개',minQty:0};
       weeklyItems[cat].push(newMaster);
-      dbSaveWeeklyItem(cat,newMaster);
+      await dbSaveWeeklyItem(cat,newMaster);
     }
-    if(!weeklyData[weekKey]) weeklyData[weekKey]=[];
-    const wItem=weeklyData[weekKey].find(w=>w.itemName===p.item&&w.category===cat);
-    if(wItem){
-      wItem.inQty=(wItem.inQty||0)+p.qty;
-      await dbSaveWeekly(month,week,wItem);
-    } else {
-      const mi=weeklyItems[cat].find(i=>i.name===p.item);
-      // DB에서 기존 레코드 확인
-      const {data:existing}=await supa.from('inv_weekly').select('*').eq('month',month).eq('week',week).eq('item_name',p.item).eq('category',cat);
-      let saveItem;
-      if(existing&&existing.length>0){
-        const r=existing[0];
-        saveItem={itemName:r.item_name,unit:r.unit||mi?.unit||'개',prevQty:r.prev_qty||0,inQty:(r.in_qty||0)+p.qty,currQty:r.curr_qty,minQty:r.min_qty||0,category:cat};
-        weeklyData[weekKey].push(saveItem);
-      } else {
-        saveItem={itemName:p.item,unit:mi?.unit||'개',prevQty:0,inQty:p.qty,currQty:null,minQty:mi?.minQty||0,category:cat};
-        weeklyData[weekKey].push(saveItem);
-      }
-      await dbSaveWeekly(month,week,saveItem);
-    }
-    showToast(`📦 입고 기록됨`,`${p.item} ${p.qty}개 → ${month}월 ${week}주차 입고 반영`,'grn');
+    // 입고량 자체는 purData(날짜)에서 자동 계산되므로 별도 저장하지 않음
+    showToast(`📦 입고 기록됨`,`${p.item} ${p.qty}개 · ${dateStr} 입고 → 해당 구간 재고에 자동 반영`,'grn');
   }
-  if(document.getElementById('tab-inventory').classList.contains('on')) renderInv();
+  if(document.getElementById('tab-inventory')?.classList.contains('on')) renderInv();
 }
 
 function recvPur(month,id){
   const p=(purData[month]||[]).find(x=>x.id==id);
   if(!p) return;
-  // 재고 반영 주차 선택
-  const weekStr=prompt(`[${p.item}] 입고 반영할 주차를 선택하세요.\n\n발주일 기준 자동: 그냥 엔터\n특정 주차: 1~5 입력`,'');
-  const invWeek=(weekStr&&weekStr.trim())?parseInt(weekStr.trim())||null:null;
+  // 입고 반영 구간은 발주 날짜(p.date)로 자동 결정되므로 주차를 물어보지 않음
   p.status='received';
-  if(invWeek) p.inv_week=invWeek;
   dbSavePurchase(month,p);
-  autoUpdateInventory(p, p.date||todayStr, invWeek||p.inv_week||null);
+  autoUpdateInventory(p, p.date||todayStr);
   renderPur();
-  if(document.getElementById('tab-inventory').classList.contains('on')) renderInv();
+  if(document.getElementById('tab-inventory')?.classList.contains('on')) renderInv();
   renderOverview();
 }
 
@@ -4301,6 +4259,15 @@ async function saveWeeklyCheck(){
   if(!weeklyData[weekKey]) weeklyData[weekKey]=[];
 
   // B. 재고 급변동 방어 - 입력값을 먼저 검사
+  // 입고량은 renderInv와 동일하게 purData 구간(직전 조사일 다음날 ~ 이번 조사일) 기준
+  const chkCurDate=new Date(weekKey);
+  const chkPrevDate=prevWeekKey?new Date(prevWeekKey):new Date(month+'-01');
+  const chkPurItems=Object.values(purData).flat().filter(p=>{
+    if(p.status!=='received') return false;
+    if((p.category||'consumable')!==currentInvCategory) return false;
+    const pd2=new Date(p.date);
+    return pd2>chkPrevDate&&pd2<=chkCurDate;
+  });
   const warnings=[];
   for(const item of items){
     const inputId='wc-'+item.name.replace(/\s/g,'_');
@@ -4309,8 +4276,7 @@ async function saveWeeklyCheck(){
     const currQty=parseInt(el.value)||0;
     const pd=prevData.find(w=>w.itemName===item.name);
     const prevQty=pd?pd.currQty:0;
-    const existingW=weeklyData[weekKey].find(w=>w.itemName===item.name);
-    const inQty=existingW?(existingW.inQty||0):0;
+    const inQty=chkPurItems.filter(x=>x.item===item.name).reduce((a,x)=>a+x.qty,0);
     // 직전 재고가 있고, 입고를 감안해도 비정상적 급변동인 경우
     if(prevQty>0){
       const expected=prevQty+inQty; // 입고 반영한 예상 최대치
@@ -4918,14 +4884,14 @@ function renderOrderSuggestion(rows){
   const tbody=document.getElementById('order-sug-tbody');
   if(!card||!tbody)return;
   const month=getInvMonth();
-  // 현재 재고: 가장 최근 조사된 주차의 currQty
+  // 현재 재고: 선택 월의 마지막 실측 스냅샷 값
+  // (그 달에 실측이 없으면 getLastSurveyedQty가 이전 달로 거슬러 올라가 마지막 실측값을 찾음)
+  const stockCutoff=(()=>{
+    const [y,m]=month.split('-').map(Number);
+    return m===12?`${y+1}-01-01`:`${y}-${String(m+1).padStart(2,'0')}-01`;
+  })();
   function getCurrentStock(itemName,category){
-    for(let w=5;w>=1;w--){
-      const wd=weeklyData[getWeekKey(month,w)]||[];
-      const it=wd.find(i=>i.itemName===itemName&&i.category===category&&i.currQty!==null&&i.currQty!==undefined);
-      if(it) return it.currQty;
-    }
-    return null;
+    return getLastSurveyedQty(itemName,category,stockCutoff);
   }
   const SAFETY_WEEKS=2; // 2주분 안전재고
   const suggestions=[];
