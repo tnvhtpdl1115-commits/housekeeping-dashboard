@@ -4329,14 +4329,18 @@ function saveInvItemReg(){
   const cat=currentInvCategory==='linen'?'consumable':currentInvCategory;
   if(!weeklyItems[cat]) weeklyItems[cat]=[];
   if(weeklyItems[cat].find(i=>i.name===name)){alert('이미 등록된 품목입니다.');return;}
-  weeklyItems[cat].push({name,unit,minQty:min});
-  // 초기 재고를 현재 주차에 설정
+  // 초기 재고를 현재 선택된 조사 날짜 스냅샷에 설정
   const month=getInvMonth();
-  const weekKey=getWeekKey(month,currentWeek);
-  if(!weeklyData[weekKey]) weeklyData[weekKey]=[];
+  const snapKey=currentSnapDate;
+  if(!snapKey){
+    alert('조사 날짜가 선택되지 않았습니다. "새 조사" 버튼으로 날짜를 먼저 추가하세요.');
+    return;
+  }
+  weeklyItems[cat].push({name,unit,minQty:min});
+  if(!weeklyData[snapKey]) weeklyData[snapKey]=[];
   const obj={itemName:name,unit,prevQty:0,inQty:0,currQty:qty,minQty:min,category:cat};
-  weeklyData[weekKey].push(obj);
-  dbSaveWeekly(month,currentWeek,obj);
+  weeklyData[snapKey].push(obj);
+  dbSaveWeekly(month,snapKey,obj);
   dbSaveWeeklyItem(cat,{name,unit,minQty:min});
   closeModal('inv-item-reg-modal');
   renderInv();
@@ -4432,12 +4436,13 @@ function updateInvMetricsOnly(){
 }
 
 function weeklyQtyChange(month, itemName, delta, category){
-  const weekKey=getWeekKey(month,currentWeek);
+  const weekKey=currentSnapDate;
+  if(!weekKey){alert('조사 날짜가 선택되지 않았습니다.');return;}
   if(!weeklyData[weekKey]) weeklyData[weekKey]=[];
   const item=weeklyData[weekKey].find(w=>w.itemName===itemName&&w.category===category);
   if(item){
-    item.currQty=Math.max(0,item.currQty+delta);
-    dbSaveWeekly(month,currentWeek,item);
+    item.currQty=Math.max(0,(item.currQty||0)+delta);
+    dbSaveWeekly(month,weekKey,item);
   } else {
     const masterItem=(weeklyItems[category]||[]).find(i=>i.name===itemName);
     const newObj={
@@ -4450,13 +4455,13 @@ function weeklyQtyChange(month, itemName, delta, category){
       category:category
     };
     weeklyData[weekKey].push(newObj);
-    dbSaveWeekly(month,currentWeek,newObj);
+    dbSaveWeekly(month,weekKey,newObj);
   }
   renderInv();
 }
 
 function openEditWeeklyItem(month, name, cat){
-  const weekKey=getWeekKey(month,currentWeek);
+  const weekKey=currentSnapDate;
   const wd=(weeklyData[weekKey]||[]).find(w=>w.itemName===name&&w.category===cat);
   const mi=(weeklyItems[cat]||[]).find(i=>i.name===name);
   document.getElementById('ewm-old-name').value=name;
@@ -4488,16 +4493,17 @@ function saveEditWeeklyItem(){
         if(w) w.itemName=newName;
       });
     }
-    const weekKey=getWeekKey(month,currentWeek);
+    const weekKey=currentSnapDate;
+    if(!weekKey){alert('조사 날짜가 선택되지 않았습니다.');return;}
     if(!weeklyData[weekKey]) weeklyData[weekKey]=[];
     const wd=weeklyData[weekKey].find(w=>w.itemName===newName&&w.category===cat);
     if(wd){
       Object.assign(wd,{unit,currQty:qty,minQty:min});
-      dbSaveWeekly(month,currentWeek,wd);
+      dbSaveWeekly(month,weekKey,wd);
     } else {
       const newWd={itemName:newName,unit,prevQty:0,inQty:0,currQty:qty,minQty:min,category:cat};
       weeklyData[weekKey].push(newWd);
-      dbSaveWeekly(month,currentWeek,newWd);
+      dbSaveWeekly(month,weekKey,newWd);
     }
     dbSaveWeeklyItem(cat,{name:newName,unit,minQty:min});
     closeModal('edit-weekly-modal');
