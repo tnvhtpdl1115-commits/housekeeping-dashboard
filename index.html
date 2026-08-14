@@ -247,11 +247,11 @@ tr:hover td{background:#fafaf8}
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-logo">
     <h1>🏨 MarinaBay Seoul</h1>
-    <p>하우스키핑 관리</p>
+    <p>객실 관리</p>
   </div>
   <nav class="sidebar-nav">
     <div class="nav-item active" onclick="swMain('overview')" id="nav-overview">
-      <i class="ti ti-layout-dashboard"></i><span>개요</span>
+      <i class="ti ti-layout-dashboard"></i><span>홈</span>
     </div>
     <div class="nav-item" onclick="swMain('rooms')" id="nav-rooms">
       <i class="ti ti-building"></i><span>객실</span>
@@ -291,7 +291,7 @@ tr:hover td{background:#fafaf8}
 <div class="main-wrap" id="main-wrap">
   <!-- 상단바 -->
   <div class="topbar">
-    <div class="topbar-left" id="topbar-title">개요</div>
+    <div class="topbar-left" id="topbar-title">홈</div>
     <div class="topbar-right">
       <button class="notif-btn" onclick="toggleNotifPanel()" title="알림">
         🔔<span class="notif-dot" id="notif-dot"></span>
@@ -1445,7 +1445,7 @@ document.addEventListener('keydown',e=>{
 });
 // ── 탭 전환 ──
 const MAIN_TABS = ['overview','rooms','issues','handover','cp','inventory','linen','purchase','cost'];
-const MAIN_LABELS = {overview:'개요',rooms:'객실',issues:'특이사항',handover:'인수인계',cp:'CP관리',inventory:'재고',linen:'린넨관리',purchase:'구매',cost:'비용'};
+const MAIN_LABELS = {overview:'홈',rooms:'객실',issues:'특이사항',handover:'인수인계',cp:'CP관리',inventory:'재고',linen:'린넨관리',purchase:'구매',cost:'비용'};
 const SUB_MAP = {
   rooms:     {default:'seoul',  subs:['seoul','dorm']},
   issues:    {default:'facility', subs:['facility','clean','item']},
