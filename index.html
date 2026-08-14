@@ -2073,13 +2073,36 @@ function printReport(){
   setTimeout(()=>{win.print();},300);
 }
 
+// 재고 부족 품목 집계 (개요·알림 공용)
+// 날짜 스냅샷 기준: 각 품목의 "마지막 실측 재고" < 최소보유량 인 것만.
+// 반환 형태는 알림 UI가 쓰는 {name,qty,unit,min} 로 맞춘다.
+function getLowStockItems(){
+  const out=[];
+  // 이번 달까지의 마지막 실측을 보기 위한 cutoff (익월 1일)
+  const tm=thisMonthKey();
+  const [y,m]=tm.split('-').map(Number);
+  const cutoff=m===12?`${y+1}-01-01`:`${y}-${String(m+1).padStart(2,'0')}-01`;
+  Object.keys(weeklyItems||{}).forEach(cat=>{
+    (weeklyItems[cat]||[]).forEach(item=>{
+      const minQty=item.minQty||0;
+      if(minQty<=0) return; // 최소보유량 미설정 품목은 판단 불가 → 제외
+      const qty=getLastSurveyedQty(item.name,cat,cutoff);
+      if(qty===null||qty===undefined) return; // 한 번도 실측 안 한 품목은 제외
+      if(qty<minQty) out.push({name:item.name,qty,unit:item.unit||'개',min:minQty,category:cat});
+    });
+  });
+  return out;
+}
+
 function renderOverview(){
   const pending=issues.filter(i=>!i.done).length,urgent=issues.filter(i=>!i.done&&i.priority==='urgent').length;
   const thisM=thisMonthKey();
   const total=(costData[thisM]||[]).reduce((a,c)=>a+c.amount,0);
-  // 재고 부족: 이번달 invData 기준
-  const allInvItems=Object.values(invData).flat();
-  const low=allInvItems.filter(i=>i.qty<i.min&&i.min>0).length;
+  // 재고 부족: 날짜 스냅샷(weeklyData)의 마지막 실측값 기준으로 전 카테고리 집계
+  // ⚠️ 예전엔 Object.values(invData).flat()을 썼는데, invData는 현재 린넨 전용이고
+  //    전체 월이 합산돼 숫자가 틀렸음. 소모품/비품/정비용품 재고는 weeklyData에 있음.
+  const lowItemsList=getLowStockItems();
+  const low=lowItemsList.length;
   const now=new Date();
   const thisMonth=cpMonthKey(now.getFullYear(),now.getMonth()+1);
   if(!cpRecords[thisMonth]) cpRecords[thisMonth]=[];
@@ -2123,7 +2146,7 @@ function renderOverview(){
     </div>
     <div style="font-size:11px;color:#6b6b68">${dormDepts.slice(0,5).map(d=>`<span style="margin-right:6px">${d} ${dormRooms.filter(r=>r.dept===d).length}명</span>`).join('')}</div>`;
   // 알림
-  const lowItems=allInvItems.filter(i=>i.qty<i.min&&i.min>0);
+  const lowItems=lowItemsList;
   const urgI=issues.filter(i=>!i.done&&i.priority==='urgent');
   let alertHtml='';
   // 긴급 특이사항은 항상 펼쳐서 표시
