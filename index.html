@@ -519,7 +519,7 @@ tr:hover td{background:#fafaf8}
   <div id="inv-weekly-section">
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
       <select id="inv-month-sel" onchange="renderInv();updateMonthBadge('inv-month-sel','inv-month-badge')" style="font-size:14px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;background:#1a3a5f;color:#ffffff;font-family:'Noto Sans KR',sans-serif;cursor:pointer;min-width:110px"></select><span id="inv-month-badge" style="font-size:28px;font-weight:800;color:#1a3a5f;letter-spacing:-1px;line-height:1"></span>
-      <button class="btn-s" onclick="invNewMonth()"><i class="ti ti-calendar-plus"></i> 새 달 시작</button>
+      <button class="btn-s" onclick="invNewMonth()"><i class="ti ti-calendar-plus"></i> 새 달 시작</button><button class="btn-s" onclick="deleteMonth('inv')" title="선택한 월 데이터 삭제" style="margin-left:6px;color:#A32D2D;border-color:rgba(163,45,45,0.35)"><i class="ti ti-trash"></i> 월 삭제</button>
       <div class="tab-sub" id="inv-snap-tabs" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"></div>
       <button class="btn-s" onclick="addSnapDate()" style="color:#185FA5;border-color:#9dc3f0"><i class="ti ti-plus"></i> 새 조사</button>
       <div style="flex:1"></div>
@@ -689,7 +689,7 @@ tr:hover td{background:#fafaf8}
 <div id="tab-linen-stock" class="sec">
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
     <select id="linen-month-sel" onchange="renderLinenStock();updateMonthBadge('linen-month-sel','linen-month-badge')" style="font-size:14px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;background:#1a3a5f;color:#ffffff;font-family:'Noto Sans KR',sans-serif;cursor:pointer;min-width:110px"></select><span id="linen-month-badge" style="font-size:28px;font-weight:800;color:#1a3a5f;letter-spacing:-1px;line-height:1"></span>
-    <button class="btn-s" onclick="linenNewMonth()"><i class="ti ti-calendar-plus"></i> 새 달 시작</button>
+    <button class="btn-s" onclick="linenNewMonth()"><i class="ti ti-calendar-plus"></i> 새 달 시작</button><button class="btn-s" onclick="deleteMonth('linen')" title="선택한 월 데이터 삭제" style="margin-left:6px;color:#A32D2D;border-color:rgba(163,45,45,0.35)"><i class="ti ti-trash"></i> 월 삭제</button>
     <div style="flex:1"></div>
     <button class="btn-p" onclick="saveLinenStock()"><i class="ti ti-device-floppy"></i> 저장</button>
   </div>
@@ -734,7 +734,7 @@ tr:hover td{background:#fafaf8}
 <div id="tab-linen-discard" class="sec">
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
     <select id="linen-discard-month-sel" onchange="renderLinenDiscard();updateMonthBadge('linen-discard-month-sel','linen-discard-month-badge')" style="font-size:14px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;background:#1a3a5f;color:#ffffff;font-family:'Noto Sans KR',sans-serif;cursor:pointer;min-width:110px"></select><span id="linen-discard-month-badge" style="font-size:28px;font-weight:800;color:#1a3a5f;letter-spacing:-1px;line-height:1"></span>
-    <button class="btn-s" onclick="linenDiscardNewMonth()"><i class="ti ti-calendar-plus"></i> 새 달 시작</button>
+    <button class="btn-s" onclick="linenDiscardNewMonth()"><i class="ti ti-calendar-plus"></i> 새 달 시작</button><button class="btn-s" onclick="deleteMonth('discard')" title="선택한 월 데이터 삭제" style="margin-left:6px;color:#A32D2D;border-color:rgba(163,45,45,0.35)"><i class="ti ti-trash"></i> 월 삭제</button>
     <div style="flex:1"></div>
     <button class="btn-p" onclick="saveLinenDiscard()"><i class="ti ti-device-floppy"></i> 저장</button>
   </div>
@@ -761,7 +761,7 @@ tr:hover td{background:#fafaf8}
 <div id="tab-linen-contamination" class="sec">
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
     <select id="linen-contam-month-sel" onchange="renderLinenContam();updateMonthBadge('linen-contam-month-sel','linen-contam-month-badge')" style="font-size:14px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;background:#1a3a5f;color:#ffffff;font-family:'Noto Sans KR',sans-serif;cursor:pointer;min-width:110px"></select><span id="linen-contam-month-badge" style="font-size:28px;font-weight:800;color:#1a3a5f;letter-spacing:-1px;line-height:1"></span>
-    <button class="btn-s" onclick="linencontamNewMonth()"><i class="ti ti-calendar-plus"></i> 새 달 시작</button>
+    <button class="btn-s" onclick="linencontamNewMonth()"><i class="ti ti-calendar-plus"></i> 새 달 시작</button><button class="btn-s" onclick="deleteMonth('contam')" title="선택한 월 데이터 삭제" style="margin-left:6px;color:#A32D2D;border-color:rgba(163,45,45,0.35)"><i class="ti ti-trash"></i> 월 삭제</button>
     <div style="flex:1"></div>
     <button class="btn-p" onclick="saveLinenContam()"><i class="ti ti-device-floppy"></i> 저장</button>
   </div>
@@ -896,7 +896,7 @@ tr:hover td{background:#fafaf8}
 <div id="tab-cp" class="sec">
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
     <select id="cp-month-sel" onchange="renderCP();updateMonthBadge('cp-month-sel','cp-month-badge')" style="font-size:14px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;background:#1a3a5f;color:#ffffff;font-family:'Noto Sans KR',sans-serif;cursor:pointer;min-width:110px"></select><span id="cp-month-badge" style="font-size:28px;font-weight:800;color:#1a3a5f;letter-spacing:-1px;line-height:1"></span>
-    <button class="btn-s" onclick="cpNewMonth()"><i class="ti ti-calendar-plus"></i> 새 달 시작</button>
+    <button class="btn-s" onclick="cpNewMonth()"><i class="ti ti-calendar-plus"></i> 새 달 시작</button><button class="btn-s" onclick="deleteMonth('cp')" title="선택한 월 데이터 삭제" style="margin-left:6px;color:#A32D2D;border-color:rgba(163,45,45,0.35)"><i class="ti ti-trash"></i> 월 삭제</button>
     <div style="flex:1"></div>
     <button class="btn-p" onclick="openCpBatchModal()"><i class="ti ti-plus"></i> CP 등록</button>
   </div>
@@ -931,7 +931,7 @@ tr:hover td{background:#fafaf8}
 <div id="tab-purchase" class="sec">
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
     <select id="pur-month-sel" onchange="renderPur();updateMonthBadge('pur-month-sel','pur-month-badge')" style="font-size:14px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;background:#1a3a5f;color:#ffffff;font-family:'Noto Sans KR',sans-serif;cursor:pointer;min-width:110px"></select><span id="pur-month-badge" style="font-size:28px;font-weight:800;color:#1a3a5f;letter-spacing:-1px;line-height:1"></span>
-    <button class="btn-s" onclick="purNewMonth()"><i class="ti ti-calendar-plus"></i> 새 달 시작</button>
+    <button class="btn-s" onclick="purNewMonth()"><i class="ti ti-calendar-plus"></i> 새 달 시작</button><button class="btn-s" onclick="deleteMonth('pur')" title="선택한 월 데이터 삭제" style="margin-left:6px;color:#A32D2D;border-color:rgba(163,45,45,0.35)"><i class="ti ti-trash"></i> 월 삭제</button>
     <div style="flex:1"></div>
     <button class="btn-p" onclick="openPurBatchModal()"><i class="ti ti-plus"></i> 발주 등록</button>
   </div>
@@ -955,7 +955,7 @@ tr:hover td{background:#fafaf8}
 <div id="tab-cost" class="sec">
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
     <select id="cost-month-sel" onchange="renderCost();updateMonthBadge('cost-month-sel','cost-month-badge')" style="font-size:14px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;background:#1a3a5f;color:#ffffff;font-family:'Noto Sans KR',sans-serif;cursor:pointer;min-width:110px"></select><span id="cost-month-badge" style="font-size:28px;font-weight:800;color:#1a3a5f;letter-spacing:-1px;line-height:1"></span>
-    <button class="btn-s" onclick="costNewMonth()"><i class="ti ti-calendar-plus"></i> 새 달 시작</button>
+    <button class="btn-s" onclick="costNewMonth()"><i class="ti ti-calendar-plus"></i> 새 달 시작</button><button class="btn-s" onclick="deleteMonth('cost')" title="선택한 월 데이터 삭제" style="margin-left:6px;color:#A32D2D;border-color:rgba(163,45,45,0.35)"><i class="ti ti-trash"></i> 월 삭제</button>
     <button class="btn-s" onclick="openBudgetModal()"><i class="ti ti-target"></i> 예산 설정</button>
     <div style="flex:1"></div>
     <button class="btn-p" onclick="openCostModal()"><i class="ti ti-plus"></i> 비용 등록</button>
@@ -5596,6 +5596,90 @@ function buildLinenMonthSel(){
   sel.innerHTML=months.map(m=>`<option value="${m}"${m===cur?' selected':''}>${m.replace('-','년 ')}월</option>`).join('');
   sel.value=cur;
   updateMonthBadge('linen-month-sel','linen-month-badge');
+}
+
+// ── 월 데이터 삭제 (7개 탭 공통) ──────────────────────────
+// "새 달 시작"으로 만든 월을 메모리 + Supabase 양쪽에서 제거한다.
+// ⚠️ 메모리만 지우면 새로고침 시 DB에서 되살아나므로 반드시 둘 다 지울 것.
+const MONTH_DEL_CFG={
+  inv:     {name:'재고',      sel:'inv-month-sel',           render:()=>renderInv()},
+  linen:   {name:'린넨 재고',  sel:'linen-month-sel',         render:()=>renderLinenStock()},
+  discard: {name:'린넨 폐기',  sel:'linen-discard-month-sel', render:()=>renderLinenDiscard()},
+  contam:  {name:'린넨 오염',  sel:'linen-contam-month-sel',  render:()=>renderLinenContam()},
+  cp:      {name:'CP',        sel:'cp-month-sel',            render:()=>renderCP()},
+  pur:     {name:'구매',      sel:'pur-month-sel',           render:()=>renderPur()},
+  cost:    {name:'비용',      sel:'cost-month-sel',          render:()=>renderCost()},
+};
+
+async function deleteMonth(kind){
+  const cfg=MONTH_DEL_CFG[kind];
+  if(!cfg) return;
+  const sel=document.getElementById(cfg.sel);
+  const month=sel?.value;
+  if(!month){alert('삭제할 월이 선택되지 않았습니다.');return;}
+
+  // 이번 달은 월 목록의 기준이라 삭제해도 즉시 다시 생성됨 → 아예 막는다
+  if(month===thisMonthKey()){
+    alert('이번 달은 삭제할 수 없습니다.\n(월 목록의 기준이 되는 달입니다)');
+    return;
+  }
+
+  const label=month.replace('-','년 ')+'월';
+  const typed=prompt(
+    `⚠️ ${label} ${cfg.name} 데이터를 완전히 삭제합니다.\n`+
+    `이 작업은 되돌릴 수 없습니다.\n\n`+
+    `삭제하려면 아래에 "${month}" 를 그대로 입력하세요.`, '');
+  if(typed===null) return;
+  if(typed.trim()!==month){alert('입력이 일치하지 않아 취소했습니다.');return;}
+
+  showLoading(true);
+  try{
+    if(kind==='inv'){
+      // 재고는 두 곳: 월별 invData(inv_data) + 날짜 스냅샷 weeklyData(inv_weekly)
+      delete invData[month];
+      await supa.from('inv_data').delete().eq('month',month);
+      getSnapDates(month).forEach(k=>delete weeklyData[k]);
+      await supa.from('inv_weekly').delete().eq('month',month);
+      if(currentSnapDate&&currentSnapDate.startsWith(month+'-')) currentSnapDate=null;
+      buildInvMonthSel(true);
+    } else if(kind==='linen'){
+      delete linenStockData[month];
+      await supa.from('linen_stock').delete().eq('month',month);
+      buildLinenMonthSel();
+    } else if(kind==='discard'){
+      delete linenDiscardData[month];
+      await supa.from('linen_discard').delete().eq('month',month);
+      buildLinenDiscardMonthSel();
+    } else if(kind==='contam'){
+      delete linencontamData[month];
+      await supa.from('linen_contamination').delete().eq('month',month);
+      buildLinenContamMonthSel();
+    } else if(kind==='cp'){
+      delete cpRecords[month];
+      await supa.from('cp_records').delete().eq('month',month);
+      buildCpMonthSel(true);
+    } else if(kind==='pur'){
+      // 구매가 원천이므로 연결된 비용도 함께 제거 (안 지우면 고아 비용이 남음)
+      delete purData[month];
+      await supa.from('pur_data').delete().eq('month',month);
+      delete costData[month];
+      await supa.from('cost_data').delete().eq('month',month);
+      buildPurMonthSel(true);
+      buildCostMonthSel(true);
+    } else if(kind==='cost'){
+      delete costData[month];
+      await supa.from('cost_data').delete().eq('month',month);
+      buildCostMonthSel(true);
+    }
+    cfg.render();
+    renderOverview();
+    showToast('🗑 삭제 완료',`${label} ${cfg.name} 데이터가 삭제됐습니다`,'red');
+  }catch(e){
+    console.error('월 삭제 오류',e);
+    alert('삭제 중 오류가 발생했습니다: '+e.message);
+  }finally{
+    showLoading(false);
+  }
 }
 
 function linenNewMonth(){
