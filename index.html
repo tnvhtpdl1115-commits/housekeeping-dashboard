@@ -62,6 +62,8 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f0ede8;min-height:100vh;c
 .ov-hero-greet{font-size:21px;font-weight:700;color:#fff;letter-spacing:-0.3px;margin-bottom:2px}
 .ov-hero-sub{font-size:13px;color:rgba(255,255,255,0.7)}
 .ov-hero-sub strong{color:#E5C158;font-weight:700}
+.ov-hero-note{margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.15);font-size:16px;font-weight:500;color:#E5C158;letter-spacing:-0.2px;display:flex;align-items:center;gap:9px}
+.ov-hero-note i{font-size:17px;opacity:0.75}
 .ov-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
 .ov-chip{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.14);border-radius:999px;padding:6px 13px;font-size:12px;color:rgba(255,255,255,0.82);cursor:pointer;transition:background .15s;font-family:'Noto Sans KR',sans-serif}
 .ov-chip:hover{background:rgba(255,255,255,0.16)}
@@ -2145,6 +2147,21 @@ function getLowStockItems(){
   return out;
 }
 
+// 근무 보드 하단 문구 — 날짜 기준으로 하루에 하나씩 순환.
+// 수정·추가 자유롭게 하시면 됩니다. 개수가 바뀌어도 순환은 알아서 맞춰집니다.
+const OV_NOTES = [
+  '오늘도 한 걸음이면 충분합니다',
+  '깨끗한 방에서 누군가 오늘 푹 잡니다',
+  '당신의 하루가 누군가의 편안한 밤이 됩니다',
+  '정갈한 시트 한 장이 여행을 완성합니다',
+  '애쓴 만큼 티가 나지 않아도, 분명 남습니다',
+  '손님이 아무 불편도 못 느꼈다면, 잘 해낸 겁니다',
+  '잘하고 있습니다. 오늘도 그럴 거고요',
+  '보이지 않는 정성이 가장 오래 남습니다',
+  '서두르지 않아도 괜찮습니다',
+  '문을 여는 순간의 기분, 그걸 우리가 만듭니다',
+];
+
 // 개요 중분류 뷰 전환 (오늘 / 이번 달)
 let ovView='today';
 function setOvView(v,btn){
@@ -2168,23 +2185,24 @@ function renderOvToday(){
   // ── 아침 근무 보드 ──
   const totalTodo=urgent.length+pending.length+openCp.length+lowList.length;
   const now=new Date();
-  const h=now.getHours();
-  const greet=h<11?'좋은 아침입니다':h<17?'오후 근무 중입니다':'마무리 근무 시간입니다';
   const dows=['일','월','화','수','목','금','토'];
   const dateLine=`${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 ${dows[now.getDay()]}요일`;
+  // 날짜 기준 순환 — 하루 동안은 같은 문구가 유지되고 매일 바뀐다
+  const dayIdx=Math.floor((now-new Date(now.getFullYear(),0,0))/86400000);
+  const note=OV_NOTES[dayIdx%OV_NOTES.length];
   const heroEl=document.getElementById('ov-hero');
   if(heroEl) heroEl.innerHTML=`
     <div class="ov-hero-date">${dateLine}</div>
-    <div class="ov-hero-greet">${greet}</div>
-    <div class="ov-hero-sub">${totalTodo>0
-      ?`오늘 확인이 필요한 항목이 <strong>${totalTodo}건</strong> 있습니다`
-      :'확인이 필요한 항목이 없습니다'}</div>
+    <div class="ov-hero-greet">${totalTodo>0
+      ?`오늘 확인할 항목이 ${totalTodo}건 있습니다`
+      :'오늘 확인할 항목이 없습니다'}</div>
     <div class="ov-chips">
       <button class="ov-chip ${urgent.length?'alert':'clear'}" onclick="swMain('issues')">긴급 <b>${urgent.length}</b></button>
       <button class="ov-chip ${pending.length?'':'clear'}" onclick="swMain('issues')">미처리 특이사항 <b>${pending.length}</b></button>
       <button class="ov-chip ${openCp.length?'':'clear'}" onclick="swMain('cp')">미조치 CP <b>${openCp.length}</b></button>
       <button class="ov-chip ${lowList.length?'':'clear'}" onclick="swMain('inventory')">재고 부족 <b>${lowList.length}</b></button>
-    </div>`;
+    </div>
+    <div class="ov-hero-note"><i class="ti ti-sparkles"></i><span>${note}</span></div>`;
 
   // ── 바로가기 ──
   const quickEl=document.getElementById('ov-quick');
