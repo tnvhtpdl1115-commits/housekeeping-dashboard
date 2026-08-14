@@ -322,38 +322,55 @@ tr:hover td{background:#fafaf8}
   <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
     <button class="btn-p" onclick="openReportModal()"><i class="ti ti-file-analytics"></i> 월말 마감 리포트</button>
   </div>
-  <div class="metrics" id="ov-metrics"></div>
-  <div class="card">
-    <div class="ct">월 CP 비율 <span id="ov-cp-month" style="font-size:12px;font-weight:400;color:#6b6b68"></span></div>
-    <div style="display:flex;align-items:flex-end;gap:16px;margin-bottom:8px">
-      <div>
-        <div style="font-size:32px;font-weight:700;color:#1a1a18" id="ov-cp-pct">0%</div>
-        <div style="font-size:11px;color:#6b6b68;margin-top:2px">이번 달 CP 미처리 비율</div>
+  <div class="tab-sub">
+    <button class="on" onclick="setOvView('today',this)"><i class="ti ti-sun"></i> 오늘</button>
+    <button onclick="setOvView('month',this)"><i class="ti ti-calendar-stats"></i> 이번 달</button>
+  </div>
+
+  <!-- ── 오늘: 지금 챙길 것 ── -->
+  <div id="ov-view-today">
+    <div class="metrics" id="ov-today-metrics"></div>
+    <div class="card"><div class="ct">금일 알림</div><div id="ov-alerts"></div></div>
+    <div class="card"><div class="ct">오늘 인수인계</div><div id="ov-today-ho"></div></div>
+    <div class="card"><div class="ct">미처리 특이사항</div><div id="ov-issues"></div></div>
+    <div class="card"><div class="ct">미조치 CP</div><div id="ov-open-cp"></div></div>
+    <div class="card"><div class="ct">발주 검토 품목</div><div id="ov-reorder"></div></div>
+  </div>
+
+  <!-- ── 이번 달: 현황 파악 ── -->
+  <div id="ov-view-month" style="display:none">
+    <div class="metrics" id="ov-metrics"></div>
+    <div class="card">
+      <div class="ct">월 CP 비율 <span id="ov-cp-month" style="font-size:12px;font-weight:400;color:#6b6b68"></span></div>
+      <div style="display:flex;align-items:flex-end;gap:16px;margin-bottom:8px">
+        <div>
+          <div style="font-size:32px;font-weight:700;color:#1a1a18" id="ov-cp-pct">0%</div>
+          <div style="font-size:11px;color:#6b6b68;margin-top:2px">이번 달 CP 미처리 비율</div>
+        </div>
+        <div id="ov-cp-diff" style="font-size:13px;font-weight:600;padding-bottom:6px"></div>
       </div>
-      <div id="ov-cp-diff" style="font-size:13px;font-weight:600;padding-bottom:6px"></div>
+      <div class="prog-bar"><div class="prog-fill" id="ov-bar" style="width:0%"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:#9b9b97">
+        <span>지난달 <span id="ov-last-pct">-</span></span>
+        <span id="ov-cp-labor" style="color:#6b6b68"></span>
+      </div>
     </div>
-    <div class="prog-bar"><div class="prog-fill" id="ov-bar" style="width:0%"></div></div>
-    <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:#9b9b97">
-      <span>지난달 <span id="ov-last-pct">-</span></span>
-      <span id="ov-cp-labor" style="color:#6b6b68"></span>
+    <div class="card"><div class="ct">이번 달 비용</div><div id="ov-month-cost"></div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+      <div class="card" style="margin-bottom:0">
+        <div class="ct">서울 객실 현황</div>
+        <div id="ov-seoul-summary"></div>
+      </div>
+      <div class="card" style="margin-bottom:0">
+        <div class="ct">기숙사 현황</div>
+        <div id="ov-dorm-summary"></div>
+      </div>
     </div>
-  </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
-    <div class="card" style="margin-bottom:0">
-      <div class="ct">서울 객실 현황</div>
-      <div id="ov-seoul-summary"></div>
+    <div class="card">
+      <div class="ct">CP 현황</div>
+      <table><thead><tr><th>객실</th><th>CP 내용</th><th>담당자</th><th>상태</th></tr></thead>
+      <tbody id="ov-cp"></tbody></table>
     </div>
-    <div class="card" style="margin-bottom:0">
-      <div class="ct">기숙사 현황</div>
-      <div id="ov-dorm-summary"></div>
-    </div>
-  </div>
-  <div class="card"><div class="ct">금일 알림</div><div id="ov-alerts"></div></div>
-  <div class="card"><div class="ct">미처리 특이사항</div><div id="ov-issues"></div></div>
-  <div class="card">
-    <div class="ct">CP 현황</div>
-    <table><thead><tr><th>객실</th><th>CP 내용</th><th>담당자</th><th>상태</th></tr></thead>
-    <tbody id="ov-cp"></tbody></table>
   </div>
 </div>
 
@@ -2094,6 +2111,114 @@ function getLowStockItems(){
   return out;
 }
 
+// 개요 중분류 뷰 전환 (오늘 / 이번 달)
+let ovView='today';
+function setOvView(v,btn){
+  ovView=v;
+  document.querySelectorAll('#tab-overview .tab-sub button').forEach(b=>b.classList.remove('on'));
+  if(btn) btn.classList.add('on');
+  document.getElementById('ov-view-today').style.display=(v==='today')?'':'none';
+  document.getElementById('ov-view-month').style.display=(v==='month')?'':'none';
+  renderOverview();
+}
+
+// 오늘 뷰 전용 렌더
+function renderOvToday(){
+  const todayKey=new Date().toISOString().slice(0,10);
+  const pending=issues.filter(i=>!i.done);
+  const urgent=pending.filter(i=>i.priority==='urgent');
+  const curMonth=thisMonthKey();
+  const openCp=(cpRecords[curMonth]||[]).filter(r=>r.status==='open');
+  const lowList=getLowStockItems();
+
+  // 상단 지표: 오늘 손이 가야 하는 것만
+  const mEl=document.getElementById('ov-today-metrics');
+  if(mEl) mEl.innerHTML=`
+    <div class="met"><div class="met-l">긴급 특이사항</div><div class="met-v ${urgent.length?'red':''}">${urgent.length}</div></div>
+    <div class="met"><div class="met-l">미처리 특이사항</div><div class="met-v ${pending.length?'red':''}">${pending.length}</div></div>
+    <div class="met"><div class="met-l">미조치 CP</div><div class="met-v ${openCp.length?'red':''}">${openCp.length}</div></div>
+    <div class="met"><div class="met-l">재고 부족</div><div class="met-v ${lowList.length?'red':''}">${lowList.length}</div></div>`;
+
+  // 오늘 인수인계
+  const hoEl=document.getElementById('ov-today-ho');
+  if(hoEl){
+    const ho=handovers[todayKey];
+    if(ho&&ho.content){
+      const readBy=ho.readBy||[];
+      const cmt=(ho.comments||[]).length;
+      hoEl.innerHTML=`
+        <div style="cursor:pointer" onclick="swMain('handover')">
+          <div style="font-size:13px;color:#1a1a18;margin-bottom:6px;white-space:pre-wrap;max-height:80px;overflow:hidden">${ho.content}</div>
+          <div style="display:flex;gap:10px;font-size:11px;color:#6b6b68">
+            ${readBy.length?`<span style="color:#3B6D11">확인 ${readBy.length}명</span>`:'<span style="color:#A32D2D">아직 확인한 사람 없음</span>'}
+            ${cmt?`<span>댓글 ${cmt}</span>`:''}
+          </div>
+        </div>`;
+    } else {
+      hoEl.innerHTML='<div class="empty">오늘 등록된 인수인계가 없습니다</div>';
+    }
+  }
+
+  // 미조치 CP (상태가 open인 것만 — 페널티는 조치완료로 간주)
+  const cpEl=document.getElementById('ov-open-cp');
+  if(cpEl){
+    cpEl.innerHTML=openCp.length
+      ?`<table><thead><tr><th>객실</th><th>내용</th><th>담당</th><th>등록일</th></tr></thead><tbody>${
+        openCp.slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(r=>`<tr>
+          <td><strong>${r.roomNo||'-'}</strong></td>
+          <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.content||''}</td>
+          <td style="font-size:11px;color:#6b6b68">${r.assignee||'미배정'}</td>
+          <td style="font-size:11px;color:#6b6b68">${r.date||'-'}</td>
+        </tr>`).join('')}</tbody></table>`
+      :'<div class="empty">미조치 CP 없음</div>';
+  }
+
+  // 발주 검토 품목 — 재고 부족분을 부족량 큰 순으로
+  const roEl=document.getElementById('ov-reorder');
+  if(roEl){
+    roEl.innerHTML=lowList.length
+      ?`<table><thead><tr><th>품목</th><th>현재고</th><th>최소보유</th><th>부족</th></tr></thead><tbody>${
+        lowList.slice().sort((a,b)=>(a.min-a.qty)-(b.min-b.qty)).reverse().map(i=>`<tr>
+          <td><strong>${i.name}</strong></td>
+          <td>${i.qty}${i.unit}</td>
+          <td style="color:#6b6b68">${i.min}${i.unit}</td>
+          <td style="color:#A32D2D;font-weight:700">${i.min-i.qty}${i.unit}</td>
+        </tr>`).join('')}</tbody></table>`
+      :'<div class="empty">발주가 필요한 품목이 없습니다</div>';
+  }
+}
+
+// 이번 달 뷰 전용: 비용 진행 상황
+function renderOvMonthCost(){
+  const el=document.getElementById('ov-month-cost');
+  if(!el) return;
+  const tm=thisMonthKey();
+  const rows=costData[tm]||[];
+  const total=rows.reduce((a,c)=>a+(c.amount||0),0);
+  if(!rows.length){el.innerHTML='<div class="empty">이번 달 비용 데이터가 없습니다</div>';return;}
+  // 분류별 집계
+  const byType={};
+  rows.forEach(c=>{const k=c.type||'기타';byType[k]=(byType[k]||0)+(c.amount||0);});
+  const sorted=Object.entries(byType).sort((a,b)=>b[1]-a[1]);
+  const now=new Date();
+  const dayOfMonth=now.getDate();
+  const daysInMonth=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+  const pace=Math.round(total/dayOfMonth*daysInMonth);
+  el.innerHTML=`
+    <div style="display:flex;align-items:flex-end;gap:16px;margin-bottom:10px">
+      <div>
+        <div style="font-size:28px;font-weight:700;color:#1a1a18">${fmt(total)}</div>
+        <div style="font-size:11px;color:#6b6b68;margin-top:2px">${dayOfMonth}일까지 누적</div>
+      </div>
+      <div style="font-size:12px;color:#6b6b68;padding-bottom:6px">이 속도면 월말 <strong style="color:#B8860B">${fmt(pace)}</strong> 예상</div>
+    </div>
+    ${sorted.map(([k,v])=>`
+      <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid rgba(0,0,0,0.05)">
+        <span>${k}</span>
+        <span><strong>${fmt(v)}</strong> <span style="color:#9b9b97">${total?Math.round(v/total*100):0}%</span></span>
+      </div>`).join('')}`;
+}
+
 function renderOverview(){
   const pending=issues.filter(i=>!i.done).length,urgent=issues.filter(i=>!i.done&&i.priority==='urgent').length;
   const thisM=thisMonthKey();
@@ -2205,6 +2330,9 @@ function renderOverview(){
       <td><span class="badge" style="${CP_STATUS_STYLE[r.status]}">${CP_STATUS[r.status]}</span></td>
     </tr>`).join('')}`
     :'<tr><td colspan="4" class="empty">이번 달 CP 내역 없음</td></tr>';
+  // 중분류 뷰 전용 블록
+  renderOvToday();
+  renderOvMonthCost();
 }
 function setSlView(v,el){slView=v;slPage=1;document.querySelectorAll('.tab-sub button').forEach(b=>b.classList.remove('on'));el.classList.add('on');renderSeoul();}
 function buildSlFilters(){
