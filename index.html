@@ -1011,6 +1011,7 @@ tr:hover td{background:#fafaf8}
     <select id="cost-month-sel" onchange="renderCost();updateMonthBadge('cost-month-sel','cost-month-badge')" style="font-size:14px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;background:#1a3a5f;color:#ffffff;font-family:'Noto Sans KR',sans-serif;cursor:pointer;min-width:110px"></select><span id="cost-month-badge" style="font-size:28px;font-weight:800;color:#1a3a5f;letter-spacing:-1px;line-height:1"></span>
     <button class="btn-s" onclick="costNewMonth()"><i class="ti ti-calendar-plus"></i> 새 달 시작</button><button class="btn-s" onclick="deleteMonth('cost')" title="선택한 월 데이터 삭제" style="margin-left:6px;color:#A32D2D;border-color:rgba(163,45,45,0.35)"><i class="ti ti-trash"></i> 월 삭제</button>
     <button class="btn-s" onclick="openBudgetModal()"><i class="ti ti-target"></i> 예산 설정</button>
+    <button class="btn-s" onclick="openUnitCoefModal()"><i class="ti ti-adjustments"></i> 유닛 계수</button>
     <div style="flex:1"></div>
     <button class="btn-p" onclick="openCostModal()"><i class="ti ti-plus"></i> 비용 등록</button>
   </div>
@@ -1057,6 +1058,34 @@ tr:hover td{background:#fafaf8}
     <table><thead><tr><th>항목</th><th>분류</th><th>금액</th><th>날짜</th><th></th></tr></thead>
     <tbody id="cost-tbody"></tbody></table>
   </div>
+</div>
+
+<!-- 모달: 객실 타입별 유닛 계수 -->
+<div class="modal-bg" id="unitcoef-modal">
+<div class="modal" style="max-width:700px">
+  <h3>객실 타입별 유닛 계수</h3>
+  <p style="font-size:12px;color:#6b6b68;margin-bottom:12px">
+    도급비 변동비 산출 기준입니다. 목록은 실제 등록된 객실 데이터에서 자동으로 만들어지므로,
+    타입이 추가되거나 없어지면 여기에도 그대로 반영됩니다.
+  </p>
+  <div id="uc-warn"></div>
+  <div style="max-height:320px;overflow-y:auto;margin-bottom:14px">
+    <table><thead><tr><th>타입</th><th>객실 수</th><th>유닛 계수</th><th>환산</th><th></th></tr></thead>
+    <tbody id="uc-tbody"></tbody></table>
+  </div>
+  <div style="border-top:1px solid rgba(0,0,0,0.08);padding-top:14px">
+    <div style="font-size:13px;font-weight:600;margin-bottom:10px">도급 계약 조건</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+      <div class="fg" style="margin:0"><label>월 고정비 (원)</label><input type="number" id="uc-fixed" min="0"></div>
+      <div class="fg" style="margin:0"><label>유닛 단가 (원)</label><input type="number" id="uc-unitprice" min="0"></div>
+      <div class="fg" style="margin:0"><label>S/O 적용률 (%)</label><input type="number" id="uc-sorate" min="0" max="100"></div>
+    </div>
+  </div>
+  <div class="modal-btns">
+    <button class="btn-s" onclick="closeModal('unitcoef-modal')">취소</button>
+    <button class="btn-p" onclick="saveUnitCoef()">저장</button>
+  </div>
+</div>
 </div>
 
 <!-- 모달: 예산 설정 -->
@@ -6485,6 +6514,98 @@ const LS_FIELDS=['sheet_s','sheet_d','sheet_k','cover_s','cover_d','cover_k','co
 let linenSettingRows=JSON.parse(JSON.stringify(LS_DEFAULT));
 let linenSettingPrices={...LS_PRICE_DEFAULT};
 
+// ── 도급 계약 조건 (settings: contract_terms) ──────────────
+// 계약이 갱신되면 값만 바꾸면 되도록 설정으로 분리한다.
+let contractTerms = {
+  fixedCost: 45560900,   // 월 고정비
+  unitPrice: 10340,      // 유닛 단가
+  soRate: 0.7            // S/O는 유닛 단가의 70%
+};
+
+// ── 객실 타입별 유닛 계수 (도급비 변동비 산출용) ──────────────
+// ⚠️ 하드코딩 금지(§2-1). 아래는 '초기값'일 뿐이며 실제 값은 settings의
+//    room_unit_coef 에 저장되고 화면에서 수정한다. 타입이 추가·삭제돼도
+//    코드 수정 없이 대응된다.
+let roomUnitCoef = {
+  DDB:1, DTW:1, DFT:1.1, PDB:1, PTW:1, PFT:1.1, IFT:1.1, DIS:1,
+  CHD:1, CHB:1, CSD:1.3, CSK:1.5, MSD:1.8, MSK:1.5, MSQ:2,
+  MSF:1.8, JSD:1.8, JSF:2
+};
+
+// 계수가 지정되지 않은 타입 목록 (실제 객실 데이터 기준)
+// 임의로 1.0을 넣지 않는다 — 조용히 틀린 금액이 나오는 것이 가장 위험하다.
+function getUnmappedRoomTypes(){
+  const cnt=getRoomCountByType();
+  return Object.keys(cnt).filter(t=>roomUnitCoef[t]===undefined||roomUnitCoef[t]===null);
+}
+
+// 실수 → 유닛 환산. rooms는 {타입:실수} 형태.
+// 반환: {units, unmapped:[{type,count}]}
+function roomsToUnits(roomsByType){
+  let units=0; const unmapped=[];
+  Object.entries(roomsByType||{}).forEach(([type,n])=>{
+    const k=roomUnitCoef[type];
+    if(k===undefined||k===null){ unmapped.push({type,count:n}); return; }
+    units+=n*k;
+  });
+  return {units:Math.round(units*100)/100, unmapped};
+}
+
+// ── 유닛 계수 설정 모달 ──────────────────────────────
+// 실제 객실 데이터(getRoomCountByType)를 기준으로 행을 만들기 때문에
+// 타입이 추가·삭제되면 이 화면에 자동 반영된다.
+function openUnitCoefModal(){
+  const cnt=getRoomCountByType();
+  const liveTypes=Object.keys(cnt).sort();
+  // 객실에는 없지만 계수만 남아있는 타입(없어진 타입)도 보여준다
+  const orphan=Object.keys(roomUnitCoef).filter(t=>cnt[t]===undefined).sort();
+  const row=(t,isOrphan)=>{
+    const k=roomUnitCoef[t];
+    const miss=(k===undefined||k===null);
+    return `<tr${isOrphan?' style="opacity:.55"':''}>
+      <td><strong>${t}</strong>${isOrphan?'<span style="font-size:10px;color:#9b9b97;margin-left:6px">객실 없음</span>':''}</td>
+      <td style="color:#6b6b68">${cnt[t]||0}</td>
+      <td><input type="number" step="0.1" min="0" class="gnav uc-in" data-type="${t}" value="${miss?'':k}" placeholder="미지정"
+        style="width:90px;padding:4px 8px;border:1px solid ${miss?'#A32D2D':'rgba(0,0,0,0.15)'};border-radius:6px;font-size:14px;text-align:right"></td>
+      <td style="font-size:11px;color:${miss?'#A32D2D':'#6b6b68'}">${miss?'계수 미지정':(cnt[t]||0)+' × '+k+' = '+Math.round((cnt[t]||0)*k*100)/100+' 유닛'}</td>
+      <td><button class="btn-i d" onclick="removeUnitCoef('${t}')"><i class="ti ti-trash"></i></button></td>
+    </tr>`;
+  };
+  document.getElementById('uc-tbody').innerHTML=
+    liveTypes.map(t=>row(t,false)).join('')+orphan.map(t=>row(t,true)).join('');
+  document.getElementById('uc-fixed').value=contractTerms.fixedCost;
+  document.getElementById('uc-unitprice').value=contractTerms.unitPrice;
+  document.getElementById('uc-sorate').value=Math.round(contractTerms.soRate*100);
+  const un=getUnmappedRoomTypes();
+  document.getElementById('uc-warn').innerHTML=un.length
+    ?`<div style="background:rgba(163,45,45,0.08);border:1px solid rgba(163,45,45,0.25);border-radius:8px;padding:10px 12px;font-size:12px;color:#A32D2D;margin-bottom:12px">
+        <strong>계수가 없는 타입 ${un.length}개: ${un.join(', ')}</strong><br>
+        <span style="color:#6b6b68">해당 타입은 유닛 합계에서 제외됩니다. 값을 입력해 주세요.</span></div>`
+    :'';
+  openModal('unitcoef-modal');
+}
+
+function removeUnitCoef(type){
+  const inp=document.querySelector(`.uc-in[data-type="${type}"]`);
+  if(inp) inp.value='';
+}
+
+function saveUnitCoef(){
+  const next={};
+  document.querySelectorAll('.uc-in').forEach(i=>{
+    const v=i.value.trim();
+    if(v!=='') next[i.dataset.type]=parseFloat(v);
+  });
+  roomUnitCoef=next;
+  contractTerms.fixedCost=parseInt(document.getElementById('uc-fixed').value)||0;
+  contractTerms.unitPrice=parseInt(document.getElementById('uc-unitprice').value)||0;
+  contractTerms.soRate=(parseFloat(document.getElementById('uc-sorate').value)||70)/100;
+  dbSaveSettings('room_unit_coef',roomUnitCoef);
+  dbSaveSettings('contract_terms',contractTerms);
+  closeModal('unitcoef-modal');
+  showToast('⚙️ 저장 완료',`유닛 계수 ${Object.keys(next).length}개 · 계약 조건이 저장됐습니다`,'grn');
+}
+
 function getRoomCountByType(){
   const src = (seoulRooms && seoulRooms.length > 0) ? seoulRooms : SR.map(([no,type])=>({no,type}));
   const cnt={};
@@ -6624,6 +6745,8 @@ async function dbLoadSettings(){
       if(r.key==='budget'&&r.value) Object.assign(budgetData,r.value);
       if(r.key==='month_closing_weeks'&&r.value) Object.assign(monthClosingWeek,r.value);
       if(r.key==='usage_pick_items'&&r.value) usagePickItems=r.value;
+      if(r.key==='room_unit_coef'&&r.value) roomUnitCoef=r.value;
+      if(r.key==='contract_terms'&&r.value) Object.assign(contractTerms,r.value);
       // 재고 품목 순서 적용
       if(r.key&&r.key.startsWith('inv_item_order_')&&r.value){
         const cat=r.key.replace('inv_item_order_','');
