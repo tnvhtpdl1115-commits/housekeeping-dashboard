@@ -336,7 +336,6 @@ tr:hover td{background:#fafaf8}
     </div>
     <div class="sub-tabs" id="sub-tabs-cost" style="display:none">
       <button class="sub-tab active" onclick="swSub('cost','total')">총비용</button>
-      <button class="sub-tab" onclick="swSub('cost','labor')">도급비</button>
       <button class="sub-tab" onclick="swSub('cost','room')">객실</button>
       <button class="sub-tab" onclick="swSub('cost','linen')">린넨</button>
       <button class="sub-tab" onclick="swSub('cost','uniform')">유니폼</button>
@@ -1064,6 +1063,31 @@ tr:hover td{background:#fafaf8}
 
   <!-- 도급비 전용 화면 -->
   <div id="cost-labor-section" style="display:none">
+    <div class="tab-sub" style="margin-bottom:14px">
+      <button class="on" onclick="setLaborView('daily',this)"><i class="ti ti-calendar-stats"></i> 일별 정비유닛</button>
+      <button onclick="setLaborView('monthly',this)"><i class="ti ti-table"></i> 월별 집행현황</button>
+    </div>
+
+    <!-- 월별 집행현황 -->
+    <div id="labor-view-monthly" style="display:none">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+        <select id="labor-year-sel" onchange="renderLaborYear()" style="font-size:14px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;background:#1a3a5f;color:#fff;font-family:'Noto Sans KR',sans-serif;cursor:pointer"></select>
+        <span style="font-size:12px;color:#9b9b97">단위: 원 (VAT 포함)</span>
+        <div style="flex:1"></div>
+        <button class="btn-s" onclick="openLaborExtraModal()"><i class="ti ti-plus"></i> 월별 항목 입력</button>
+      </div>
+      <div class="card">
+        <div class="ct">객실정비 도급비 집행내역</div>
+        <div style="overflow-x:auto"><table id="labor-year-table" style="font-size:12.5px;white-space:nowrap"></table></div>
+      </div>
+      <div class="card">
+        <div class="ct">월별 정비 UNIT</div>
+        <div style="height:260px"><canvas id="labor-unit-chart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- 일별 정비유닛 -->
+    <div id="labor-view-daily">
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
       <select id="labor-month-sel" onchange="renderLabor()" style="font-size:14px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;background:#1a3a5f;color:#fff;font-family:'Noto Sans KR',sans-serif;cursor:pointer;min-width:110px"></select>
       <button class="btn-s" onclick="laborNewMonth()"><i class="ti ti-calendar-plus"></i> 새 달 시작</button>
@@ -1093,7 +1117,26 @@ tr:hover td{background:#fafaf8}
         <tbody id="labor-tbody"></tbody></table>
       </div>
     </div>
+    </div>
   </div>
+</div>
+
+<!-- 모달: 월별 부가 항목 -->
+<div class="modal-bg" id="laborextra-modal">
+<div class="modal" style="max-width:560px">
+  <h3>월별 항목 입력 <span id="lx-year" style="font-size:13px;font-weight:400;color:#6b6b68"></span></h3>
+  <p style="font-size:12px;color:#6b6b68;margin-bottom:12px">
+    점유율·판매 실수·전년 집행금액은 대시보드가 계산할 수 없는 값이라 직접 입력합니다.
+    나머지(정비 실수·고정비·변동비·집행합계)는 일별 정비유닛에서 자동 계산됩니다.
+  </p>
+  <div style="max-height:400px;overflow-y:auto">
+    <table><thead><tr><th style="width:60px">월</th><th>점유율(%)</th><th>판매 실수</th><th>전년 집행금액</th></tr></thead>
+    <tbody id="lx-tbody"></tbody></table>
+  </div>
+  <div class="modal-btns">
+    <button class="btn-p" onclick="closeModal('laborextra-modal');renderLaborYear()">확인</button>
+  </div>
+</div>
 </div>
 
 <!-- 모달: 객실 타입별 유닛 계수 -->
@@ -1520,7 +1563,7 @@ const SUB_MAP = {
   inventory: {default:'consumable', subs:['consumable','equipment','maintenance','rental','facility','analysis']},
   purchase:  {default:'consumable', subs:['consumable','equipment','maintenance','rental','facility','linen']},
   linen:     {default:'stock', subs:['stock','discard','contamination','setting']},
-  cost:      {default:'total', subs:['total','labor','room','linen','uniform','purchase','etc']},
+  cost:      {default:'total', subs:['total','room','linen','uniform','purchase','etc']},
 };
 let currentMain = 'overview';
 let currentSub = {};
@@ -1604,7 +1647,7 @@ function swSub(main, sub){
     document.getElementById('tab-cost').classList.add('on');
     currentCostCategory = sub;
     // 도급비는 화면 구성이 완전히 달라 별도 섹션으로 전환한다
-    const isLabor=(sub==='labor');
+    const isLabor=(sub==='room');
     document.getElementById('cost-normal-section').style.display=isLabor?'none':'';
     document.getElementById('cost-labor-section').style.display=isLabor?'':'none';
     if(isLabor){
@@ -3587,7 +3630,7 @@ function buildCostMonthSel(forceReset=false){
 
 function getCostMonth(){return document.getElementById('cost-month-sel')?.value||thisMonthKey();}
 
-const COST_CAT_LABEL={total:'총',labor:'도급비',room:'객실',linen:'린넨',uniform:'유니폼',purchase:'구매',etc:'기타',maintenance:'정비용품'};
+const COST_CAT_LABEL={total:'총',room:'객실',linen:'린넨',uniform:'유니폼',purchase:'구매',etc:'기타',maintenance:'정비용품'};
 
 // ── 예산 데이터 ──
 let budgetData = {room:0, linen:0, uniform:0, purchase:0, etc:0};
@@ -6814,6 +6857,120 @@ function laborNewMonth(){
   renderLabor();
 }
 
+// ── 객실 비용: 뷰 전환 (일별 / 월별) ──────────────────
+let laborView='daily';
+function setLaborView(v,btn){
+  laborView=v;
+  document.querySelectorAll('#cost-labor-section .tab-sub button').forEach(b=>b.classList.remove('on'));
+  if(btn) btn.classList.add('on');
+  document.getElementById('labor-view-daily').style.display=(v==='daily')?'':'none';
+  document.getElementById('labor-view-monthly').style.display=(v==='monthly')?'':'none';
+  if(v==='monthly'){ buildLaborYearSel(); renderLaborYear(); }
+  else renderLabor();
+}
+
+// 월별 부가 항목 (점유율·판매실수·전년 집행금액) — 자동 계산이 불가능해 직접 입력받는다
+// laborExtra: {'YYYY-MM': {occ, sold, prevYear}}
+let laborExtra = {};
+
+function buildLaborYearSel(){
+  const sel=document.getElementById('labor-year-sel');
+  if(!sel) return;
+  const yrs=new Set([String(new Date().getFullYear())]);
+  Object.keys(laborDaily).forEach(k=>yrs.add(k.slice(0,4)));
+  Object.keys(laborAdj).forEach(k=>yrs.add(k.slice(0,4)));
+  const arr=[...yrs].sort().reverse();
+  const cur=sel.value||String(new Date().getFullYear());
+  sel.innerHTML=arr.map(y=>`<option value="${y}"${y===cur?' selected':''}>${y}년</option>`).join('');
+}
+
+function renderLaborYear(){
+  const year=document.getElementById('labor-year-sel')?.value||String(new Date().getFullYear());
+  const months=Array.from({length:12},(_,i)=>`${year}-${String(i+1).padStart(2,'0')}`);
+  const vat=v=>Math.round(v*1.1);   // 이 표는 VAT 포함 기준
+  const rows=months.map(mk=>{
+    const c=calcLabor(mk);
+    const ex=laborExtra[mk]||{};
+    const has=c.totalUnit>0||c.adj!==0;
+    return {mk,c,ex,has,
+      fixed:vat(c.fixed), variable:vat(c.varCost), adj:vat(c.adj), total:c.total};
+  });
+  const any=rows.some(r=>r.has);
+  const F=(v,r)=>r.has?fmt(v):'-';
+  const sum=k=>rows.filter(r=>r.has).reduce((a,r)=>a+(typeof k==='function'?k(r):r[k]),0);
+
+  const th=`<thead><tr style="background:#f0ede8">
+    <th style="position:sticky;left:0;background:#f0ede8;text-align:left;min-width:150px">구 분</th>
+    ${months.map((m,i)=>`<th style="text-align:right;min-width:92px">${i+1}월</th>`).join('')}
+    <th style="text-align:right;background:#e8e4dd;min-width:110px">누계</th></tr></thead>`;
+
+  const line=(label,val,opt={})=>{
+    const {color,bold,bg,pct}=opt;
+    const cells=rows.map(r=>{
+      const v=val(r);
+      if(!r.has||v===null||v===undefined) return '<td style="text-align:right;color:#c9c7c3">-</td>';
+      return `<td style="text-align:right${color?';color:'+color:''}${bold?';font-weight:700':''}">${pct?(v*100).toFixed(1)+'%':fmt(v)}</td>`;
+    }).join('');
+    let tot;
+    if(pct){
+      const vs=rows.filter(r=>r.has).map(val).filter(v=>v);
+      tot=vs.length?(vs.reduce((a,b)=>a+b,0)/vs.length*100).toFixed(1)+'%':'-';
+    } else {
+      const t=sum(r=>val(r)||0); tot=any?fmt(t):'-';
+    }
+    return `<tr${bg?` style="background:${bg}"`:''}>
+      <td style="position:sticky;left:0;background:${bg||'#fff'};text-align:left;font-weight:600">${label}</td>
+      ${cells}<td style="text-align:right;background:#f5f3ef;font-weight:700${color?';color:'+color:''}">${tot}</td></tr>`;
+  };
+
+  document.getElementById('labor-year-table').innerHTML=th+'<tbody>'
+    +line('점유율(occ.)',r=>r.ex.occ?r.ex.occ/100:null,{pct:true})
+    +line('판매 실 수',r=>r.ex.sold||null)
+    +line('정비 실 수',r=>r.c.roomsTotal||null)
+    +line('고정비 - ①',r=>r.fixed)
+    +line('변동비 - ②',r=>r.variable)
+    +line('기숙사 및 기타 차감 - ③',r=>r.adj,{color:'#A32D2D'})
+    +line('집행 합계 (①+②+③)',r=>r.total,{bold:true,bg:'#f7f6f4'})
+    +line(`${Number(year)-1}년 집행금액`,r=>r.ex.prevYear||null,{color:'#9b9b97'})
+    +line('전년대비',r=>r.ex.prevYear?r.total-r.ex.prevYear:null,{color:'#A32D2D'})
+    +'</tbody>';
+
+  // 월별 정비 UNIT 차트
+  const ctx=document.getElementById('labor-unit-chart');
+  if(ctx){
+    if(window.laborUnitChart) window.laborUnitChart.destroy();
+    window.laborUnitChart=new Chart(ctx,{type:'bar',data:{
+      labels:months.map((m,i)=>(i+1)+'월'),
+      datasets:[
+        {label:'C/O UNIT',data:rows.map(r=>r.c.cuUnit||0),backgroundColor:'#A8C89A'},
+        {label:'S/O UNIT',data:rows.map(r=>r.c.suUnit||0),backgroundColor:'#EBD9A8'},
+      ]},options:{responsive:true,maintainAspectRatio:false,
+        scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,beginAtZero:true}},
+        plugins:{legend:{position:'bottom'}}}});
+  }
+}
+
+// 월별 부가 항목 입력 모달
+function openLaborExtraModal(){
+  const year=document.getElementById('labor-year-sel')?.value||String(new Date().getFullYear());
+  const iN='width:100%;padding:5px 8px;border:1px solid rgba(0,0,0,0.14);border-radius:6px;font-size:13px;text-align:right';
+  document.getElementById('lx-tbody').innerHTML=Array.from({length:12},(_,i)=>{
+    const mk=`${year}-${String(i+1).padStart(2,'0')}`;
+    const e=laborExtra[mk]||{};
+    return `<tr><td style="font-weight:600">${i+1}월</td>
+      <td><input type="number" step="0.1" style="${iN}" value="${e.occ??''}" placeholder="-" onchange="setLaborExtra('${mk}','occ',this.value)"></td>
+      <td><input type="number" style="${iN}" value="${e.sold??''}" placeholder="-" onchange="setLaborExtra('${mk}','sold',this.value)"></td>
+      <td><input type="number" style="${iN}" value="${e.prevYear??''}" placeholder="-" onchange="setLaborExtra('${mk}','prevYear',this.value)"></td></tr>`;
+  }).join('');
+  document.getElementById('lx-year').textContent=year+'년';
+  openModal('laborextra-modal');
+}
+function setLaborExtra(mk,key,v){
+  if(!laborExtra[mk]) laborExtra[mk]={};
+  laborExtra[mk][key]=(v===''?null:Number(v));
+  dbSaveSettings('labor_extra',laborExtra);
+}
+
 function getRoomCountByType(){
   const src = (seoulRooms && seoulRooms.length > 0) ? seoulRooms : SR.map(([no,type])=>({no,type}));
   const cnt={};
@@ -6989,6 +7146,7 @@ async function dbLoadSettings(){
       if(r.key==='month_closing_weeks'&&r.value) Object.assign(monthClosingWeek,r.value);
       if(r.key==='usage_pick_items'&&r.value) usagePickItems=r.value;
       if(r.key==='room_unit_coef'&&r.value) roomUnitCoef=r.value;
+      if(r.key==='labor_extra'&&r.value) laborExtra=r.value;
       if(r.key==='contract_terms'&&r.value) Object.assign(contractTerms,r.value);
       // 재고 품목 순서 적용
       if(r.key&&r.key.startsWith('inv_item_order_')&&r.value){
