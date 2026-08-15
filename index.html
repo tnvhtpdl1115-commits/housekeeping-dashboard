@@ -679,7 +679,7 @@ tr:hover td{background:#fafaf8}
     <!-- 분석 테이블 -->
     <div class="card">
       <div class="ct">소모량 분석표
-        <span style="font-size:11px;font-weight:400;color:#6b6b68">객실 <span id="analysis-room-count">471</span>개 기준 · <span id="analysis-data-note" style="color:#854F0B"></span></span>
+        <span style="font-size:11px;font-weight:400;color:#6b6b68">객실 <span id="analysis-room-count">-</span>개 기준 · <span id="analysis-data-note" style="color:#854F0B"></span></span>
       </div>
       <div style="overflow-x:auto">
         <table id="analysis-table" style="width:100%;min-width:1000px;table-layout:fixed;border-collapse:collapse">
@@ -1994,8 +1994,9 @@ function renderReportContent(){
     });
   });
   const usageTopCost=usageItems.filter(u=>u.cost>0).sort((a,b)=>b.cost-a.cost).slice(0,10);
-  const roomCnt=(typeof seoulRooms!=='undefined'&&seoulRooms.length>0)?seoulRooms.length:471;
-  const perRoomCost=roomCnt>0?Math.round(usageTotal/roomCnt):0;
+  // ⚠️ 471 등 고정값 폴백 금지 (§2-1). 객실 데이터가 없으면 계산하지 않고 '-'로 표시한다.
+  const roomCnt=(typeof seoulRooms!=='undefined'&&seoulRooms.length>0)?seoulRooms.length:0;
+  const perRoomCost=roomCnt>0?Math.round(usageTotal/roomCnt):null;
 
   const catColors={객실:'#185FA5',린넨:'#1A7A5A',유니폼:'#B8860B',구매:'#A32D6A',기타:'#534AB7'};
 
@@ -2093,7 +2094,7 @@ function renderReportContent(){
         <div style="font-size:15px;font-weight:700;border-left:3px solid #C9A84C;padding-left:8px;margin-bottom:10px">5. 소모량 분석 요약</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
           <div style="background:#f7f6f4;border-radius:8px;padding:12px;text-align:center"><div style="font-size:11px;color:#6b6b68">이번 달 총 소모비용</div><div style="font-size:22px;font-weight:700;margin-top:4px;color:#A32D6A">${fmt(usageTotal)}</div></div>
-          <div style="background:#f7f6f4;border-radius:8px;padding:12px;text-align:center"><div style="font-size:11px;color:#6b6b68">1실당 소모비용 <span style="color:#9b9b97">(${roomCnt}실)</span></div><div style="font-size:22px;font-weight:700;margin-top:4px">${fmt(perRoomCost)}</div></div>
+          <div style="background:#f7f6f4;border-radius:8px;padding:12px;text-align:center"><div style="font-size:11px;color:#6b6b68">1실당 소모비용 <span style="color:#9b9b97">(${roomCnt>0?roomCnt+'실':'객실 데이터 없음'})</span></div><div style="font-size:22px;font-weight:700;margin-top:4px">${perRoomCost===null?'-':fmt(perRoomCost)}</div></div>
         </div>
         ${usageTopCost.length>0?`
         <div style="font-size:12px;font-weight:600;color:#4a453e;margin-bottom:6px">소모 비용 상위 품목</div>
@@ -4928,8 +4929,8 @@ function getAvgMonthlyUsage(itemName,category){
 
 function renderAnalysis(){
   const cat=document.getElementById('analysis-cat')?.value||'all';
-  const roomCount=seoulRooms.length||471;
-  document.getElementById('analysis-room-count').textContent=roomCount;
+  const roomCount=seoulRooms.length||0;
+  document.getElementById('analysis-room-count').textContent=roomCount||'-';
   const _noteEl=document.getElementById('analysis-data-note');
   if(_noteEl){
     const mc=getMonthsWithData().length;
@@ -5230,7 +5231,8 @@ async function dbLoadMaster(){
 
 function exportAnalysis(){
   const cat=document.getElementById('analysis-cat')?.value||'all';
-  const roomCount=seoulRooms.length||471;
+  // 고정값 폴백 금지 (§2-1) — 객실 데이터 없으면 1실당 수치는 '-'로 내보낸다
+  const roomCount=seoulRooms.length||0;
   let items=[];
   if(cat==='all'||cat==='consumable') items=[...items,...(weeklyItems.consumable||[]).map(i=>({...i,category:'consumable'}))];
   if(cat==='all'||cat==='equipment') items=[...items,...(weeklyItems.equipment||[]).map(i=>({...i,category:'equipment'}))];
@@ -5248,7 +5250,7 @@ function exportAnalysis(){
   });
   data.forEach(({item,m,w,mo,yr})=>{
     const pct=totalYear>0?(yr*(m.eaPrice||0)/totalYear*100).toFixed(1):'0';
-    rows.push([m.supplier||'',item.name,m.eaPrice||0,(w/7).toFixed(1),w,mo,yr,(w/(roomCount||471)).toFixed(2),fmt(mo*(m.eaPrice||0)),fmt(yr*(m.eaPrice||0)),pct+'%']);
+    rows.push([m.supplier||'',item.name,m.eaPrice||0,(w/7).toFixed(1),w,mo,yr,(roomCount>0?(w/roomCount).toFixed(2):'-'),fmt(mo*(m.eaPrice||0)),fmt(yr*(m.eaPrice||0)),pct+'%']);
   });
   const csv=rows.map(r=>r.join(',')).join('\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
@@ -6624,10 +6626,18 @@ async function dbLoadSettings(){
 }
 
 async function dbLoadRooms(){
-  const {data}=await supa.from('rooms').select('*').order('no');
+  const {data,error}=await supa.from('rooms').select('*').order('no');
+  // ⚠️ error를 무시하면 안 됨. 조회 실패(401 등)를 "DB가 비었다"로 오해해
+  //    기본 목록(SR)을 통째로 insert하려 들고, 화면엔 실제와 다른 객실 수가 뜬다.
+  if(error){
+    console.error('rooms 조회 실패 — 기본 목록으로 대체하지 않음',error);
+    showToast('⚠️ 객실 데이터 로드 실패',`화면의 객실 정보가 실제와 다를 수 있습니다 (${error.message||error.code||'오류'})`,'red',9000);
+    return;
+  }
   if(data&&data.length>0){
     seoulRooms=data.filter(r=>r.section==='seoul').map(r=>({no:r.no,type:r.type,floor:r.floor}));
   } else {
+    // DB가 실제로 비어 있을 때만 초기 데이터 주입
     await supa.from('rooms').insert(seoulRooms.map(r=>({no:r.no,type:r.type,floor:r.floor,section:'seoul'})));
   }
 }
@@ -6639,7 +6649,12 @@ async function dbSaveRoom(r,sec='seoul'){
 async function dbDeleteRoom(no){await supa.from('rooms').delete().eq('no',no);}
 
 async function dbLoadDormRooms(){
-  const {data}=await supa.from('dorm_rooms').select('*').order('no');
+  const {data,error}=await supa.from('dorm_rooms').select('*').order('no');
+  if(error){
+    console.error('dorm_rooms 조회 실패 — 기본 목록으로 대체하지 않음',error);
+    showToast('⚠️ 기숙사 데이터 로드 실패',`화면의 기숙사 정보가 실제와 다를 수 있습니다 (${error.message||error.code||'오류'})`,'red',9000);
+    return;
+  }
   if(data&&data.length>0){
     dormRooms=data.map(r=>({no:r.no,type:r.type,dept:r.dept||'',name:r.name||''}));
   } else {
