@@ -1109,11 +1109,11 @@ tr:hover td{background:#fafaf8}
 
     <div class="card">
       <div class="ct">일별 정비유닛</div>
-      <p style="font-size:11.5px;color:#9b9b97;margin:-4px 0 10px">업체 일일리포트의 S/O·C/O 실수와 S/U·C/U 유닛을 입력하세요. 방향키·엔터로 칸 이동이 됩니다.</p>
+      <p style="font-size:11.5px;color:#9b9b97;margin:-4px 0 10px">업체 일일리포트의 S/O·C/O 실수와 유닛을 입력하세요. 방향키·엔터로 칸 이동이 됩니다.</p>
       <div style="max-height:520px;overflow-y:auto">
         <table><thead><tr>
           <th>일자</th><th>S/O 실수</th><th>C/O 실수</th><th>실수 계</th>
-          <th>S/U 유닛</th><th>C/U 유닛</th><th>유닛 계</th>
+          <th>S/O 유닛</th><th>C/O 유닛</th><th>유닛 계</th>
         </tr></thead>
         <tbody id="labor-tbody"></tbody></table>
       </div>
@@ -6744,7 +6744,30 @@ function setLaborVal(month,d,key,v){
   if(!row) return;
   row[key]=(v===''||v===null)?null:Number(v);
   dbSaveLaborDaily(month,row);
-  renderLaborSummary(month);   // 표는 다시 그리지 않음 (입력 포커스 유지)
+  updateLaborRowCells(month,d);   // 표 전체를 다시 그리지 않고 계산 칸만 갱신 (포커스 유지)
+  renderLaborSummary(month);
+}
+
+// 입력한 행의 '실수 계'·'유닛 계'와 맨 아래 합계행만 다시 계산해 넣는다
+function updateLaborRowCells(month,d){
+  const rows=getLaborRows(month);
+  const row=rows.find(r=>r.d===d);
+  if(row){
+    const rSum=(Number(row.so)||0)+(Number(row.co)||0);
+    const uSum=(Number(row.su)||0)+(Number(row.cu)||0);
+    const rc=document.getElementById(`lb-rsum-${d}`);
+    const uc=document.getElementById(`lb-usum-${d}`);
+    if(rc) rc.textContent=rSum||'-';
+    if(uc) uc.textContent=uSum?uSum.toFixed(2):'-';
+  }
+  const c=calcLabor(month);
+  const set=(id,val)=>{const e=document.getElementById(id); if(e) e.textContent=val;};
+  set('lb-tot-so',c.soRooms||'-');
+  set('lb-tot-co',c.coRooms||'-');
+  set('lb-tot-rooms',c.roomsTotal||'-');
+  set('lb-tot-su',c.suUnit?c.suUnit.toFixed(2):'-');
+  set('lb-tot-cu',c.cuUnit?c.cuUnit.toFixed(2):'-');
+  set('lb-tot-unit',c.totalUnit?c.totalUnit.toFixed(2):'-');
 }
 
 function addLaborAdj(){
@@ -6786,17 +6809,17 @@ function renderLabor(){
       <td style="font-weight:600">${r.d}<span style="font-size:11px;color:${dow===0?'#A32D2D':dow===6?'#185FA5':'#9b9b97'};margin-left:4px">${dows[dow]}</span></td>
       <td><input class="gnav" type="number" tabindex="${++tab}" style="${iN}" value="${r.so??''}" placeholder="-" onchange="setLaborVal('${month}',${r.d},'so',this.value)"></td>
       <td><input class="gnav" type="number" tabindex="${++tab}" style="${iN}" value="${r.co??''}" placeholder="-" onchange="setLaborVal('${month}',${r.d},'co',this.value)"></td>
-      <td style="color:#6b6b68">${((Number(r.so)||0)+(Number(r.co)||0))||'-'}</td>
+      <td id="lb-rsum-${r.d}" style="color:#6b6b68">${((Number(r.so)||0)+(Number(r.co)||0))||'-'}</td>
       <td><input class="gnav" type="number" step="0.01" tabindex="${++tab}" style="${iN}" value="${r.su??''}" placeholder="-" onchange="setLaborVal('${month}',${r.d},'su',this.value)"></td>
       <td><input class="gnav" type="number" step="0.01" tabindex="${++tab}" style="${iN}" value="${r.cu??''}" placeholder="-" onchange="setLaborVal('${month}',${r.d},'cu',this.value)"></td>
-      <td style="font-weight:700;color:#B8860B">${rowUnit?rowUnit.toFixed(2):'-'}</td>
+      <td id="lb-usum-${r.d}" style="font-weight:700;color:#B8860B">${rowUnit?rowUnit.toFixed(2):'-'}</td>
     </tr>`;
   }).join('')+`<tr style="background:#0f1f3d;color:#fff;font-weight:700">
-      <td>합계</td><td style="text-align:right;padding-right:12px">${c.soRooms||'-'}</td>
-      <td style="text-align:right;padding-right:12px">${c.coRooms||'-'}</td><td>${c.roomsTotal||'-'}</td>
-      <td style="text-align:right;padding-right:12px">${c.suUnit?c.suUnit.toFixed(2):'-'}</td>
-      <td style="text-align:right;padding-right:12px">${c.cuUnit?c.cuUnit.toFixed(2):'-'}</td>
-      <td style="color:#E5C158">${c.totalUnit?c.totalUnit.toFixed(2):'-'}</td></tr>`;
+      <td>합계</td><td id="lb-tot-so" style="text-align:right;padding-right:12px">${c.soRooms||'-'}</td>
+      <td id="lb-tot-co" style="text-align:right;padding-right:12px">${c.coRooms||'-'}</td><td id="lb-tot-rooms">${c.roomsTotal||'-'}</td>
+      <td id="lb-tot-su" style="text-align:right;padding-right:12px">${c.suUnit?c.suUnit.toFixed(2):'-'}</td>
+      <td id="lb-tot-cu" style="text-align:right;padding-right:12px">${c.cuUnit?c.cuUnit.toFixed(2):'-'}</td>
+      <td id="lb-tot-unit" style="color:#E5C158">${c.totalUnit?c.totalUnit.toFixed(2):'-'}</td></tr>`;
 
   // 조정 항목 (자유 입력)
   const ab=document.getElementById('labor-adj-tbody');
