@@ -335,7 +335,8 @@ tr:hover td{background:#fafaf8}
       <button class="sub-tab" onclick="swSub('linen','setting')">세팅현황</button>
     </div>
     <div class="sub-tabs" id="sub-tabs-cost" style="display:none">
-      <button class="sub-tab active" onclick="swSub('cost','room')">객실</button>
+      <button class="sub-tab active" onclick="swSub('cost','total')">총비용</button>
+      <button class="sub-tab" onclick="swSub('cost','room')">객실</button>
       <button class="sub-tab" onclick="swSub('cost','linen')">린넨</button>
       <button class="sub-tab" onclick="swSub('cost','uniform')">유니폼</button>
       <button class="sub-tab" onclick="swSub('cost','purchase')">구매</button>
@@ -1454,7 +1455,7 @@ const SUB_MAP = {
   inventory: {default:'consumable', subs:['consumable','equipment','maintenance','rental','facility','analysis']},
   purchase:  {default:'consumable', subs:['consumable','equipment','maintenance','rental','facility','linen']},
   linen:     {default:'stock', subs:['stock','discard','contamination','setting']},
-  cost:      {default:'room', subs:['room','linen','uniform','purchase','etc']},
+  cost:      {default:'total', subs:['total','room','linen','uniform','purchase','etc']},
 };
 let currentMain = 'overview';
 let currentSub = {};
@@ -1537,8 +1538,8 @@ function swSub(main, sub){
   } else if(main==='cost'){
     document.getElementById('tab-cost').classList.add('on');
     currentCostCategory = sub;
-    const title={room:'객실',linen:'린넨',uniform:'유니폼',purchase:'구매',etc:'기타'}[sub]||sub;
-    document.getElementById('cost-title').textContent=title+' 비용 내역';
+    const title={total:'전체',room:'객실',linen:'린넨',uniform:'유니폼',purchase:'구매',etc:'기타'}[sub]||sub;
+    document.getElementById('cost-title').textContent=(sub==='total'?'전체 비용 내역':title+' 비용 내역');
     renderCost();
     renderCostChart();
   }
@@ -1548,7 +1549,7 @@ function swSub(main, sub){
 let currentIssueType = 'facility';
 let currentInvCategory = 'consumable';
 let currentPurCategory = 'consumable';
-let currentCostCategory = 'room';
+let currentCostCategory = 'total';
 function updateClock(){document.getElementById('clock').textContent=new Date().toLocaleString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});}
 function toggleLowStockDetail(){
   const detail=document.getElementById('lowstock-detail');
@@ -3512,7 +3513,7 @@ function buildCostMonthSel(forceReset=false){
 
 function getCostMonth(){return document.getElementById('cost-month-sel')?.value||thisMonthKey();}
 
-const COST_CAT_LABEL={room:'객실',linen:'린넨',uniform:'유니폼',purchase:'구매',etc:'기타',maintenance:'정비용품'};
+const COST_CAT_LABEL={total:'총',room:'객실',linen:'린넨',uniform:'유니폼',purchase:'구매',etc:'기타',maintenance:'정비용품'};
 
 // ── 예산 데이터 ──
 let budgetData = {room:0, linen:0, uniform:0, purchase:0, etc:0};
@@ -3560,7 +3561,8 @@ function renderCost(){
   const allItems=costData[month]||[];
   const prevItems=prevMonth?costData[prevMonth]||[]:[];
   const catLabel=COST_CAT_LABEL[currentCostCategory]||currentCostCategory;
-  const filtered=allItems.filter(c=>{
+  const isTotal=currentCostCategory==='total';
+  const filtered=isTotal?allItems.slice():allItems.filter(c=>{
     if(currentCostCategory==='purchase') return c.type==='구매'||c.subType==='구매';
     if(currentCostCategory==='room') return c.type==='객실'||c.subType==='객실';
     return c.type===catLabel||c.subType===catLabel;
@@ -3570,7 +3572,7 @@ function renderCost(){
   const catTotal=filtered.reduce((a,c)=>a+c.amount,0);
   const diff=total-prevTotal;
   const titleEl=document.getElementById('cost-title');
-  if(titleEl) titleEl.textContent=`${month.replace('-','년 ')}월 ${catLabel} 비용 내역`;
+  if(titleEl) titleEl.textContent=`${month.replace('-','년 ')}월 ${isTotal?'전체':catLabel} 비용 내역`;
   const el=document.getElementById('cost-metrics');
   if(el) el.innerHTML=`
     <div style="background:linear-gradient(135deg,#B8860B,#DAA520,#C9A84C);border-radius:14px;padding:20px 24px;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between">
@@ -3580,9 +3582,14 @@ function renderCost(){
         ${prevTotal?`<div style="display:inline-block;font-size:12px;font-weight:700;margin-top:6px;padding:3px 10px;border-radius:6px;background:${diff>0?'rgba(140,20,20,0.85)':'rgba(20,90,50,0.85)'};color:#fff">${diff>0?'▲':'▼'} ${fmt(Math.abs(diff))} 전월 대비</div>`:`<div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:4px">전월 데이터 없음</div>`}
       </div>
       <div style="text-align:right">
+        ${isTotal?`
+        <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:4px">등록 건수</div>
+        <div style="font-size:20px;font-weight:600;color:rgba(255,255,255,0.85)">${filtered.length}건</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:2px">전체 분류 합산</div>`
+        :`
         <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:4px">${catLabel} 합계</div>
         <div style="font-size:20px;font-weight:600;color:rgba(255,255,255,0.85)">${fmt(catTotal)}</div>
-        <div style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:2px">${total?Math.round(catTotal/total*100):0}% 비중</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:2px">${total?Math.round(catTotal/total*100):0}% 비중</div>`}
       </div>
     </div>`;
   if(costDonutChart) costDonutChart.destroy();
@@ -3628,7 +3635,8 @@ function openCostModal(){
   document.getElementById('cost-date').value=todayStr;
   document.getElementById('cost-label').value='';
   document.getElementById('cost-amount').value='';
-  document.getElementById('cost-type').value=currentCostCategory||'room';
+  // 총비용 탭에는 'total'이라는 분류가 실제로 존재하지 않으므로 기본값을 객실로 둔다
+  document.getElementById('cost-type').value=(currentCostCategory&&currentCostCategory!=='total')?currentCostCategory:'room';
   openModal('cost-add-modal');
 }
 
