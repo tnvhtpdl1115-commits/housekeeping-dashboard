@@ -1061,6 +1061,57 @@ tr:hover td{background:#fafaf8}
   </div>
   </div>
 
+  <!-- 린넨 세탁비 전용 화면 -->
+  <div id="cost-wash-section" style="display:none">
+    <div class="tab-sub" style="margin-bottom:14px">
+      <button class="on" onclick="setWashView('item',this)"><i class="ti ti-list-details"></i> 품목별 집행현황</button>
+      <button onclick="setWashView('monthly',this)"><i class="ti ti-table"></i> 월별 집행현황</button>
+    </div>
+
+    <div id="wash-view-monthly" style="display:none">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+        <select id="wash-year-sel" onchange="renderWashYear()" style="font-size:14px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;background:#1A7A5A;color:#fff;font-family:'Noto Sans KR',sans-serif;cursor:pointer"></select>
+        <span style="font-size:12px;color:#9b9b97">단위: 원 (VAT 포함)</span>
+        <div style="flex:1"></div>
+        <button class="btn-s" onclick="openWashExtraModal()"><i class="ti ti-plus"></i> 월별 항목 입력</button>
+      </div>
+      <div class="card">
+        <div class="ct">세탁비 집행내역</div>
+        <div style="overflow-x:auto"><table id="wash-year-table" style="font-size:12.5px;white-space:nowrap"></table></div>
+      </div>
+    </div>
+
+    <div id="wash-view-item">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+        <select id="wash-month-sel" onchange="renderWash()" style="font-size:14px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;background:#1A7A5A;color:#fff;font-family:'Noto Sans KR',sans-serif;cursor:pointer;min-width:110px"></select>
+        <button class="btn-s" onclick="washNewMonth()"><i class="ti ti-calendar-plus"></i> 새 달 시작</button>
+        <button class="btn-s" onclick="deleteWashMonth()" style="color:#A32D2D;border-color:rgba(163,45,45,0.35)"><i class="ti ti-trash"></i> 월 삭제</button>
+        <div style="flex:1"></div>
+        <button class="btn-s" onclick="openWashItemModal()"><i class="ti ti-settings"></i> 품목·단가 관리</button>
+      </div>
+
+      <div id="wash-summary"></div>
+
+      <div class="card">
+        <div class="ct">조정 항목
+          <button class="btn-i" style="margin-left:8px;color:#185FA5" onclick="addWashAdj()"><i class="ti ti-plus"></i> 항목 추가</button>
+        </div>
+        <p style="font-size:11.5px;color:#9b9b97;margin:-4px 0 10px">도급비 차감 등. 차감은 음수로 입력하세요.</p>
+        <table><thead><tr><th style="width:40%">항목명</th><th style="width:22%">금액</th><th>비고</th><th style="width:50px"></th></tr></thead>
+        <tbody id="wash-adj-tbody"></tbody></table>
+      </div>
+
+      <div class="card">
+        <div class="ct">품목별 세탁 수량</div>
+        <p style="font-size:11.5px;color:#9b9b97;margin:-4px 0 10px">그 달 세탁 수량만 입력하면 금액은 단가로 자동 계산됩니다. 방향키·엔터로 칸 이동이 됩니다.</p>
+        <div style="max-height:560px;overflow-y:auto">
+          <table><thead><tr><th>품목</th><th style="text-align:right">단가</th><th>세탁수량</th><th style="text-align:right">금액</th></tr></thead>
+          <tbody id="wash-tbody"></tbody></table>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- 도급비 전용 화면 -->
   <div id="cost-labor-section" style="display:none">
     <div class="tab-sub" style="margin-bottom:14px">
@@ -1120,6 +1171,38 @@ tr:hover td{background:#fafaf8}
     </div>
     </div>
   </div>
+</div>
+
+<!-- 모달: 세탁 품목·단가 관리 -->
+<div class="modal-bg" id="washitem-modal">
+<div class="modal" style="max-width:640px">
+  <h3>세탁 품목 · 단가 관리</h3>
+  <p style="font-size:12px;color:#6b6b68;margin-bottom:12px">
+    단가는 <strong>부가세 포함</strong> 기준입니다. 재계약으로 단가가 바뀌거나 품목이 추가·삭제되면 여기서 수정하세요.
+  </p>
+  <div style="max-height:420px;overflow-y:auto;margin-bottom:12px">
+    <table><thead><tr><th>품목명</th><th style="width:110px">구역</th><th style="width:130px">단가(VAT포함)</th><th style="width:50px"></th></tr></thead>
+    <tbody id="wi-tbody"></tbody></table>
+  </div>
+  <button class="btn-s" onclick="addWashItem()"><i class="ti ti-plus"></i> 품목 추가</button>
+  <div class="modal-btns">
+    <button class="btn-s" onclick="closeModal('washitem-modal')">취소</button>
+    <button class="btn-p" onclick="saveWashItems()">저장</button>
+  </div>
+</div>
+</div>
+
+<!-- 모달: 세탁 월별 부가 항목 -->
+<div class="modal-bg" id="washextra-modal">
+<div class="modal" style="max-width:560px">
+  <h3>월별 항목 입력 <span id="wx-year" style="font-size:13px;font-weight:400;color:#6b6b68"></span></h3>
+  <p style="font-size:12px;color:#6b6b68;margin-bottom:12px">점유율·판매 실수·전년 집행금액을 입력합니다. 정비 실수는 객실 탭에서 자동으로 가져옵니다.</p>
+  <div style="max-height:400px;overflow-y:auto">
+    <table><thead><tr><th style="width:60px">월</th><th>점유율(%)</th><th>판매 실수</th><th>전년 집행금액</th></tr></thead>
+    <tbody id="wx-tbody"></tbody></table>
+  </div>
+  <div class="modal-btns"><button class="btn-p" onclick="closeModal('washextra-modal');renderWashYear()">확인</button></div>
+</div>
 </div>
 
 <!-- 모달: 월별 부가 항목 -->
@@ -1648,12 +1731,16 @@ function swSub(main, sub){
     document.getElementById('tab-cost').classList.add('on');
     currentCostCategory = sub;
     // 도급비는 화면 구성이 완전히 달라 별도 섹션으로 전환한다
-    const isLabor=(sub==='room');
-    document.getElementById('cost-normal-section').style.display=isLabor?'none':'';
+    const isLabor=(sub==='room'), isWash=(sub==='linen');
+    document.getElementById('cost-normal-section').style.display=(isLabor||isWash)?'none':'';
     document.getElementById('cost-labor-section').style.display=isLabor?'':'none';
+    document.getElementById('cost-wash-section').style.display=isWash?'':'none';
     if(isLabor){
       buildLaborMonthSel();
       renderLabor();
+    } else if(isWash){
+      buildWashMonthSel();
+      renderWash();
     } else {
       const title={total:'전체',room:'객실',linen:'린넨',uniform:'유니폼',purchase:'구매',etc:'기타'}[sub]||sub;
       document.getElementById('cost-title').textContent=(sub==='total'?'전체 비용 내역':title+' 비용 내역');
@@ -7014,6 +7101,323 @@ async function deleteLaborMonth(){
   finally{ showLoading(false); }
 }
 
+// ── 린넨 세탁비 ─────────────────────────────────────
+// wash_items  : 품목 마스터 (settings). 단가는 VAT 포함 기준 — 총괄표 2-1과 동일.
+//   단가는 1년 재계약 시, 품목은 수시로 바뀔 수 있으므로 화면에서 편집한다(§2).
+// washQty     : {'YYYY-MM': {품목명: 수량}}   ← DB: wash_qty
+// washAdj     : {'YYYY-MM': [{id,label,amount,note}]}  ← DB: wash_adj (도급비 차감 등)
+const WASH_ZONE={room:'객실',pool:'수영장',banquet:'연회장'};
+let washItems = [
+  {name:'시트 S(소)',zone:'room',price:440},{name:'시트 D(중)',zone:'room',price:550},
+  {name:'시트 K(대)',zone:'room',price:660},{name:'커버 S(소)',zone:'room',price:990},
+  {name:'커버 D(중)',zone:'room',price:1100},{name:'커버 K(대)',zone:'room',price:1320},
+  {name:'베게커버(기숙사용)',zone:'room',price:0},{name:'필로우케이스',zone:'room',price:220},
+  {name:'가운',zone:'room',price:770},{name:'바스타올',zone:'room',price:385},
+  {name:'페이스타올',zone:'room',price:220},{name:'매트타올',zone:'room',price:330},
+  {name:'이불',zone:'room',price:3300},{name:'패드',zone:'room',price:1650},
+  {name:'담요',zone:'room',price:1100},{name:'행주',zone:'room',price:88},
+  {name:'베이비가드커버',zone:'room',price:880},{name:'베게(솜)',zone:'room',price:2200},
+  {name:'속커튼',zone:'room',price:5500},{name:'겉커튼',zone:'room',price:11000},
+  {name:'핸드타올',zone:'room',price:88},{name:'토퍼커버',zone:'room',price:2200},
+  {name:'소파커버',zone:'room',price:1100},{name:'옷',zone:'room',price:0},
+  {name:'카펫',zone:'room',price:5500},{name:'쿠션커버',zone:'room',price:550},
+  {name:'방수패드',zone:'room',price:0},
+  {name:'바스타올(수영장)',zone:'pool',price:385},{name:'쿠션커버(수영장)',zone:'pool',price:0},
+  {name:'원형',zone:'pool',price:0},{name:'카바나 스윙 베드',zone:'pool',price:0},
+  {name:'흔들의자 쿠션',zone:'pool',price:0},{name:'풀카바나 베드',zone:'pool',price:0},
+  {name:'풀카바나 베게',zone:'pool',price:0},{name:'시크릿 카바나 베드',zone:'pool',price:0},
+  {name:'시크릿 카바나 베게',zone:'pool',price:0},
+  {name:'테이블 크로스',zone:'banquet',price:1760},{name:'테이블 스커트',zone:'banquet',price:0},
+  {name:'테이블 커버',zone:'banquet',price:0},{name:'앞치마',zone:'banquet',price:0},
+  {name:'담요(무릎담요)',zone:'banquet',price:0},{name:'의자커버(연회장)',zone:'banquet',price:0}
+];
+let washQty = {};
+let washAdj = {};
+let washView = 'item';
+
+function getWashMonth(){return document.getElementById('wash-month-sel')?.value||thisMonthKey();}
+
+function calcWash(month){
+  const q=washQty[month]||{};
+  const zones={room:{qty:0,amt:0},pool:{qty:0,amt:0},banquet:{qty:0,amt:0}};
+  washItems.forEach(it=>{
+    const n=Number(q[it.name])||0;
+    if(!zones[it.zone]) zones[it.zone]={qty:0,amt:0};
+    zones[it.zone].qty+=n;
+    zones[it.zone].amt+=n*(it.price||0);
+  });
+  const adj=(washAdj[month]||[]).reduce((a,x)=>a+(Number(x.amount)||0),0);
+  const qty=Object.values(zones).reduce((a,z)=>a+z.qty,0);
+  const amt=Object.values(zones).reduce((a,z)=>a+z.amt,0);
+  return {zones,adj,qty,amt,total:amt+adj};
+}
+
+function setWashQty(month,name,v){
+  if(!washQty[month]) washQty[month]={};
+  const n=(v===''||v===null)?null:Number(v);
+  if(n===null) delete washQty[month][name]; else washQty[month][name]=n;
+  dbSaveWashQty(month,name,n);
+  updateWashCells(month,name);
+}
+
+// 표 전체를 다시 그리지 않고 해당 행 금액 + 소계 + 합계만 갱신 (입력 포커스 유지)
+function updateWashCells(month,name){
+  const it=washItems.find(i=>i.name===name);
+  if(it){
+    const n=Number((washQty[month]||{})[name])||0;
+    const el=document.getElementById('wq-amt-'+washKey(name));
+    if(el) el.textContent=n?fmt(n*(it.price||0)):'-';
+  }
+  const c=calcWash(month);
+  Object.keys(WASH_ZONE).forEach(z=>{
+    const q=document.getElementById('wq-zqty-'+z), a=document.getElementById('wq-zamt-'+z);
+    if(q) q.textContent=c.zones[z].qty?c.zones[z].qty.toLocaleString():'-';
+    if(a) a.textContent=c.zones[z].amt?fmt(c.zones[z].amt):'-';
+  });
+  const tq=document.getElementById('wq-tqty'), ta=document.getElementById('wq-tamt');
+  if(tq) tq.textContent=c.qty?c.qty.toLocaleString():'-';
+  if(ta) ta.textContent=fmt(c.total);
+  renderWashSummary(month);
+}
+function washKey(n){return n.replace(/[^가-힣A-Za-z0-9]/g,'_');}
+
+// ── 린넨 세탁: 화면 렌더 ────────────────────────────
+function setWashView(v,btn){
+  washView=v;
+  document.querySelectorAll('#cost-wash-section .tab-sub button').forEach(b=>b.classList.remove('on'));
+  if(btn) btn.classList.add('on');
+  document.getElementById('wash-view-item').style.display=(v==='item')?'':'none';
+  document.getElementById('wash-view-monthly').style.display=(v==='monthly')?'':'none';
+  if(v==='monthly'){ buildWashYearSel(); renderWashYear(); }
+  else { buildWashMonthSel(); renderWash(); }
+}
+
+function buildWashMonthSel(){
+  const sel=document.getElementById('wash-month-sel');
+  if(!sel) return;
+  const keys=new Set([...Object.keys(washQty),...Object.keys(washAdj),thisMonthKey()]);
+  const arr=[...keys].filter(Boolean).sort().reverse();
+  const cur=sel.value||thisMonthKey();
+  sel.innerHTML=arr.map(k=>`<option value="${k}"${k===cur?' selected':''}>${k.replace('-','년 ')}월</option>`).join('');
+}
+
+function renderWash(){
+  const month=getWashMonth();
+  const q=washQty[month]||{};
+  const c=calcWash(month);
+  const iN='width:92px;padding:4px 8px;border:1px solid rgba(0,0,0,0.14);border-radius:6px;font-size:14px;text-align:right';
+  let tab=0, html='';
+  Object.entries(WASH_ZONE).forEach(([z,label])=>{
+    const list=washItems.filter(i=>i.zone===z);
+    if(!list.length) return;
+    html+=`<tr style="background:#f0ede8"><td colspan="4" style="font-weight:700;font-size:12px;color:#1a3a5f">${label}</td></tr>`;
+    html+=list.map(it=>{
+      const n=q[it.name];
+      const amt=(Number(n)||0)*(it.price||0);
+      const noPrice=!it.price;
+      return `<tr>
+        <td>${it.name}${noPrice?'<span style="font-size:10px;color:#A32D2D;margin-left:6px">단가 미설정</span>':''}</td>
+        <td style="text-align:right;color:#6b6b68">${it.price?fmt(it.price):'-'}</td>
+        <td><input class="gnav" type="number" tabindex="${++tab}" style="${iN}" value="${n??''}" placeholder="-" onchange="setWashQty('${month}','${it.name}',this.value)"></td>
+        <td id="wq-amt-${washKey(it.name)}" style="text-align:right;font-weight:600">${amt?fmt(amt):'-'}</td>
+      </tr>`;
+    }).join('');
+    html+=`<tr style="background:#f7f6f4;font-weight:700">
+      <td colspan="2" style="text-align:right;padding-right:12px">${label} 소계</td>
+      <td id="wq-zqty-${z}" style="text-align:right;padding-right:12px">${c.zones[z].qty?c.zones[z].qty.toLocaleString():'-'}</td>
+      <td id="wq-zamt-${z}" style="text-align:right">${c.zones[z].amt?fmt(c.zones[z].amt):'-'}</td></tr>`;
+  });
+  html+=`<tr style="background:#0f1f3d;color:#fff;font-weight:700">
+    <td colspan="2" style="text-align:right;padding-right:12px">합계 (부가세 포함)</td>
+    <td id="wq-tqty" style="text-align:right;padding-right:12px">${c.qty?c.qty.toLocaleString():'-'}</td>
+    <td id="wq-tamt" style="text-align:right;color:#E5C158">${fmt(c.total)}</td></tr>`;
+  document.getElementById('wash-tbody').innerHTML=html;
+
+  const ab=document.getElementById('wash-adj-tbody');
+  const list=washAdj[month]||[];
+  if(ab) ab.innerHTML=list.length?list.map(a=>`<tr>
+      <td><input type="text" value="${a.label||''}" placeholder="항목명 (예: 도급비 차감)" style="width:100%;padding:5px 8px;border:1px solid rgba(0,0,0,0.14);border-radius:6px;font-size:13px" onchange="setWashAdj(${a.id},'label',this.value)"></td>
+      <td><input type="number" value="${a.amount||0}" style="width:140px;padding:5px 8px;border:1px solid rgba(0,0,0,0.14);border-radius:6px;font-size:13px;text-align:right" onchange="setWashAdj(${a.id},'amount',this.value)"></td>
+      <td><input type="text" value="${a.note||''}" placeholder="비고" style="width:100%;padding:5px 8px;border:1px solid rgba(0,0,0,0.14);border-radius:6px;font-size:13px" onchange="setWashAdj(${a.id},'note',this.value)"></td>
+      <td><button class="btn-i d" onclick="delWashAdj(${a.id})"><i class="ti ti-trash"></i></button></td>
+    </tr>`).join(''):'<tr><td colspan="4" class="empty">조정 항목이 없습니다. 도급비 차감 등을 추가하세요</td></tr>';
+
+  renderWashSummary(month);
+}
+
+function renderWashSummary(month){
+  const c=calcWash(month);
+  const el=document.getElementById('wash-summary');
+  if(!el) return;
+  el.innerHTML=`
+    <div style="background:linear-gradient(135deg,#1A7A5A,#155F47);border-radius:14px;padding:20px 24px;margin-bottom:1rem">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px">
+        <div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.55);margin-bottom:4px">${month.replace('-','년 ')}월 세탁비 합계 (부가세 포함)</div>
+          <div style="font-size:30px;font-weight:700;color:#fff">${fmt(c.total)}</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:4px">세탁 ${c.qty.toLocaleString()}장</div>
+        </div>
+        <div style="text-align:right;font-size:12px;color:rgba(255,255,255,0.8);line-height:1.9">
+          ${Object.entries(WASH_ZONE).map(([z,l])=>`<div>${l} ${c.zones[z].qty.toLocaleString()}장 <strong style="color:#fff;margin-left:8px">${fmt(c.zones[z].amt)}</strong></div>`).join('')}
+          ${c.adj?`<div>조정 <strong style="color:${c.adj<0?'#FFC9C9':'#C9FFD9'};margin-left:8px">${fmt(c.adj)}</strong></div>`:''}
+        </div>
+      </div>
+    </div>`;
+}
+
+function addWashAdj(){
+  const month=getWashMonth();
+  if(!washAdj[month]) washAdj[month]=[];
+  washAdj[month].push({id:Date.now(),label:'',amount:0,note:''});
+  renderWash();
+}
+function setWashAdj(id,key,v){
+  const month=getWashMonth();
+  const it=(washAdj[month]||[]).find(x=>x.id==id);
+  if(!it) return;
+  it[key]=(key==='amount')?(Number(v.toString().replace(/,/g,''))||0):v;
+  dbSaveWashAdj(month,it);
+  renderWashSummary(month);
+  updateWashCells(month,'');
+}
+function delWashAdj(id){
+  const month=getWashMonth();
+  const it=(washAdj[month]||[]).find(x=>x.id==id);
+  washAdj[month]=(washAdj[month]||[]).filter(x=>x.id!=id);
+  if(it&&it.dbId) supa.from('wash_adj').delete().eq('id',it.dbId);
+  renderWash();
+}
+
+function washNewMonth(){
+  const v=prompt('추가할 월을 입력하세요 (예: 2026-09)','');
+  if(!v) return;
+  const key=v.trim();
+  if(!/^\d{4}-\d{2}$/.test(key)){alert('형식이 올바르지 않습니다. 예: 2026-09');return;}
+  if(!washQty[key]) washQty[key]={};
+  buildWashMonthSel();
+  document.getElementById('wash-month-sel').value=key;
+  renderWash();
+}
+
+async function deleteWashMonth(){
+  const month=getWashMonth();
+  if(month===thisMonthKey()){alert('이번 달은 삭제할 수 없습니다.');return;}
+  const typed=prompt(`⚠️ ${month.replace('-','년 ')}월 세탁 데이터를 삭제합니다.\n되돌릴 수 없습니다.\n\n삭제하려면 "${month}" 를 입력하세요.`,'');
+  if(typed===null) return;
+  if(typed.trim()!==month){alert('입력이 일치하지 않아 취소했습니다.');return;}
+  showLoading(true);
+  try{
+    delete washQty[month]; delete washAdj[month];
+    await supa.from('wash_qty').delete().eq('month',month);
+    await supa.from('wash_adj').delete().eq('month',month);
+    buildWashMonthSel(); renderWash();
+    showToast('🗑 삭제 완료',`${month.replace('-','년 ')}월 세탁 데이터가 삭제됐습니다`,'red');
+  }catch(e){ alert('삭제 중 오류: '+e.message); }
+  finally{ showLoading(false); }
+}
+
+// ── 월별 집행현황 (시트 2) ──────────────────────────
+let washExtra = {};   // {'YYYY-MM':{occ,sold,prevYear}}
+
+function buildWashYearSel(){
+  const sel=document.getElementById('wash-year-sel');
+  if(!sel) return;
+  const yrs=new Set([String(new Date().getFullYear())]);
+  Object.keys(washQty).forEach(k=>yrs.add(k.slice(0,4)));
+  const arr=[...yrs].sort().reverse();
+  const cur=sel.value||String(new Date().getFullYear());
+  sel.innerHTML=arr.map(y=>`<option value="${y}"${y===cur?' selected':''}>${y}년</option>`).join('');
+}
+
+function renderWashYear(){
+  const year=document.getElementById('wash-year-sel')?.value||String(new Date().getFullYear());
+  const months=Array.from({length:12},(_,i)=>`${year}-${String(i+1).padStart(2,'0')}`);
+  const rows=months.map(mk=>{
+    const c=calcWash(mk); const ex=washExtra[mk]||{};
+    return {mk,c,ex,has:c.qty>0||c.adj!==0};
+  });
+  const any=rows.some(r=>r.has);
+  const line=(label,val,opt={})=>{
+    const {color,bold,bg,pct,indent}=opt;
+    const cells=rows.map(r=>{
+      const v=val(r);
+      if(!r.has||v===null||v===undefined||v===0&&!pct) return '<td style="text-align:right;color:#c9c7c3">-</td>';
+      return `<td style="text-align:right${color?';color:'+color:''}${bold?';font-weight:700':''}">${pct?(v*100).toFixed(1)+'%':fmt(v)}</td>`;
+    }).join('');
+    let tot;
+    if(pct){
+      const vs=rows.filter(r=>r.has).map(val).filter(v=>v);
+      tot=vs.length?(vs.reduce((a,b)=>a+b,0)/vs.length*100).toFixed(1)+'%':'-';
+    } else {
+      const t=rows.filter(r=>r.has).reduce((a,r)=>a+(val(r)||0),0); tot=any?fmt(t):'-';
+    }
+    return `<tr${bg?` style="background:${bg}"`:''}>
+      <td style="position:sticky;left:0;background:${bg||'#fff'};text-align:left;font-weight:600${indent?';padding-left:24px;font-weight:400':''}">${label}</td>
+      ${cells}<td style="text-align:right;background:#f5f3ef;font-weight:700${color?';color:'+color:''}">${tot}</td></tr>`;
+  };
+  const th=`<thead><tr style="background:#f0ede8">
+    <th style="position:sticky;left:0;background:#f0ede8;text-align:left;min-width:150px">구 분</th>
+    ${months.map((m,i)=>`<th style="text-align:right;min-width:92px">${i+1}월</th>`).join('')}
+    <th style="text-align:right;background:#e8e4dd;min-width:110px">누계</th></tr></thead>`;
+  document.getElementById('wash-year-table').innerHTML=th+'<tbody>'
+    +line('점유율(occ.)',r=>r.ex.occ?r.ex.occ/100:null,{pct:true})
+    +line('판매 실 수',r=>r.ex.sold||null)
+    +line('정비 실 수',r=>calcLabor(r.mk).roomsTotal||null)
+    +line('세탁비 — 객실',r=>r.c.zones.room.amt,{indent:true})
+    +line('세탁비 — 수영장',r=>r.c.zones.pool.amt,{indent:true})
+    +line('세탁비 — 연회',r=>r.c.zones.banquet.amt,{indent:true})
+    +line('조정 (도급비 차감 등)',r=>r.c.adj,{color:'#A32D2D'})
+    +line('세탁비 합계',r=>r.c.total,{bold:true,bg:'#f7f6f4'})
+    +line(`${Number(year)-1}년 집행금액`,r=>r.ex.prevYear||null,{color:'#9b9b97'})
+    +line('전년대비',r=>r.ex.prevYear?r.c.total-r.ex.prevYear:null,{color:'#A32D2D'})
+    +'</tbody>';
+}
+
+// 품목 마스터 편집
+function openWashItemModal(){
+  const iN='padding:4px 8px;border:1px solid rgba(0,0,0,0.14);border-radius:6px;font-size:13px';
+  document.getElementById('wi-tbody').innerHTML=washItems.map((it,i)=>`<tr>
+    <td><input type="text" value="${it.name}" style="${iN};width:100%" onchange="washItems[${i}].name=this.value"></td>
+    <td><select style="${iN}" onchange="washItems[${i}].zone=this.value">
+      ${Object.entries(WASH_ZONE).map(([z,l])=>`<option value="${z}"${it.zone===z?' selected':''}>${l}</option>`).join('')}
+    </select></td>
+    <td><input type="number" value="${it.price||0}" style="${iN};width:110px;text-align:right" onchange="washItems[${i}].price=Number(this.value)||0"></td>
+    <td><button class="btn-i d" onclick="washItems.splice(${i},1);openWashItemModal()"><i class="ti ti-trash"></i></button></td>
+  </tr>`).join('');
+  openModal('washitem-modal');
+}
+function addWashItem(){
+  washItems.push({name:'',zone:'room',price:0});
+  openWashItemModal();
+}
+function saveWashItems(){
+  washItems=washItems.filter(i=>i.name&&i.name.trim());
+  dbSaveSettings('wash_items',washItems);
+  closeModal('washitem-modal');
+  renderWash();
+  showToast('⚙️ 저장 완료',`세탁 품목 ${washItems.length}개가 저장됐습니다`,'grn');
+}
+
+function openWashExtraModal(){
+  const year=document.getElementById('wash-year-sel')?.value||String(new Date().getFullYear());
+  const iN='width:100%;padding:5px 8px;border:1px solid rgba(0,0,0,0.14);border-radius:6px;font-size:13px;text-align:right';
+  document.getElementById('wx-tbody').innerHTML=Array.from({length:12},(_,i)=>{
+    const mk=`${year}-${String(i+1).padStart(2,'0')}`;
+    const e=washExtra[mk]||{};
+    return `<tr><td style="font-weight:600">${i+1}월</td>
+      <td><input type="number" step="0.1" style="${iN}" value="${e.occ??''}" placeholder="-" onchange="setWashExtra('${mk}','occ',this.value)"></td>
+      <td><input type="number" style="${iN}" value="${e.sold??''}" placeholder="-" onchange="setWashExtra('${mk}','sold',this.value)"></td>
+      <td><input type="number" style="${iN}" value="${e.prevYear??''}" placeholder="-" onchange="setWashExtra('${mk}','prevYear',this.value)"></td></tr>`;
+  }).join('');
+  document.getElementById('wx-year').textContent=year+'년';
+  openModal('washextra-modal');
+}
+function setWashExtra(mk,key,v){
+  if(!washExtra[mk]) washExtra[mk]={};
+  washExtra[mk][key]=(v===''?null:Number(v));
+  dbSaveSettings('wash_extra',washExtra);
+}
+
 function getRoomCountByType(){
   const src = (seoulRooms && seoulRooms.length > 0) ? seoulRooms : SR.map(([no,type])=>({no,type}));
   const cnt={};
@@ -7143,6 +7547,28 @@ function updateAllMonthBadges(){
   ].forEach(([s,b])=>updateMonthBadge(s,b));
 }
 
+// ── 린넨 세탁 DB ─────────────────────────────────────
+async function dbSaveWashQty(month,name,qty){
+  if(qty===null){ await supa.from('wash_qty').delete().eq('month',month).eq('item_name',name); return; }
+  const {error}=await supa.from('wash_qty').upsert({month,item_name:name,qty},{onConflict:'month,item_name'});
+  if(error) console.error('wash_qty 저장 실패',error);
+}
+async function dbSaveWashAdj(month,item){
+  const payload={month,label:item.label||'',amount:item.amount||0,note:item.note||''};
+  if(item.dbId) payload.id=item.dbId;
+  const {data,error}=await supa.from('wash_adj').upsert(payload).select();
+  if(error) console.error('wash_adj 저장 실패',error);
+  else if(data&&data[0]) item.dbId=data[0].id;
+}
+async function dbLoadWash(){
+  const {data:d1,error:e1}=await supa.from('wash_qty').select('*');
+  if(e1) console.error('wash_qty 조회 실패',e1);
+  else if(d1){ washQty={}; d1.forEach(r=>{ if(!washQty[r.month]) washQty[r.month]={}; washQty[r.month][r.item_name]=r.qty; }); }
+  const {data:d2,error:e2}=await supa.from('wash_adj').select('*');
+  if(e2) console.error('wash_adj 조회 실패',e2);
+  else if(d2){ washAdj={}; d2.forEach(r=>{ if(!washAdj[r.month]) washAdj[r.month]=[]; washAdj[r.month].push({id:r.id,dbId:r.id,label:r.label,amount:r.amount,note:r.note}); }); }
+}
+
 // ── 도급비 DB ────────────────────────────────────────
 async function dbSaveLaborDaily(month,row){
   const payload={month,d:row.d,so:row.so,co:row.co,su:row.su,cu:row.cu};
@@ -7190,6 +7616,8 @@ async function dbLoadSettings(){
       if(r.key==='usage_pick_items'&&r.value) usagePickItems=r.value;
       if(r.key==='room_unit_coef'&&r.value) roomUnitCoef=r.value;
       if(r.key==='labor_extra'&&r.value) laborExtra=r.value;
+      if(r.key==='wash_items'&&r.value) washItems=r.value;
+      if(r.key==='wash_extra'&&r.value) washExtra=r.value;
       if(r.key==='contract_terms'&&r.value) Object.assign(contractTerms,r.value);
       // 재고 품목 순서 적용
       if(r.key&&r.key.startsWith('inv_item_order_')&&r.value){
@@ -7569,6 +7997,7 @@ async function initApp(){
       dbLoadLinenSetting(),
       dbLoadHandover(),
       dbLoadLabor(),
+      dbLoadWash(),
     ]);
     // 구매 데이터 기준으로 비용 재동기화 (구매 탭이 원천)
     await syncPurchaseCosts();
