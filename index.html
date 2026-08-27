@@ -7112,18 +7112,19 @@ function renderLaborYear(){
     <th style="text-align:right;background:#e8e4dd;min-width:110px">누계</th></tr></thead>`;
 
   const line=(label,val,opt={})=>{
-    const {color,bold,bg,pct}=opt;
+    const {color,bold,bg,pct,num}=opt;
     const cells=rows.map(r=>{
       const v=val(r);
       if(!r.has||v===null||v===undefined) return '<td style="text-align:right;color:#c9c7c3">-</td>';
-      return `<td style="text-align:right${color?';color:'+color:''}${bold?';font-weight:700':''}">${pct?(v*100).toFixed(1)+'%':fmt(v)}</td>`;
+      const txt=pct?(v*100).toFixed(1)+'%':(num?v.toLocaleString('ko-KR'):fmt(v));
+      return `<td style="text-align:right${color?';color:'+color:''}${bold?';font-weight:700':''}">${txt}</td>`;
     }).join('');
     let tot;
     if(pct){
       const vs=rows.filter(r=>r.has).map(val).filter(v=>v);
       tot=vs.length?(vs.reduce((a,b)=>a+b,0)/vs.length*100).toFixed(1)+'%':'-';
     } else {
-      const t=sum(r=>val(r)||0); tot=any?fmt(t):'-';
+      const t=sum(r=>val(r)||0); tot=any?(num?t.toLocaleString('ko-KR'):fmt(t)):'-';
     }
     return `<tr${bg?` style="background:${bg}"`:''}>
       <td style="position:sticky;left:0;background:${bg||'#fff'};text-align:left;font-weight:600">${label}</td>
@@ -7132,8 +7133,8 @@ function renderLaborYear(){
 
   document.getElementById('labor-year-table').innerHTML=th+'<tbody>'
     +line('점유율(occ.)',r=>r.ex.occ?r.ex.occ/100:null,{pct:true})
-    +line('판매 실 수',r=>r.ex.sold||null)
-    +line('정비 실 수',r=>r.c.roomsTotal||null)
+    +line('판매 실 수',r=>r.ex.sold||null,{num:true})
+    +line('정비 실 수',r=>r.c.roomsTotal||null,{num:true})
     +line('고정비 - ①',r=>r.fixed)
     +line('변동비 - ②',r=>r.variable)
     +line('기숙사 및 기타 차감 - ③',r=>r.adj,{color:'#A32D2D'})
@@ -7434,18 +7435,19 @@ function renderWashYear(){
   });
   const any=rows.some(r=>r.has);
   const line=(label,val,opt={})=>{
-    const {color,bold,bg,pct,indent}=opt;
+    const {color,bold,bg,pct,indent,num}=opt;
     const cells=rows.map(r=>{
       const v=val(r);
       if(!r.has||v===null||v===undefined||v===0&&!pct) return '<td style="text-align:right;color:#c9c7c3">-</td>';
-      return `<td style="text-align:right${color?';color:'+color:''}${bold?';font-weight:700':''}">${pct?(v*100).toFixed(1)+'%':fmt(v)}</td>`;
+      const txt=pct?(v*100).toFixed(1)+'%':(num?v.toLocaleString('ko-KR'):fmt(v));
+      return `<td style="text-align:right${color?';color:'+color:''}${bold?';font-weight:700':''}">${txt}</td>`;
     }).join('');
     let tot;
     if(pct){
       const vs=rows.filter(r=>r.has).map(val).filter(v=>v);
       tot=vs.length?(vs.reduce((a,b)=>a+b,0)/vs.length*100).toFixed(1)+'%':'-';
     } else {
-      const t=rows.filter(r=>r.has).reduce((a,r)=>a+(val(r)||0),0); tot=any?fmt(t):'-';
+      const t=rows.filter(r=>r.has).reduce((a,r)=>a+(val(r)||0),0); tot=any?(num?t.toLocaleString('ko-KR'):fmt(t)):'-';
     }
     return `<tr${bg?` style="background:${bg}"`:''}>
       <td style="position:sticky;left:0;background:${bg||'#fff'};text-align:left;font-weight:600${indent?';padding-left:24px;font-weight:400':''}">${label}</td>
@@ -7457,8 +7459,8 @@ function renderWashYear(){
     <th style="text-align:right;background:#e8e4dd;min-width:110px">누계</th></tr></thead>`;
   document.getElementById('wash-year-table').innerHTML=th+'<tbody>'
     +line('점유율(occ.)',r=>r.ex.occ?r.ex.occ/100:null,{pct:true})
-    +line('판매 실 수',r=>r.ex.sold||null)
-    +line('정비 실 수',r=>calcLabor(r.mk).roomsTotal||null)
+    +line('판매 실 수',r=>r.ex.sold||null,{num:true})
+    +line('정비 실 수',r=>calcLabor(r.mk).roomsTotal||null,{num:true})
     +line('세탁비 — 객실',r=>r.c.zones.room.amt,{indent:true})
     +line('세탁비 — 수영장',r=>r.c.zones.pool.amt,{indent:true})
     +line('세탁비 — 연회',r=>r.c.zones.banquet.amt,{indent:true})
@@ -7635,17 +7637,18 @@ function renderSimpleYear(){
   });
   const any=rows.some(r=>r.has);
   const line=(label,val,opt={})=>{
-    const {color,bold,bg,pct}=opt;
+    const {color,bold,bg,pct,num}=opt;
     const cells=rows.map(r=>{
       const v=val(r);
       if(!r.has||v===null||v===undefined) return '<td style="text-align:right;color:#c9c7c3">-</td>';
-      return `<td style="text-align:right${color?';color:'+color:''}${bold?';font-weight:700':''}">${pct?(v*100).toFixed(1)+'%':fmt(v)}</td>`;
+      const txt=pct?(v*100).toFixed(1)+'%':(num?v.toLocaleString('ko-KR'):fmt(v));
+      return `<td style="text-align:right${color?';color:'+color:''}${bold?';font-weight:700':''}">${txt}</td>`;
     }).join('');
     let tot;
     if(pct){
       const vs=rows.filter(r=>r.has).map(val).filter(v=>v);
       tot=vs.length?(vs.reduce((a,b)=>a+b,0)/vs.length*100).toFixed(1)+'%':'-';
-    } else tot=any?fmt(rows.filter(r=>r.has).reduce((a,r)=>a+(val(r)||0),0)):'-';
+    } else { const t=rows.filter(r=>r.has).reduce((a,r)=>a+(val(r)||0),0); tot=any?(num?t.toLocaleString('ko-KR'):fmt(t)):'-'; }
     return `<tr${bg?` style="background:${bg}"`:''}>
       <td style="position:sticky;left:0;background:${bg||'#fff'};text-align:left;font-weight:600">${label}</td>
       ${cells}<td style="text-align:right;background:#f5f3ef;font-weight:700${color?';color:'+color:''}">${tot}</td></tr>`;
@@ -7656,8 +7659,8 @@ function renderSimpleYear(){
     <th style="text-align:right;background:#e8e4dd;min-width:110px">누계</th></tr></thead>`;
   document.getElementById('simple-year-table').innerHTML=th+'<tbody>'
     +line('점유율(occ.)',r=>r.ex.occ?r.ex.occ/100:null,{pct:true})
-    +line('판매 실 수',r=>r.ex.sold||null)
-    +line('등록 건수',r=>r.cnt||null)
+    +line('판매 실 수',r=>r.ex.sold||null,{num:true})
+    +line('등록 건수',r=>r.cnt||null,{num:true})
     +line(cfg.label+' 비용',r=>r.amt,{bold:true,bg:'#f7f6f4'})
     +line(`${Number(year)-1}년 집행금액`,r=>r.ex.prevYear||null,{color:'#9b9b97'})
     +line('전년대비',r=>r.ex.prevYear?r.amt-r.ex.prevYear:null,{color:'#A32D2D'})
