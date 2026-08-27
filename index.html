@@ -1061,36 +1061,40 @@ tr:hover td{background:#fafaf8}
   </div>
   </div>
 
-  <!-- 유니폼 전용 화면 -->
-  <div id="cost-uni-section" style="display:none">
+  <!-- 유니폼 / 구매 / 기타 공통 화면 -->
+  <div id="cost-simple-section" style="display:none">
     <div class="tab-sub" style="margin-bottom:14px">
-      <button class="on" onclick="setUniView('item',this)"><i class="ti ti-shirt"></i> 비용 등록</button>
-      <button onclick="setUniView('monthly',this)"><i class="ti ti-table"></i> 월별 집행현황</button>
+      <button class="on" onclick="setSimpleView('item',this)"><i class="ti ti-list-details"></i> 비용 내역</button>
+      <button onclick="setSimpleView('monthly',this)"><i class="ti ti-table"></i> 월별 집행현황</button>
     </div>
 
-    <div id="uni-view-monthly" style="display:none">
+    <div id="simple-view-monthly" style="display:none">
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-        <select id="uni-year-sel" onchange="renderUniYear()" style="font-size:14px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;background:#8C6608;color:#fff;font-family:'Noto Sans KR',sans-serif;cursor:pointer"></select>
+        <select id="simple-year-sel" onchange="renderSimpleYear()" style="font-size:14px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;color:#fff;font-family:'Noto Sans KR',sans-serif;cursor:pointer"></select>
         <div style="flex:1"></div>
-        <button class="btn-s" onclick="openUniExtraModal()"><i class="ti ti-plus"></i> 월별 항목 입력</button>
+        <button class="btn-s" onclick="openSimpleExtraModal()"><i class="ti ti-plus"></i> 월별 항목 입력</button>
       </div>
       <div class="card">
-        <div class="ct">유니폼 집행내역</div>
-        <div style="overflow-x:auto"><table id="uni-year-table" style="font-size:12.5px;white-space:nowrap"></table></div>
+        <div class="ct"><span id="simple-title-y"></span>집행내역</div>
+        <div style="overflow-x:auto"><table id="simple-year-table" style="font-size:12.5px;white-space:nowrap"></table></div>
       </div>
     </div>
 
-    <div id="uni-view-item">
+    <div id="simple-view-item">
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-        <select id="uni-month-sel" onchange="renderUni()" style="font-size:14px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;background:#8C6608;color:#fff;font-family:'Noto Sans KR',sans-serif;cursor:pointer;min-width:110px"></select>
+        <select id="simple-month-sel" onchange="renderSimple()" style="font-size:14px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;color:#fff;font-family:'Noto Sans KR',sans-serif;cursor:pointer;min-width:110px"></select>
+        <span id="simple-title" style="font-size:15px;font-weight:700;color:#1a1a18"></span>
         <div style="flex:1"></div>
-        <button class="btn-p" onclick="openUniModal()"><i class="ti ti-plus"></i> 유니폼 비용 등록</button>
+        <button class="btn-p" id="simple-add-btn" onclick="openSimpleModal()"><i class="ti ti-plus"></i> 비용 등록</button>
       </div>
-      <div id="uni-summary"></div>
+      <div id="simple-readonly-note" style="display:none;background:rgba(163,45,106,0.07);border:1px solid rgba(163,45,106,0.2);border-radius:8px;padding:10px 14px;font-size:12px;color:#7A2150;margin-bottom:1rem">
+        구매 비용은 <strong>구매 탭이 원천</strong>이라 여기서 직접 등록·삭제하지 않습니다. 구매 탭에서 입고 완료 처리하면 자동으로 반영됩니다.
+      </div>
+      <div id="simple-summary"></div>
       <div class="card">
         <div class="ct">등록 내역</div>
         <table><thead><tr><th style="width:110px">날짜</th><th>항목</th><th style="text-align:right;width:150px">금액</th><th style="width:50px"></th></tr></thead>
-        <tbody id="uni-tbody"></tbody></table>
+        <tbody id="simple-tbody"></tbody></table>
       </div>
     </div>
   </div>
@@ -1231,6 +1235,33 @@ tr:hover td{background:#fafaf8}
     <tbody id="ux-tbody"></tbody></table>
   </div>
   <div class="modal-btns"><button class="btn-p" onclick="closeModal('uniextra-modal');renderUniYear()">확인</button></div>
+</div>
+</div>
+
+<!-- 모달: 단순 비용 등록 -->
+<div class="modal-bg" id="simple-add-modal">
+<div class="modal" style="max-width:420px">
+  <h3 id="simple-modal-title">비용 등록</h3>
+  <div class="fg"><label>대상 월</label><input type="text" id="simple-modal-month" readonly style="background:#f7f6f4"></div>
+  <div class="fg"><label>날짜</label><input type="date" id="simple-date"></div>
+  <div class="fg"><label>항목명</label><input type="text" id="simple-label" placeholder="예: 하계 유니폼 제작"></div>
+  <div class="fg"><label>금액 (원)</label><input type="number" id="simple-amount" placeholder="0"></div>
+  <div class="modal-btns">
+    <button class="btn-s" onclick="closeModal('simple-add-modal')">취소</button>
+    <button class="btn-p" onclick="addSimpleCost()">등록</button>
+  </div>
+</div>
+</div>
+
+<!-- 모달: 단순 비용 월별 항목 -->
+<div class="modal-bg" id="simpleextra-modal">
+<div class="modal" style="max-width:560px">
+  <h3>월별 항목 입력 <span id="sx-year" style="font-size:13px;font-weight:400;color:#6b6b68"></span></h3>
+  <div style="max-height:400px;overflow-y:auto">
+    <table><thead><tr><th style="width:60px">월</th><th>점유율(%)</th><th>판매 실수</th><th>전년 집행금액</th></tr></thead>
+    <tbody id="sx-tbody"></tbody></table>
+  </div>
+  <div class="modal-btns"><button class="btn-p" onclick="closeModal('simpleextra-modal');renderSimpleYear()">확인</button></div>
 </div>
 </div>
 
@@ -1792,20 +1823,20 @@ function swSub(main, sub){
     document.getElementById('tab-cost').classList.add('on');
     currentCostCategory = sub;
     // 도급비는 화면 구성이 완전히 달라 별도 섹션으로 전환한다
-    const isLabor=(sub==='room'), isWash=(sub==='linen'), isUni=(sub==='uniform');
-    document.getElementById('cost-normal-section').style.display=(isLabor||isWash||isUni)?'none':'';
+    const isLabor=(sub==='room'), isWash=(sub==='linen');
+    const isSimple=['uniform','purchase','etc'].includes(sub);
+    document.getElementById('cost-normal-section').style.display=(isLabor||isWash||isSimple)?'none':'';
     document.getElementById('cost-labor-section').style.display=isLabor?'':'none';
     document.getElementById('cost-wash-section').style.display=isWash?'':'none';
-    document.getElementById('cost-uni-section').style.display=isUni?'':'none';
+    document.getElementById('cost-simple-section').style.display=isSimple?'':'none';
     if(isLabor){
       buildLaborMonthSel();
       renderLabor();
     } else if(isWash){
       buildWashMonthSel();
       renderWash();
-    } else if(isUni){
-      buildUniMonthSel();
-      renderUni();
+    } else if(isSimple){
+      openSimpleCost(sub);
     } else {
       const title={total:'전체',room:'객실',linen:'린넨',uniform:'유니폼',purchase:'구매',etc:'기타'}[sub]||sub;
       document.getElementById('cost-title').textContent=(sub==='total'?'전체 비용 내역':title+' 비용 내역');
@@ -7483,83 +7514,108 @@ function setWashExtra(mk,key,v){
   dbSaveSettings('wash_extra',washExtra);
 }
 
-// ── 유니폼 비용 ──────────────────────────────────────
-// 데이터는 기존 costData(type='유니폼')를 그대로 쓴다. 별도 테이블 없음.
-let uniView='item';
-let uniExtra={};   // {'YYYY-MM':{occ,sold,prevYear}}
+// ── 단순 비용 카테고리 (유니폼 / 구매 / 기타) 공통 ──────────
+// 화면 구조가 같아 하나의 섹션을 카테고리만 바꿔가며 재사용한다.
+// ⚠️ 구매는 §8대로 '구매 탭이 원천'이라 여기서는 읽기 전용으로만 보여준다.
+const COST_SIMPLE={
+  uniform:{label:'유니폼', typeName:'유니폼', color:'#A34A2D', color2:'#7A3520', icon:'ti-shirt',         readonly:false},
+  purchase:{label:'구매',  typeName:'구매',   color:'#A32D6A', color2:'#7A2150', icon:'ti-shopping-cart', readonly:true},
+  etc:{label:'기타',       typeName:'기타',   color:'#534AB7', color2:'#3B3489', icon:'ti-dots',          readonly:false},
+};
+let simpleCat='uniform';
+let simpleView='item';
+let simpleExtra={};   // {cat:{'YYYY-MM':{occ,sold,prevYear}}}
 
-function getUniMonth(){return document.getElementById('uni-month-sel')?.value||thisMonthKey();}
-function getUniRows(month){return (costData[month]||[]).filter(c=>c.type==='유니폼'||c.subType==='유니폼');}
-
-function setUniView(v,btn){
-  uniView=v;
-  document.querySelectorAll('#cost-uni-section .tab-sub button').forEach(b=>b.classList.remove('on'));
-  if(btn) btn.classList.add('on');
-  document.getElementById('uni-view-item').style.display=(v==='item')?'':'none';
-  document.getElementById('uni-view-monthly').style.display=(v==='monthly')?'':'none';
-  if(v==='monthly'){ buildUniYearSel(); renderUniYear(); }
-  else { buildUniMonthSel(); renderUni(); }
+function getSimpleMonth(){return document.getElementById('simple-month-sel')?.value||thisMonthKey();}
+function getSimpleRows(cat,month){
+  const t=COST_SIMPLE[cat].typeName;
+  return (costData[month]||[]).filter(c=>c.type===t||c.subType===t);
 }
 
-function buildUniMonthSel(){
-  const sel=document.getElementById('uni-month-sel');
+function openSimpleCost(cat){
+  simpleCat=cat;
+  const cfg=COST_SIMPLE[cat];
+  document.getElementById('simple-title').innerHTML=`<i class="ti ${cfg.icon}"></i> ${cfg.label}`;
+  ['simple-month-sel','simple-year-sel'].forEach(id=>{
+    const e=document.getElementById(id); if(e) e.style.background=cfg.color2;
+  });
+  const ty=document.getElementById('simple-title-y'); if(ty) ty.textContent=cfg.label+' ';
+  document.getElementById('simple-add-btn').style.display=cfg.readonly?'none':'';
+  document.getElementById('simple-readonly-note').style.display=cfg.readonly?'':'none';
+  buildSimpleMonthSel();
+  setSimpleView(simpleView,null);
+}
+
+function setSimpleView(v,btn){
+  simpleView=v;
+  const btns=document.querySelectorAll('#cost-simple-section .tab-sub button');
+  btns.forEach(b=>b.classList.remove('on'));
+  if(btn) btn.classList.add('on'); else if(btns[v==='item'?0:1]) btns[v==='item'?0:1].classList.add('on');
+  document.getElementById('simple-view-item').style.display=(v==='item')?'':'none';
+  document.getElementById('simple-view-monthly').style.display=(v==='monthly')?'':'none';
+  if(v==='monthly'){ buildSimpleYearSel(); renderSimpleYear(); }
+  else renderSimple();
+}
+
+function buildSimpleMonthSel(){
+  const sel=document.getElementById('simple-month-sel');
   if(!sel) return;
-  const keys=new Set([...Object.keys(costData),thisMonthKey()]);
-  const arr=[...keys].filter(Boolean).sort().reverse();
+  const arr=[...new Set([...Object.keys(costData),thisMonthKey()])].filter(Boolean).sort().reverse();
   const cur=sel.value||thisMonthKey();
   sel.innerHTML=arr.map(k=>`<option value="${k}"${k===cur?' selected':''}>${k.replace('-','년 ')}월</option>`).join('');
 }
 
-function renderUni(){
-  const month=getUniMonth();
-  const rows=getUniRows(month).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+function renderSimple(){
+  const cfg=COST_SIMPLE[simpleCat], month=getSimpleMonth();
+  const rows=getSimpleRows(simpleCat,month).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
   const total=rows.reduce((a,c)=>a+(c.amount||0),0);
-
-  const s=document.getElementById('uni-summary');
+  const s=document.getElementById('simple-summary');
   if(s) s.innerHTML=`
-    <div style="background:linear-gradient(135deg,#B8860B,#8C6608);border-radius:14px;padding:20px 24px;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px">
+    <div style="background:linear-gradient(135deg,${cfg.color},${cfg.color2});border-radius:14px;padding:20px 24px;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px">
       <div>
-        <div style="font-size:11px;color:rgba(255,255,255,0.6);margin-bottom:4px">${month.replace('-','년 ')}월 유니폼 비용</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.6);margin-bottom:4px">${month.replace('-','년 ')}월 ${cfg.label} 비용</div>
         <div style="font-size:30px;font-weight:700;color:#fff">${fmt(total)}</div>
       </div>
       <div style="text-align:right;font-size:12px;color:rgba(255,255,255,0.8)">등록 ${rows.length}건</div>
     </div>`;
-
-  const tb=document.getElementById('uni-tbody');
+  const tb=document.getElementById('simple-tbody');
   if(tb) tb.innerHTML=rows.length?rows.map(c=>`<tr>
       <td style="color:#6b6b68;font-size:12px">${c.date||'-'}</td>
       <td><strong>${c.label||''}</strong></td>
       <td style="text-align:right;font-weight:700">${fmt(c.amount||0)}</td>
-      <td><button class="btn-i d" onclick="deleteCostItem('${month}',${c.id});renderUni()"><i class="ti ti-trash"></i></button></td>
+      <td>${cfg.readonly?'':`<button class="btn-i d" onclick="deleteCostItem('${month}',${c.id});renderSimple()"><i class="ti ti-trash"></i></button>`}</td>
     </tr>`).join('')
-    :'<tr><td colspan="4" class="empty">등록된 유니폼 비용이 없습니다</td></tr>';
+    :`<tr><td colspan="4" class="empty">${cfg.readonly?'구매 탭에서 입고 완료된 항목이 여기 표시됩니다':'등록된 '+cfg.label+' 비용이 없습니다'}</td></tr>`;
 }
 
-function openUniModal(){
-  document.getElementById('uni-date').value=todayStr;
-  document.getElementById('uni-label').value='';
-  document.getElementById('uni-amount').value='';
-  document.getElementById('uni-modal-month').value=getUniMonth();
-  openModal('uni-add-modal');
+function openSimpleModal(){
+  const cfg=COST_SIMPLE[simpleCat];
+  document.getElementById('simple-modal-title').textContent=cfg.label+' 비용 등록';
+  document.getElementById('simple-date').value=todayStr;
+  document.getElementById('simple-label').value='';
+  document.getElementById('simple-amount').value='';
+  document.getElementById('simple-modal-month').value=getSimpleMonth();
+  openModal('simple-add-modal');
 }
-function addUniCost(){
-  const label=document.getElementById('uni-label').value.trim();
-  const amount=parseInt(document.getElementById('uni-amount').value)||0;
-  const date=document.getElementById('uni-date').value||todayStr;
-  const month=document.getElementById('uni-modal-month').value||getUniMonth();
+function addSimpleCost(){
+  const cfg=COST_SIMPLE[simpleCat];
+  const label=document.getElementById('simple-label').value.trim();
+  const amount=parseInt(document.getElementById('simple-amount').value)||0;
+  const date=document.getElementById('simple-date').value||todayStr;
+  const month=document.getElementById('simple-modal-month').value||getSimpleMonth();
   if(!label||!amount){alert('항목명과 금액을 입력하세요.');return;}
   if(!costData[month]) costData[month]=[];
-  const obj={id:costIdSeq++,label,type:'유니폼',subType:'유니폼',amount,date};
+  const obj={id:costIdSeq++,label,type:cfg.typeName,subType:cfg.typeName,amount,date};
   costData[month].push(obj);
   dbSaveCost(month,obj);
-  closeModal('uni-add-modal');
-  buildUniMonthSel();
-  document.getElementById('uni-month-sel').value=month;
-  renderUni(); renderOverview();
+  closeModal('simple-add-modal');
+  buildSimpleMonthSel();
+  document.getElementById('simple-month-sel').value=month;
+  renderSimple(); renderOverview();
 }
 
-function buildUniYearSel(){
-  const sel=document.getElementById('uni-year-sel');
+function buildSimpleYearSel(){
+  const sel=document.getElementById('simple-year-sel');
   if(!sel) return;
   const yrs=new Set([String(new Date().getFullYear())]);
   Object.keys(costData).forEach(k=>yrs.add(k.slice(0,4)));
@@ -7568,13 +7624,14 @@ function buildUniYearSel(){
   sel.innerHTML=arr.map(y=>`<option value="${y}"${y===cur?' selected':''}>${y}년</option>`).join('');
 }
 
-function renderUniYear(){
-  const year=document.getElementById('uni-year-sel')?.value||String(new Date().getFullYear());
+function renderSimpleYear(){
+  const cfg=COST_SIMPLE[simpleCat];
+  const year=document.getElementById('simple-year-sel')?.value||String(new Date().getFullYear());
   const months=Array.from({length:12},(_,i)=>`${year}-${String(i+1).padStart(2,'0')}`);
+  const ex=simpleExtra[simpleCat]||{};
   const rows=months.map(mk=>{
-    const list=getUniRows(mk);
-    const amt=list.reduce((a,c)=>a+(c.amount||0),0);
-    return {mk,amt,cnt:list.length,ex:uniExtra[mk]||{},has:list.length>0};
+    const list=getSimpleRows(simpleCat,mk);
+    return {mk,amt:list.reduce((a,c)=>a+(c.amount||0),0),cnt:list.length,ex:ex[mk]||{},has:list.length>0};
   });
   const any=rows.some(r=>r.has);
   const line=(label,val,opt={})=>{
@@ -7597,34 +7654,36 @@ function renderUniYear(){
     <th style="position:sticky;left:0;background:#f0ede8;text-align:left;min-width:150px">구 분</th>
     ${months.map((m,i)=>`<th style="text-align:right;min-width:92px">${i+1}월</th>`).join('')}
     <th style="text-align:right;background:#e8e4dd;min-width:110px">누계</th></tr></thead>`;
-  document.getElementById('uni-year-table').innerHTML=th+'<tbody>'
+  document.getElementById('simple-year-table').innerHTML=th+'<tbody>'
     +line('점유율(occ.)',r=>r.ex.occ?r.ex.occ/100:null,{pct:true})
     +line('판매 실 수',r=>r.ex.sold||null)
     +line('등록 건수',r=>r.cnt||null)
-    +line('유니폼 비용',r=>r.amt,{bold:true,bg:'#f7f6f4'})
+    +line(cfg.label+' 비용',r=>r.amt,{bold:true,bg:'#f7f6f4'})
     +line(`${Number(year)-1}년 집행금액`,r=>r.ex.prevYear||null,{color:'#9b9b97'})
     +line('전년대비',r=>r.ex.prevYear?r.amt-r.ex.prevYear:null,{color:'#A32D2D'})
     +'</tbody>';
 }
 
-function openUniExtraModal(){
-  const year=document.getElementById('uni-year-sel')?.value||String(new Date().getFullYear());
+function openSimpleExtraModal(){
+  const year=document.getElementById('simple-year-sel')?.value||String(new Date().getFullYear());
   const iN='width:100%;padding:5px 8px;border:1px solid rgba(0,0,0,0.14);border-radius:6px;font-size:13px;text-align:right';
-  document.getElementById('ux-tbody').innerHTML=Array.from({length:12},(_,i)=>{
+  const ex=simpleExtra[simpleCat]||{};
+  document.getElementById('sx-tbody').innerHTML=Array.from({length:12},(_,i)=>{
     const mk=`${year}-${String(i+1).padStart(2,'0')}`;
-    const e=uniExtra[mk]||{};
+    const e=ex[mk]||{};
     return `<tr><td style="font-weight:600">${i+1}월</td>
-      <td><input type="number" step="0.1" style="${iN}" value="${e.occ??''}" placeholder="-" onchange="setUniExtra('${mk}','occ',this.value)"></td>
-      <td><input type="number" style="${iN}" value="${e.sold??''}" placeholder="-" onchange="setUniExtra('${mk}','sold',this.value)"></td>
-      <td><input type="number" style="${iN}" value="${e.prevYear??''}" placeholder="-" onchange="setUniExtra('${mk}','prevYear',this.value)"></td></tr>`;
+      <td><input type="number" step="0.1" style="${iN}" value="${e.occ??''}" placeholder="-" onchange="setSimpleExtra('${mk}','occ',this.value)"></td>
+      <td><input type="number" style="${iN}" value="${e.sold??''}" placeholder="-" onchange="setSimpleExtra('${mk}','sold',this.value)"></td>
+      <td><input type="number" style="${iN}" value="${e.prevYear??''}" placeholder="-" onchange="setSimpleExtra('${mk}','prevYear',this.value)"></td></tr>`;
   }).join('');
-  document.getElementById('ux-year').textContent=year+'년';
-  openModal('uniextra-modal');
+  document.getElementById('sx-year').textContent=`${COST_SIMPLE[simpleCat].label} · ${year}년`;
+  openModal('simpleextra-modal');
 }
-function setUniExtra(mk,key,v){
-  if(!uniExtra[mk]) uniExtra[mk]={};
-  uniExtra[mk][key]=(v===''?null:Number(v));
-  dbSaveSettings('uni_extra',uniExtra);
+function setSimpleExtra(mk,key,v){
+  if(!simpleExtra[simpleCat]) simpleExtra[simpleCat]={};
+  if(!simpleExtra[simpleCat][mk]) simpleExtra[simpleCat][mk]={};
+  simpleExtra[simpleCat][mk][key]=(v===''?null:Number(v));
+  dbSaveSettings('simple_extra',simpleExtra);
 }
 
 function getRoomCountByType(){
@@ -7827,7 +7886,7 @@ async function dbLoadSettings(){
       if(r.key==='labor_extra'&&r.value) laborExtra=r.value;
       if(r.key==='wash_items'&&r.value) washItems=r.value;
       if(r.key==='wash_extra'&&r.value) washExtra=r.value;
-      if(r.key==='uni_extra'&&r.value) uniExtra=r.value;
+      if(r.key==='simple_extra'&&r.value) simpleExtra=r.value;
       if(r.key==='contract_terms'&&r.value) Object.assign(contractTerms,r.value);
       // 재고 품목 순서 적용
       if(r.key&&r.key.startsWith('inv_item_order_')&&r.value){
